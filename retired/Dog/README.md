@@ -34,15 +34,24 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 
 解析一下命令行：
 【1】FUFF是ffuf的占位符，会被字典里的每一行替换。
+
 【2】\? 访问的是http://dog.htb/?q=accounts/FUZZ
+
 【3】 使用的字典（wordlist）。这里是一个常用的用户名列表：xato 的 1000 万用户名合集
+
 【4】 -c 彩色输出（colorize），更易读
+
 【5】 -v verbose（详细模式），会显示更多调试/请求信息
+
 【6】 -mc 403 只显示响应状态码是 403 Forbidden 的结果（Match Codes）
+
 原因：目标站点 dog.htb 是 Backdrop CMS，有一个特殊的 URL：` ?q=accounts/用户名`
+
 如果 fuzz 到一个存在的用户名：可能返回 403 Forbidden（存在但不允许匿名访问）或返回 200/301（正常页面）
 通过这些差异可以枚举出有效用户名
 
 ## 第一个卡住我点
 其一 FUUF命令跑了5个小时，别看它现在6位数，要跑到7位数还需要4天半。。。
 其二 按了Ctrl+C不会停下来，直接按回车就会跳出提示选项进入交互模式，退出只能手动关闭窗口。
+
+retired/Dog/images/截屏2025-07-13 22.42.03.png
