@@ -1,4 +1,5 @@
 ### Dog过期机器，我挑战的第4天，记住一下卡住我的点
+##### 因为我是新手，我的能力只能够打过期有文档的靶机，所以整个upwrite的逻辑的无法完全串通的，但是对详细操作的小细节是OK的，觉得超级新鲜的。
 
 ### 首先先简单描述一下过程
 #### 1.加入域名 ‘$ echo "ip dog.htb" | sudo tee -a /etc/hosts'
@@ -50,8 +51,26 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 如果 fuzz 到一个存在的用户名：可能返回 403 Forbidden（存在但不允许匿名访问）或返回 200/301（正常页面）
 通过这些差异可以枚举出有效用户名
 
-## 第一个卡住我点
+## 第一个卡住我点,too long time
 其一 FUUF命令跑了5个小时，别看它现在6位数，要跑到7位数还需要4天半。。。
+![你还好吗](images/001.png)
 其二 按了Ctrl+C不会停下来，直接按回车就会跳出提示选项进入交互模式，退出只能手动关闭窗口。
+![嘿我是小黑](images/002.png)
+结果就是有两用户名john && tiffany
 
-![你还好吗](retired/Dog/images/001.png)
+## 第二个卡住我的点 
+其一 因为跑太长时间了，把虚拟机跑崩了，登不了目标网站了，还以为是那个网站本来就不能登 哼
+
+目标网站为： http://dog.htb
+登陆 tiffany用户 输入mysql密码
+
+其二 HackTheBox 自带的VPN虚拟机，不能粘贴，我得手动编辑 BackDrop_CMS_1.27.1_exploit.py
+
+
+其三 老辛苦找到Manual installion上传文件的地方，但是在下载文件的地方 没有找到 我上传的文件 
+
+天塌了。。这就是exploit如何利用的神奇好玩的地方，哼因为我找到了，所以我觉得好玩
+
+
+
+
