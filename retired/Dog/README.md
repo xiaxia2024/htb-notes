@@ -1,4 +1,4 @@
-### Dog过期机器，我挑战的第4天，记住一下卡住我的点
+### Dog 过期机器，我挑战的第4天，记住一下卡住我的点
 ##### 因为我是新手，我的能力只能够打过期有文档的靶机，所以整个upwrite的逻辑的无法完全串通的，但是对详细操作的小细节是OK的，觉得超级新鲜的。
 
 ### 首先先简单描述一下过程
@@ -34,6 +34,7 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 ```
 
 解析一下命令行：
+
 【1】FUFF是ffuf的占位符，会被字典里的每一行替换。
 
 【2】\? 访问的是http://dog.htb/?q=accounts/FUZZ
@@ -52,7 +53,7 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 通过这些差异可以枚举出有效用户名
 
 ## 第一个卡住我点,too long time
-其一 FUUF命令跑了5个小时，别看它现在6位数，要跑到7位数还需要4天半。。。
+其一 FUFF命令跑了5个小时，别看它现在6位数，要跑到7位数还需要4天半。。。
 ![你还好吗](images/001.png)
 其二 按了Ctrl+C不会停下来，直接按回车就会跳出提示选项进入交互模式，退出只能手动关闭窗口。
 ![嘿我是小黑](images/002.png)
