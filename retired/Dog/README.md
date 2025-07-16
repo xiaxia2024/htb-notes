@@ -58,6 +58,11 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 ![嘿我是小黑](images/002.png)
 结果就是有两用户名john && tiffany
 
+#### 6.获知exploit版本
+https://github.com/FisMatHack/BackDropScan/blob/main/BackDropScan.py#L35
+
+`$ curl http://dog.htb/core/profiles/testing.info`
+
 ## 第二个卡住我的点 
 其一 因为跑太长时间了，把虚拟机跑崩了，登不了目标网站了，还以为是那个网站本来就不能登 哼
 
@@ -66,11 +71,14 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 
 其二 HackTheBox 自带的VPN虚拟机，不能粘贴，我得手动编辑 BackDrop_CMS_1.27.1_exploit.py
 
+https://www.exploit-db.com/exploits/52021  //BackDrop_CMS_1.27.1_exploit.py的原创
+
+//我要添加自己的解析
 
 其三 老辛苦找到Manual installion上传文件的地方，但是在下载文件的地方 没有找到 我上传的文件 
 
 天塌了。。这就是exploit如何利用的神奇好玩的地方，哼因为我找到了，所以我觉得好玩
-
+![小黑哒](images/0003.png)
 
 
 
