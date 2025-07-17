@@ -54,7 +54,7 @@ $ ffuf -w /usr/share/seclists/Username/xato-net-10-millon-username.txt -u http:/
 
 ## 第一个卡住我点,too long time
 其一 FUFF命令跑了5个小时，别看它现在6位数，要跑到7位数还需要4天半。。。
-![你还好吗](images1/0001.png)
+![你还好吗](images/7004.png)
 其二 按了Ctrl+C不会停下来，直接按回车就会跳出提示选项进入交互模式，退出只能手动关闭窗口。
 ![嘿我是小黑](images/002.png)
 结果就是有两用户名john && tiffany
