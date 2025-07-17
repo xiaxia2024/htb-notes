@@ -65,8 +65,11 @@ savejson mresult.json //就会保存跑到的内容(myresult.json)
 #### 6.获知exploit版本
 https://github.com/FisMatHack/BackDropScan/blob/main/BackDropScan.py#L35
 
+从这里面看到了backdrop CMS的路径，就有了下面的搜索：
 `$ curl http://dog.htb/core/profiles/testing.info`
+![学得越多我越猖狂](images/7005.png)
 
+（然后就仿照这个.info文档，编辑exploit.py里面的.info文件）
 ## 第二个卡住我的点 
 其一 因为跑太长时间了，把虚拟机跑崩了，登不了目标网站了，还以为是那个网站本来就不能登 哼
 
