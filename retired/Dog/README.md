@@ -71,21 +71,39 @@ https://github.com/FisMatHack/BackDropScan/blob/main/BackDropScan.py#L35
 
 （然后就仿照这个.info文档，编辑exploit.py里面的.info文件）
 ## 第二个卡住我的点 
-其一 因为跑太长时间了，把虚拟机跑崩了，登不了目标网站了，还以为是那个网站本来就不能登 哼
+### 其一 因为跑太长时间了，把虚拟机跑崩了，登不了目标网站了，还以为是那个网站本来就不能登 哼
 
 目标网站为： http://dog.htb
 登陆 tiffany用户 输入mysql密码
 
-其二 HackTheBox 自带的VPN虚拟机，不能粘贴，我得手动编辑 BackDrop_CMS_1.27.1_exploit.py
+### 其二 HackTheBox 自带的VPN虚拟机，不能粘贴，我得手动编辑 BackDrop_CMS_1.27.1_exploit.py
 
 https://www.exploit-db.com/exploits/52021  //BackDrop_CMS_1.27.1_exploit.py的原创
 
 [超级认真的我](./BackDrop_CMS_1.27.1_exploit.py) //我要添加自己的解析
 
-其三 老辛苦找到Manual installion上传文件的地方，但是在下载文件的地方 没有找到 我上传的文件 
+#### 下面是对这exploit.py的使用1
+```
+$ python3 exploit.py http://dog.htb //用 Python3 运行当前目录下的脚本 exploit.py，并传入一个参数 http://dog.htb
+//也就是说，这个 http://dog.htb 会作为参数传递给 sys.argv[1]，在脚本中用于后续攻击
+
+$ ls shell
+
+$tar -czvf shell.tar.ga shell //将当前目录中的 shell 文件或文件夹 打包并压缩为 gzip 格式
+```
+
+### 其三 老辛苦找到Manual installion上传文件的地方，但是在下载文件的地方 没有找到 我上传的文件 
 
 天塌了。。这就是exploit如何利用的神奇好玩的地方，哼因为我找到了，所以我觉得好玩
 ![小黑哒](images/0003.png)
+
+####  下面是对这exploit.py的使用2 需要这么做
+【1】Manual installion 手动上传成功，前往URL：http://dog.htb/modules/shell/shell.php
+结果：Not Found
+【2】Manual installion 手动上传成功[+1],前往URL：http://dog.htb/modules/shell/shell.php?cmd=id
+结果：有回应了并且有个输入框
+【3】Manual installion 手动上传成功[+1]，开启nc监听，在输入框里输入内容并回车
+![一切都不是必须的肯定](images/7006]
 
 
 
