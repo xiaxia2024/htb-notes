@@ -77,7 +77,7 @@ https://github.com/FisMatHack/BackDropScan/blob/main/BackDropScan.py#L35
 
 https://www.exploit-db.com/exploits/52021  //BackDrop_CMS_1.27.1_exploit.py的原创
 
-//我要添加自己的解析
+[超级认真的我](./BackDrop_CMS_1.27.1_exploit.py) //我要添加自己的解析
 
 其三 老辛苦找到Manual installion上传文件的地方，但是在下载文件的地方 没有找到 我上传的文件 
 
