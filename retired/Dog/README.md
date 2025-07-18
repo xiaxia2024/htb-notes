@@ -113,10 +113,11 @@ $tar -czvf shell.tar.ga shell //将当前目录中的 shell 文件或文件夹 �
 
 ```
 $ python3 -c 'import pty;pty.spawn("/bin/bash")'
-$export TEMT=xtemt
+$export TREM=xtrem
 $ ^Z
 >> stty raw -echo; fg
 $
+回车
 
 www-data@dog:/var/www/html$ cat /etc/passwd | grep 'sh$' |awk -F: '{print $1}'
 root
