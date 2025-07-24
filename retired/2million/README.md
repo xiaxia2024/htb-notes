@@ -21,6 +21,7 @@ https://lelinhtinh.github.io/de4js/
 ![快速理清一下](images/113.png)
 
 ### 出现了 ROT13 值得学习
+![快速理清一下](images/1135.png)
 加密类型被暗示为ROT13，基本上是凯撒密码。一个提示也是可见的，提到我们需要识别加密类型并对其进行解密
 ![快速理清一下](images/114.png)
 
