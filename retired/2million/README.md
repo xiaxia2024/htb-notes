@@ -28,7 +28,7 @@ https://lelinhtinh.github.io/de4js/
 通过ROT13解码 ：为了生成邀请代码，向/api/v1/invite/generate发出POST请求
 ![快速理清一下](images/115.png)
 生成的邀请码还有解base64
-![快速理清一下](images/116.png)
+![快速理清一下](images/117.png)
 
 ### 登陆账户之后，开启本地拦截burpsuite,下载Access的VPN，只是为了获得页面已经登陆的cookie
 拿着cookie开始 查询API接口信息
@@ -51,7 +51,6 @@ curl -v -X PUT http://2million.htb/api/v1/admin/settings/update  --cookie "PHPSE
 谁能想到 无效内容类型 竟然是一个开端，PUT为更新或覆盖，POST为新增
 这次没有得到未经授权的错误，而是API回复了无效的内容类型
 API以JSON格式回复，将Content-Type头设置为JSON并再试一次
-![快速理清一下](images/117.png)
 
 ### 发现id 注入漏洞
 ```
