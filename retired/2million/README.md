@@ -136,7 +136,7 @@ admin@2million:/tmp/CVE-202300386$ make all //注意：编译会抛出一些警�
 ### 8.双层的复杂解码，可难了 
 `admin@2million:/root# cat thank_you.json`
 使用的工具https://gchq.github.io/CyberChef/
-[转码困住了我](Multi-layerDecoding.md)
-
+经历了3天，UTF8的添加只在XOR的Key的旁边，其余地方均保持Raw Bytes。
+[点击查看 转码困住了我](Multi-layerDecoding.md)
 好想吐槽这个靶机重量
 
