@@ -15,11 +15,9 @@ jQuery 是个老牌工具库，很多老网站和项目用它，现在新项目�
 
 https://lelinhtinh.github.io/de4js/ 
 ![快速理清一下](images/112.png)
-
-(代码解析）
 可读JavaScript代码
 ![快速理清一下](images/113.png)
-[前端太美了差点跑偏](nvite.js)
+[查看 邀请码nvite.js的解析](./nvite.js)
 ### 2.出现了 ROT13 值得学习
 ![快速理清一下](images/1135.png)
 加密类型被暗示为ROT13，基本上是凯撒密码。一个提示也是可见的，提到我们需要识别加密类型并对其进行解密
