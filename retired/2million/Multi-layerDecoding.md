@@ -23,7 +23,7 @@ DAQCGXQgBCEELCAEIQQsSCYtAhU9DwofLURvSDgdaAARDnQcDTAGFCQEB0sgB0UjARYnFA0IMUgEYgIX
 ```
 先 Base64 解码 → 再 XOR 解密（Key: HackTheBox）
 
-但是Base64解码的目标是生成十六进制字符串（Hex）
+第三天的，无数次之后,,,
 
 ## 3
-![好难](images/33.png)
+![好难](images/010000.png)
