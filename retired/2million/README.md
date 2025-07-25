@@ -124,8 +124,9 @@ scp cve.zip admin@2million.htb:/tmp //密码为SuperDuperPass123
 admin@2million:/tmp$ ls
 admin@2million:/tmp$ unzip cve.zip
 admin@2million:/tmp$ cd CVE-202300386
-admin@2million:/tmp/CVE-202300386$ make //注意：编译会抛出一些警告，但可以安全地忽略这些警告
+admin@2million:/tmp/CVE-202300386$ make all //注意：编译会抛出一些警告，但可以安全地忽略这些警告
 ```
+成功会返回最后两条如图
 ![快速理清一下](images/126.png)
 ![快速理清一下](images/127.png)
 这是一个正常的调试输出，说明 gc（通常是伪造的cap文件）大小正确地被读取。
