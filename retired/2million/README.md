@@ -9,7 +9,9 @@ jQuery 是个老牌工具库，很多老网站和项目用它，现在新项目�
 
 ## 主要工具 
 de4js     ：JavaScript 解混淆和解码工具 
+
 ROT13     ：对称加密
+
 CyberChef ：各种编码/加密/解码/分析工具（CyberChef的使用在第8步骤）
 
 ## 主要漏洞： id_admin 隐式逻辑漏洞 ｜ CVE-2023-0386 ｜ CVE-2023-4911
