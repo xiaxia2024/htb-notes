@@ -8,6 +8,7 @@ API接口	                      后台返回 JSON 数据	        { "invite_code"
 jQuery 是个老牌工具库，很多老网站和项目用它，现在新项目用得较少（转向 Vue/React），但它对理解 Ajax 很重要
 
 ## 主要工具 
+de4js     ：JavaScript 解混淆和解码工具 
 ROT13     ：对称加密
 CyberChef ：各种编码/加密/解码/分析工具（CyberChef的使用在第8步骤）
 
