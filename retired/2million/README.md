@@ -7,6 +7,12 @@ API接口	                      后台返回 JSON 数据	        { "invite_code"
 
 jQuery 是个老牌工具库，很多老网站和项目用它，现在新项目用得较少（转向 Vue/React），但它对理解 Ajax 很重要
 
+## 主要工具 
+ROT13     ：对称加密
+CyberChef ：各种编码/加密/解码/分析工具（CyberChef的使用在第8步骤）
+
+## 主要漏洞： id_admin 隐式逻辑漏洞 ｜ CVE-2023-0386 ｜ CVE-2023-4911
+
 ### ` echo 'IP 2million.htb' | sudo tee -a /etc/hosts`
 
 ### 1.目标网页的Fn+12原代码 发现隐藏代码为典型的 JavaScript 混淆格式
@@ -141,3 +147,15 @@ admin@2million:/tmp/CVE-202300386$ make all //注意：编译会抛出一些警�
 [点击查看 转码困住了我](Multi-layerDecoding.md)
 好想吐槽这个靶机重量
 
+### 相关 CVE-2023-4911
+2023 年 10 月披露的一个高危漏洞，影响 glibc 的动态链接器
+漏洞详情：
+组件： GNU C Library (glibc) 的动态加载器 ld.so；
+漏洞类型： 缓冲区溢出；
+影响版本： glibc 2.34 到 2.37；
+影响平台： 常见的 Linux 发行版，如 Ubuntu、Debian、Fedora 等；
+利用条件：
+    本地攻击者（非 root 用户）；
+    如果攻击者能设置 GLIBC_TUNABLES 环境变量并执行某些 SUID 程序（如 ping, sudo, pkexec）；
+漏洞危害： 本地提权到 root。
+https://github.com/leesh3288/CVE-2023-4911
