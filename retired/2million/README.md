@@ -121,7 +121,7 @@ scp cve.zip admin@2million.htb:/tmp //密码为SuperDuperPass123
 ```
 admin@2million:/tmp$ ls
 admin@2million:/tmp$ unzip cve.zip
-admin@2million:/tmp$ cd CVE-202300386
+admin@2million:/tmp$ cd CVE-2023-0386
 admin@2million:/tmp/CVE-202300386$ make all //注意：编译会抛出一些警告，但可以安全地忽略这些警告
 ```
 成功会返回最后两条如图
@@ -136,7 +136,8 @@ admin@2million:/tmp/CVE-202300386$ make all //注意：编译会抛出一些警�
 ### 8.双层的复杂解码，可难了 
 `admin@2million:/root# cat thank_you.json`
 使用的工具https://gchq.github.io/CyberChef/
-经历了3天，UTF8的添加只在XOR的Key的旁边，其余地方均保持Raw Bytes。
+经历了3天，UTF8的添加只在XOR的Key的旁边，其余地方均保持Raw Bytes
+
 [点击查看 转码困住了我](Multi-layerDecoding.md)
 好想吐槽这个靶机重量
 
