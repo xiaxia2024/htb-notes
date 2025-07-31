@@ -7,11 +7,11 @@
 提供了一个公开接口 reset_password.php，允许通过用户名重置密码，并返回明文密码；
 
 
-!(夜深晨早打靶机)[images/073101.png]
+![夜深晨早打靶机](images/073101.png)
 ## buripsuite | squite3添加SHA1 
 
 ### 1. 关于BurpSuite 的 主动利用漏洞的中间人攻击技术流程
-!(夜深晨早打靶机)[images/073102.png]
+![夜深晨早打靶机](images/073102.png)
 Web 应用的密码重置功能，在浏览器的开发者工具中 (F12 → Network)获得密码后，开始拦截
 #### 获得POST，Ctrl+R,Shift+Ctrl+R 修改file=为/%2Fvar/%2Flog/%2Fapache2/%2Faccess.log  Send，回应有User-Agent字段 ,Forward 
 漏洞类型：本地文件包含（LFI）
@@ -46,14 +46,14 @@ sqlite> SELECT * FROM users;
 1|admin|hash...|1
 sqlite> .exit
 ```
-!(夜深晨早打靶机)[images/073103.png]
+![夜深晨早打靶机](images/073103.png)
 +sadm 允许所有主机以 sadm 用户身份信任连接（允许免密码 rsh 登录）
 
 使用rockyou.txt无法破解hash值，登陆samd需要www-date的密码
 
 so SHA1 是单向哈希，不能“解密”
 创建一个自定义密码的sha1 
-!(夜深晨早打靶机)[images/073104.png]
+![夜深晨早打靶机](images/073104.png)
 ```
 sqlite> UPDATE users SET password_hash = '自定义sha1' WHERE username = 'sadm';
 ```
