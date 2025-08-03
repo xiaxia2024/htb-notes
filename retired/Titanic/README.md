@@ -93,6 +93,7 @@ PATH = /data/gitea/gitea.db //Gitea 使用 SQLite 数据库，并且数据库文
 $ echo -e 'administrator\ndevelop' > user  //把两个用户名写进users，-e启用\n作为换行符
 ```
 [2]发现了 密码哈希 和 加密方式：pbkdf2$50000$50：使用 PBKDF2，迭代 50000 次，salt 长度 50
+
 发现pbkdf2$50000$50时，在Google搜索的关键词是：'gitea to hachcat'
 
 “gitea to hashcat” 意思是：
@@ -130,6 +131,24 @@ administrator 为 Gitea admin 用户：	破解后可用于控制整个平台｜d
 $ ssh developer@10.129.231.221
 ```
 ## 7
+```
+developer@titanic:/opt/scripts$ ls   // 通常用来存放各种脚本的路径/opt/scripts/
+identify_images.sh
+developer@titanic:/opt/scripts$ cat identify_images.sh //可能是一个用于识别或处理图片文件的脚本
+```
+![beautiful day](images/080309.png)
+```
+cd /opt/app/static/assets/images  //切换到图片所在目录
+truncate -s 0 metadata.log        //清空旧的元数据日志文件;truncate：用于修改文件的大小;-s 0：指定将文件大小设置为 0
+find /opt/app/static/assets/images/ -type f -name "*.jpg" | xargs /usr/bin/magick identify >> metadata.log
+
+//find：查找命令;/opt/app/static/assets/images/：指定要查找的目录；-type f：只找普通文件；-name "*.jpg"：文件名以 .jpg 结尾
+//xargs：把输入的文件名列表一一传给后面的命令；magick 是 ImageMagick 图像处理工具的主命令；对每张图片执行 identify，提取其基本元数据
+//>> 表示将输出“追加”写入到 metadata.log 文件中（不会覆盖原有内容）
+```
+
+                              
+
 
 
 
