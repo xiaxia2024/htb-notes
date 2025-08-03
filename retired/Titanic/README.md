@@ -224,7 +224,7 @@ gcc -x c :GNU C 编译器,强制将输入解释为 C 语言
 
 __attribute__((constructor)) 会让这个函数 init() 在共享库被加载时自动运行，在 main() 之前执行
 ```
-### [3]植入反弹shell
+### [3]植入反弹shell_动态链接库劫持
 ![beautiful day](images/080314.png)
 反向shell在libxcb.so.1，把它拷贝到指定路径，挺重要一步的
 ```
