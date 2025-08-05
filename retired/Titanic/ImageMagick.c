@@ -14,3 +14,5 @@ while [[ $(pgrep -x i3lock) ]];do
   [[ $timeout -lt $(xssstate -i) ]] && xset dpms force off
   sleep 5
 done
+
+//跑网上学习magick2天
