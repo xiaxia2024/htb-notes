@@ -1,5 +1,6 @@
 ## Code
 
+##### sudo配置漏洞_backy.sh备份归档root目录
 #### 这是典型的 Python 沙箱逃逸（sandbox escape）或反序列化攻击中使用的技巧。
 
 #### 目标是通过 Python 类的 introspection（反射）能力，获取到底层模块（如 os），再调用 os.system('ls') 执行系统命令。
