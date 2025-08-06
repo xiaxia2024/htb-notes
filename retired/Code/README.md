@@ -68,3 +68,85 @@ martin|xxx
 
 ### 3.备份backy.sh
 
+#### [1] 登陆martin的ssh
+```
+ssh martin@10.129.218.25
+
+martin@code:~/backups$ ls
+code_home_app-production_app_2024_August.tar.bz2  task.json
+```
+这两个重要文件，一个显示着日期的备份文件，另一个为辅助文件。
+
+```
+martin@code:~/backups$ sudo -l
+Matching Defaults entries for martin on localhost:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User martin may run the following commands on localhost:
+    (ALL : ALL) NOPASSWD: /usr/bin/backy.sh
+```
+一个重要程序shell脚本
+
+#### [2] 查看/usr/bin/backy.sh
+```
+martin@code:~/backups$ cat /usr/bin/backy.sh
+#!/bin/bash
+
+if [[ $# -ne 1 ]]; then
+    /usr/bin/echo "Usage: $0 <task.json>"
+    exit 1
+fi //1.如果传入参数数量不是1，就打印用法说明（$0 是脚本名称），然后退出 ｜ $0为 /usr/bin/echo，$1为<task.json>
+
+json_file="$1"
+
+if [[ ! -f "$json_file" ]]; then
+    /usr/bin/echo "Error: File '$json_file' not found."
+    exit 1
+fi //2.检查<task.json>文件是否存在。
+
+allowed_paths=("/var/" "/home/") //3.只允许归档 /var/ 和 /home/ 下的目录。
+
+updated_json=$(/usr/bin/jq '.directories_to_archive |= map(gsub("\\.\\./"; ""))' "$json_file") //4.清理路径中的 ../为空，防止目录穿越攻击
+
+/usr/bin/echo "$updated_json" > "$json_file"
+
+directories_to_archive=$(/usr/bin/echo "$updated_json" | /usr/bin/jq -r '.directories_to_archive[]')
+//再次用 jq 取出 directories_to_archive 字段中的每个路径（清理后的）｜ 并保存成 shell 变量：directories_to_archive
+
+is_allowed_path() {
+    local path="$1"
+    for allowed_path in "${allowed_paths[@]}"; do
+        if [[ "$path" == $allowed_path* ]]; then
+            return 0
+        fi
+    done
+    return 1
+} //这是一个 shell 函数，用来判断某路径是否以 /var/ 或 /home/ 开头；｜函数定义，返回1或0
+
+for dir in $directories_to_archive; do
+    if ! is_allowed_path "$dir"; then
+        /usr/bin/echo "Error: $dir is not allowed. Only directories under /var/ and /home/ are allowed."
+        exit 1
+    fi
+done // 函数调用，遍历所有从 task.json 里解析出来的路径，如果不是允许的路径（返回非 0），就报错并退出脚本
+
+/usr/bin/backy "$json_file"
+```
+
+            用户输入 task.json
+                   │
+                   ▼
+     检查参数数目和文件是否存在
+                   │
+                   ▼
+     用 jq 去除 "../" 防穿越攻击
+                   │
+                   ▼
+  检查所有路径是否以 /var/ 或 /home/ 开头
+                   │
+                   ▼
+          如果全部合法，就调用
+         /usr/bin/backy "$json_file"
+
+
