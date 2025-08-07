@@ -1,6 +1,6 @@
 
 ## Manage
-
+```
 22/tcp
 2222/tcp open  java-rmi Java RMI
 | rmi-dumpregistry: 
@@ -12,7 +12,7 @@
 |       extends
 |_        java.rmi.server.RemoteObject
 8080/tcp 
-
+```
 从 rmi-dumpregistry 成功地枚举出了 RMI 对象（如 jmxrmi）这一行为，就可以初步判断服务 没有启用访问控制（未绑定凭据）
 
 Java JMX（Java Management Extensions）是 Java 提供的一种 系统管理和监控框架。
