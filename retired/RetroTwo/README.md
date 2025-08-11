@@ -30,6 +30,8 @@ $ impacket-smbclient guest@retro2.vl -no-pass
 #### 把staff.accdb拉到Windowns
 ![还要继续吗](images/081103.png)
 
+
+#### staff文件需要密码，下面是破解密码：
 #### 从受密码保护的 Microsoft Office 文件中提取哈希值
 
 #### https://hashcat.net/wiki/doku.php?id=example_hashes
@@ -41,6 +43,7 @@ $ gunzip -d rockyou.txt.gz
 ```
 ![还要继续吗](images/081105.png)
 ![还要继续吗](images/081106.png)
+#### staff文件需要密码为:class08
 输入密码后，我们查看文件的Visual Basic内容，在其中找到Active用于LDAP认证的目录凭据
 ![还要继续吗](images/081107.png)
 retro2\ldapreader 密码为“ppYaVcB5R"
