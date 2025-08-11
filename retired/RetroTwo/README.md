@@ -100,6 +100,6 @@ $ bloodhound-python -u 'ldapreader' -p 'ppYaVcB5R' -d retro2.vl --zip -c All -dc
 https://medium.com/@offsecdeer/finding-weak-ad-computer-passwords-e3dc1ed220df
 在网上搜索这方面的信息时，它解释了计算机创建的的SamAccountName的密码，帐户用小写减去美元符号
 ```
-$ wget https://raw.githubusercontent.com/fortra/impacket/refs/heads/master/examples/changepasswd.py
+$ wget https://raw.githubusercontent.com/api0cradle/impacket/a1d0cc99ff1bd4425eddc1b28add1f269ff230a6/examples/rpcchangepwd.py
 ```
 
