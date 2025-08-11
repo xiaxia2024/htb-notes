@@ -15,8 +15,6 @@ echo 'IP retro2.vl' | sudo tee -a /etc/hosts'
 ```
 $ nxc smb 10.129.86.138 -u 'guest' -p '' --shares
 ```
-
-### 2.在Windowns上挂载ProfessionalRetail.img,查看staff.accdb数据
 ```
 $ impacket-smbclient guest@retro2.vl -no-pass
 # use Punlic
@@ -27,10 +25,15 @@ $ impacket-smbclient guest@retro2.vl -no-pass
 # exit
 ```
 
-把staff.accdb拉到Windowns
+### 2.在Windowns上挂载ProfessionalRetail.img,查看staff.accdb数据
+
+#### 把staff.accdb拉到Windowns
 ![还要继续吗](images/081103.png)
-从受密码保护的 Microsoft Office 文件中提取哈希值
-https://hashcat.net/wiki/doku.php?id=example_hashes
+
+#### 从受密码保护的 Microsoft Office 文件中提取哈希值
+
+#### https://hashcat.net/wiki/doku.php?id=example_hashes
+
 ![还要继续吗](images/081104.png)
 ```
 $ cp /usr/share/wordlists/rockyou.txt.gz .
