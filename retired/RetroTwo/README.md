@@ -9,7 +9,8 @@ echo 'IP retro2.vl' | sudo tee -a /etc/hosts'
 ```
 ![还要继续吗](images/081102.png)
 ```
-echo 'IP BLN01.retro2.vl' | sudo tee -a /etc/hosts'
+$ echo 'IP BLN01.retro2.vl' | sudo tee -a /etc/hosts'
+$ nxc smb 10.129.86.138 -u 'guest' -p '' --shares
 ```
 
 ### 2.在Windowns上挂载ProfessionalRetail.img,查看staff.accdb数据
@@ -36,10 +37,14 @@ $ gunzip -d rockyou.txt.gz
 ![还要继续吗](images/081106.png)
 输入密码后，我们查看文件的Visual Basic内容，在其中找到Active用于LDAP认证的目录凭据
 ![还要继续吗](images/081107.png)
-密码为“ppYaVcB5R"
+retro2\ldapreader 密码为“ppYaVcB5R"
+```
+$ ncx ldap BLN01.retro2.vl -u 'ldapreader' -p 'ppYaVcB5R'
+```
 ![还要继续吗](images/081108.png)
 
 ### 3.在kali下载Bloodhound
+https://bloodhound.specterops.io/get-started/quickstart/community-edition-quickstart
 ```
 //下载 Linux ARM64：
 $ curl -L -o bloodhound-cli-linux-arm64.tar.gz \
