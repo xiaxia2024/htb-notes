@@ -2,7 +2,7 @@
 
 Windows
 
-在HTB的Pwnbox,kali开启openvpn,以及win11直接来回跳，目标ip有所改变。
+在HTB的Pwnbox,kali开启openvpn,以及win11之间来回跳，目标ip有所改变。
 
 ### 1.信息收集
 ![还要继续吗](images/081101.png)
