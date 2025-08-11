@@ -43,6 +43,7 @@ staff.accdb:$office$*2013*100000*256*16*5736cfcbb054e749a8f303570c5c1970*1ec683f
 #### https://hashcat.net/wiki/doku.php?id=example_hashes
 
 ![还要继续吗](images/081104.png)
+#### MS Office 2013的哈希模式为9600
 ```
 $ cp /usr/share/wordlists/rockyou.txt.gz .
 $ gunzip -d rockyou.txt.gz
