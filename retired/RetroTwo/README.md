@@ -34,6 +34,8 @@ staff.accdb:$office$*2013*100000*256*16*5736cfcbb054e749a8f303570c5c1970*1ec683f
 ### 2.在Windowns上挂载ProfessionalRetail.img,查看staff.accdb数据
 
 #### 把staff.accdb拉到Windowns
+
+双击.img
 ![还要继续吗](images/081103.png)
 
 ![还要继续吗](images/0811031.png)
