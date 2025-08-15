@@ -5,7 +5,7 @@ Windows
 在HTB的Pwnbox,kali开启openvpn,以及win11之间来回跳，目标ip有所改变。
 #### Pwnbox 信息收集
 #### kali 开启bloodhoud查看目标windowns域关系图
-#### win11 使用VS生成.exe程序
+#### win11 挂载Microsoft Office的.img ｜ 使用VS生成.exe程序
 攻击命令很逻辑点单，使用的工具真复杂，花上了接近一个星期。
 ### 1.信息收集
 ![还要继续吗](images/081101.png)
