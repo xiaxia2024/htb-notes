@@ -60,6 +60,7 @@ print(f"sha256:{ITERATIONS}:{salt64}:{target_hash64}")
 ##### unhexlify 就是把用 十六进制字符串表示的哈希 转回真正的 二进制字节
 #### 到了Hashcat所需的散列格式：sha256:10000:<salt_base64>:<hash_base64>
 ![夏日里的秋风第二天](images/081702.png)
+#### hashcat --help 或 -hh
 #### Hashcat 的模式号10900为PBKDF2-HMAC-SHA256 (Grafana)
 ```
 $ hashcat -m 10900 hash1.txt rockyou.txt
