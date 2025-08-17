@@ -82,5 +82,5 @@ bash-5.1# mount
 bash-5.1# mount /dev/sda1 /mnt
 bash-5.1# ls -la /mnt/root/root.txt
 ```
-![夏日里的秋风第二天](images/081705.png)
+
 
