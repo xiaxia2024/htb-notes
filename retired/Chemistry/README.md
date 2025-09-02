@@ -112,7 +112,7 @@ d8578edf8458ce06fbc5bb76a58c5ca4:qwerty
 c3601ad2286a4293868ec2a4bc606ba3:victoria123              
 63ed86ee9f624c7b14f1d4f43dc251a5:unicorniosrosados
 ```
-#### 密码解开了unicorniosrosados，对于的用户名rosa
+#### 密码解开了unicorniosrosados，对应的用户名是rosa
 ```
 app@chemistry:~$ cat /etc/passwd|grep '/bin/bash'
 cat /etc/passwd|grep '/bin/bash'
