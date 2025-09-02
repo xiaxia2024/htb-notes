@@ -29,7 +29,7 @@
 ```
 $ nc -lvnp 3000
 ```
-#### 在http://alert.htb/的Markdown Viewer 上传markdown.md
+#### 在http://alert.htb/ 的Markdown Viewer 上传markdown.md
 ![万念归心](images/090205.png)
 #### 是个GET请求，Ctrl + C结束nc，可以看到在右下角看到Share Markdown
 ![万念归心](images/090200.png)
@@ -60,7 +60,6 @@ $ echo "PHByZT48VmlydHVhbEhvc3QgKjo4MD4KICAgIFNlcnZlck5hbWUgYWxlcnQuaHRiCgogICAg
 ```
 ![万念归心](images/090212.png)
 #### 从/etc/passwd得出 倒数第三个albert用户
-
 #### Apache 默认安装后确实会生成 000-default.conf
 #### 修改pwned.js
 ![万念归心](images/090213.png)
@@ -97,7 +96,6 @@ $ ssh albert@alert.htb
 ![万念归心](images/090222.png)
 #### 访问浏览器http://127.0.0.1:8089
 ![万念归心](images/090223.png)
-
 ### 4.1 pspy64s
 #### pspy64s 是 pspy 工具的一个编译版本。pspy 是一款用于 Linux 提权枚举的工具，可以在不需要 root 权限的情况下 监控进程执行。
 ```
@@ -127,7 +125,7 @@ albert@alert:~$ cat /opt/website-monitor/monitor.php
 * 里面放了 configuration.php，通常存储 PATH、监控列表等配置
 ```
 ![万念归心](images/090227.png)
-#### 修改configuration.php
+####  vi configuration.php
 ![万念归心](images/090228.png)
-#### 修改之后，cat查看它，它还是会回复，使用普通用户运行/bin/bash -p
+#### 修改之后，cat查看它，它还是会恢复，使用普通用户运行/bin/bash -p
 ![万念归心](images/090229.png)
