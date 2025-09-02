@@ -138,5 +138,18 @@ Service detection performed. Please report any incorrect results at https://nmap
 Nmap done: 1 IP address (1 host up) scanned in 11.97 seconds
 ```
 
+```
+wget https://github.com/epi052/feroxbuster/releases/download/v2.12.0/x86_64-linux-feroxbuster.zip
+unzip x86_64-linux-feroxbuster.zip
+chmod +x feroxbuster
+sudo mv feroxbuster /usr/local/bin/
+feroxbuster --help
+
+[★]$ ls /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+[★]$ feroxbuster -u http://127.0.0.1:8787/ -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+```
+
+
 #### https://github.com/z3rObyte/CVE-2024-23334-PoC
 
