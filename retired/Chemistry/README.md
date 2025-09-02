@@ -70,3 +70,19 @@ select * from user;
 14|kristel|6896ba7b11a62cacffbdaded457c6d92
 15|hei|d8578edf8458ce06fbc5bb76a58c5ca4
 ```
+
+
+```
+[★]$ ls /usr/share/wordlists/rockyou.txt.gz
+/usr/share/wordlists/rockyou.txt.gz
+[★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[★]$ gunzip rockyou.txt.gz
+[★]$ hashcat -m 0 hashes rockyou.txt
+```
+```
+d8578edf8458ce06fbc5bb76a58c5ca4:qwerty                   
+9ad48828b0955513f7cf0f7f6510c8f8:carlos123                
+6845c17d298d95aa942127bdad2ceb9b:peterparker              
+c3601ad2286a4293868ec2a4bc606ba3:victoria123              
+63ed86ee9f624c7b14f1d4f43dc251a5:unicorniosrosados
+```
