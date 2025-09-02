@@ -106,4 +106,37 @@ The authenticity of host 'chemistry.htb (10.129.231.170)' can't be established.
 ED25519 key fingerprint is SHA256:pCTpV0QcjONI3/FCDpSD+5DavCNbTobQqcaz7PC6S8k.
 This key is not known by any other names.
 Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+
+rosa@chemistry:~$ ss -ltnp
+State          Recv-Q         Send-Q                 Local Address:Port                 Peer Address:Port        Process        
+LISTEN         0              128                        127.0.0.1:8080                      0.0.0.0:*                          
+LISTEN         0              4096                   127.0.0.53%lo:53                        0.0.0.0:*                          
+LISTEN         0              128                          0.0.0.0:22                        0.0.0.0:*                          
+LISTEN         0              128                          0.0.0.0:5000                      0.0.0.0:*                          
+LISTEN         0              128                             [::]:22                           [::]:*       
 ```
+
+#### 用SSH转发该端口，以便我们可以从本地机器访问它
+```
+[★]$ ssh -L 8787:127.0.0.1:8080 -N -vv rosa@10.129.231.170
+```
+#### 输入rosa密码之后，登陆浏览器
+
+#### 在本地Terminal进行nmap
+```
+[★]$ nmap -p 8787 -sC -sV 127.0.0.1
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-09-02 05:11 CDT
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.000034s latency).
+
+PORT     STATE SERVICE VERSION
+8787/tcp open  http    aiohttp 3.9.1 (Python 3.9)
+|_http-title: Site Monitoring
+|_http-server-header: Python/3.9 aiohttp/3.9.1
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 11.97 seconds
+```
+
+#### https://github.com/z3rObyte/CVE-2024-23334-PoC
+
