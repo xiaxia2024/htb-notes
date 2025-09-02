@@ -32,6 +32,7 @@ $ nc -lvnp 3000
 #### 在http://alert.htb/的Markdown Viewer 上传markdown.md
 ![万念归心](images/090205.png)
 #### 是个GET请求，Ctrl + C结束nc，可以看到在右下角看到Share Markdown
+![万念归心](images/090200.png)
 #### 警报已经触发。这证实了XSS漏洞
 ### 3.2 操作
 ```
@@ -66,7 +67,6 @@ $ echo "PHByZT48VmlydHVhbEhvc3QgKjo4MD4KICAgIFNlcnZlck5hbWUgYWxlcnQuaHRiCgogICAg
 #### --再
 #### 在Markdown Viewer 上传markdown.md,点击Share Markdown获得不一样的url
 #### 在Contact Us上传url ,信息便会传回$ python3 -m http.server 3000
-![万念归心](images/090214.png)
 #### 使用Base64编码响应
 ![万念归心](images/090215.png)
 #### 得到了路径/var/www/statistics.alert.htb
