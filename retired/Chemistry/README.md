@@ -95,3 +95,15 @@ root:x:0:0:root:/root:/bin/bash
 rosa:x:1000:1000:rosa:/home/rosa:/bin/bash
 app:x:1001:1001:,,,:/home/app:/bin/bash
 ```
+
+```
+[★]$ ssh rosa@chemistry.htb
+ssh: Could not resolve hostname chemistry.htb: Name or service not known
+[★]$ echo '10.129.231.170 chemistry.htb' | sudo tee -a /etc/hosts
+10.129.231.170 chemistry.htb
+[★]$ ssh rosa@chemistry.htb
+The authenticity of host 'chemistry.htb (10.129.231.170)' can't be established.
+ED25519 key fingerprint is SHA256:pCTpV0QcjONI3/FCDpSD+5DavCNbTobQqcaz7PC6S8k.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+```
