@@ -1,7 +1,7 @@
 ## Chemistry
 
-#### CIF 文件
-#### AioHTTP
+#### CIF 文件漏洞：解析CIF文件时任意执行代码
+#### AioHTTP漏洞：处理静态资源请求的方式
 
 ### 1.nmap
 ![喜欢物](images/09020201.png)
@@ -10,6 +10,7 @@
 #### 手动到here时，会在左下角出现路径/static/example.cif
 ![喜欢物](images/09020207.png)
 ### 2.与使用 Python 库解析 CIF 文件相关的漏洞的 2024 CVE ID 是什么:
+#### 解析CIF文件时任意执行代码
 #### https://github.com/materialsproject/pymatgen/security/advisories/GHSA-vgv8-5cpj-qj2f
 #### 创建shell.sh文件,这样的9090是反弹shell的端口
 ```
