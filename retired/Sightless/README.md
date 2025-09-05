@@ -203,8 +203,8 @@ michael@sightless.htb's password:
 Last login: Fri Sep  5 06:39:59 2025 from 10.10.14.80
 michael@sightless:~$
 ```
-#### 使用浏览器Firefox登录10.10.14.80:8081（本机IP+端口)
-##### 这里不需要用户web1,去连接FTP；[ *:21    21端口开放连接反倒连接不上】
+#### 使用浏览器Firefox登录10.10.14.80:8081（本机IP+端口),用户密码
+##### 这里不需要用户web1,去连接FTP；[ *:21    ,21端口开放连接,反倒连接不上】
 ```
 1.利用 Froxlor 的管理员功能 修改 PHP-FPM restart 命令
 2.重启 PHP-FPM → 执行 chmod 4755 /bin/bash
