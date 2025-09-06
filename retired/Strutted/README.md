@@ -53,6 +53,20 @@ mvnw  mvnw.cmd  pom.xml  src  target
         <jackson-data-bind.version>2.14.1</jackson-data-bind.version>
     </properties>
 ```
-#### 加入域名
-```
+#### <struts2.version>6.3.0.1</struts2.version>
+#### Apache Struts2 6.3.0.1
+https://security.netapp.com/advisory/ntap-20250103-0005/
 
+https://y4tacker.github.io/2024/12/16/year/2024/12/Apache-Struts2-%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E9%80%BB%E8%BE%91%E7%BB%95%E8%BF%87-CVE-2024-53677-S2-067/
+#### Apache Struts2 文件上传逻辑绕过(CVE-2024-53677)(S2-067)
+```
+[~/Downloads/strutted/src/main/java/org/strutted/htb][★]$ ls
+AboutAction.java  DatabaseUtil.java  HowAction.java  Upload.java  URLMapping.java  URLUtil.java
+[~/Downloads/strutted/src/main/java/org/strutted/htb][★]$ cat Upload.java
+```
+### 首先我们要上传什么样的文件 
+
+#### 下载一个随机图片生成网站，然后上传
+```
+[★]$ wget https://picsum.photos/200/300 -O test.jpg
+```
