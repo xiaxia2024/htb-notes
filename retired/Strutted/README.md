@@ -1,4 +1,4 @@
-## Strutted
+## Strutted--没通过
 
 ```
 [★]$ nmap -sC -sV 10.129.231.200
