@@ -165,9 +165,26 @@ depix.py  docs             LICENSE  tool_gen_pixelated.py
 [★]$ chmod +x depix.py
 [★]$ ls images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png
 images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png
-[★]$ python3 depix.py -p image-1.png -s ./images/searchimages/debruinseq_notepad_Windows10_closeAndSpaces.png -o output.png
+[★]$ python3 depix.py -p image-1.png -s images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png -o output.png
 
 [★]$ xdg-open output.png
 ```
 
+```
+[★]$ identify -verbose output.png //查看图片大小
+Page geometry: 1241x1754+0+0
+[★]$ convert output.png -crop 500x50+300+450 image6.png
+[★]$ display image6.png
 
+[★]$ convert image6.png -type TrueColor image6_rgb.png
+[★]$ python3 depix.py -p image6_rgb.png -s images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png -o output2.png
+
+[★]$ convert image-1.png -crop 450x50+300+450 image7.png
+[★]$ python3 depix.py -p image7.png -s images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png -o output7.png
+```
+```
+identify -verbose image7_rgb.png | grep -E 'Type|Channels|Depth'
+Type 应该显示 TrueColor
+Channels 应该是 3
+Depth 通常是 8
+```
