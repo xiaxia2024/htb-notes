@@ -231,7 +231,7 @@ user:mtz:rwx
 group::r--
 other::---
 ```
-
+![原来距离昨天的昨天才2天](image/091203.png)
 ```
 mtz@permx:~$ vi /etc/sudoers
 <SNIP>
