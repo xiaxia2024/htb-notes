@@ -255,6 +255,6 @@ other::---
 mtz@permx:~$ vi /etc/sudoers
 ![原来距离昨天的昨天才2天](image/091203.png)
 mtz ALL=(ALL:ALL) NOPASSWD: /bin/bash
-退出vi的按键：esc,Shitf+:,wq,回车
+
 mtz@permx:~$ sudo bash
 ```
