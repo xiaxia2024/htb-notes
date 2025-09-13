@@ -22,7 +22,7 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 listening on [any] 5555 ...
 ```
 #### 浏览器Publish with us
-![我爱死HTB](iamges/09120201.png)
+![我爱死HTB](images/09120201.png)
 ```
 [★]$ nc -lvnp 5555
 listening on [any] 5555 ...
@@ -36,11 +36,11 @@ Connection: keep-alive
 ```
 ### burpsuite拦截
 #### Send
-![我爱死HTB](iamges/09120202.png)
+![我爱死HTB](images/09120202.png)
 #### 回应/static/images/unsplash_photo_1630734277837_ebe62757b6e0.jpeg
 #### 回头看看我们的Netcat侦听器，我们看到我们确实收到了一个回调。这证实了服务器试图连接回我们的本地机器，这表明应用程序是错误的易受服务器端请求伪造（SSRF）的攻击。
 #### 再拦截127.0.0.1:80 Send
-![我爱死HTB](iamges/09120203.png)
+![我爱死HTB](images/09120203.png)
 #### 回应/static/images/unsplash_photo_1630734277837_ebe62757b6e0.jpeg,一样的
 ```
 在这个HTTP请求中，bookfile 和 bookurl 都是表单字段（form fields）。它们是上传文件和数据时使用的名称。以下是这两个字段的作用：
@@ -57,12 +57,12 @@ bookfile:
 ```
 [*]$ wget https://raw.githubusercontent.com/danielmiessler/SecLists/refs/heads/master/Discovery/Infrastructure/common-http-ports.txt
 ```
-![我爱死HTB](iamges/09120204.png)
+![我爱死HTB](images/09120204.png)
 #### 操作2，在Settings->Grep-Match->点击Clear之后添加.jpeg
-![我爱死HTB](iamges/09120205.png)
+![我爱死HTB](images/09120205.png)
 #### 操作3 点击Start attack
 #### 完成后，我们看到所有响应都包含一个.jpeg文件扩展名。现在我们可以写出Python脚本模糊所有开放端口（1-65535）并过滤掉任何不包含.jpeg扩展名，因为使用免费版本的Burp入侵者会很慢
-![我爱死HTB](iamges/09120206.png)
+![我爱死HTB](images/09120206.png)
 #### 该脚本使用请求库发送HTTP请求。它首先创建一个空二进制文件一个名为a的文件，它作为POST请求中bookfile的占位符。这个脚本然后循环通过从1到65534的所有TCP端口。对于每个端口，它打开空文件和为POST请求准备数据，将bookurl设置为本地IP，当前端口为测试。该脚本向http://editorial.htb/upload-cover发送POST请求，其中包括空文件和URL数据。发送请求后，它检查响应是否没有以。结尾.jpeg扩展名。如果接收到的响应不以.jpeg结尾，则打印端口与响应文本一起编号。这有助于识别返回唯一内容的端口。现在,如果我们运行脚本，看到端口5000没有.jpeg扩展名
 ```
 [*]$ vi ssrf2.py
@@ -87,7 +87,7 @@ for port in range(1, 65535):
 Ctrl+C
 ```
 ### 浏览器127.0.0.1:5000 ->Preview,在图标的位置右键下载图片
-![我爱死HTB](iamges/09120207.png)
+![我爱死HTB](images/09120207.png)
 #### 查看文件，通过jq输出以整齐地格式化JSON数据
 ```
 [★]$ file 684b74de-5cce-4df4-80d8-0cd1350e3fff
