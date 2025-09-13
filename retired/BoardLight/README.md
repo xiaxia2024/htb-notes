@@ -110,10 +110,12 @@ $dolibarr_main_db_collation='utf8_unicode_ci';
 <SNIP>
 ```
 #### dolibarrowner\serverfun2$2023!!
+```
 www-data@boardlight:~/html/crm.board.htb/htdocs$ cat /etc/passwd | grep /bin/bash
 <.board.htb/htdocs$ cat /etc/passwd | grep /bin/bash
 root:x:0:0:root:/root:/bin/bash
 larissa:x:1000:1000:larissa,,,:/home/larissa:/bin/bash
+```
 #### 用户larissa
 ### ssh登陆
 ```
