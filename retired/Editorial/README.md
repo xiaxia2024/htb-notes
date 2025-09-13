@@ -1,7 +1,7 @@
 ## Editorial
 
 ```
-[★]$ nmap -sC -sV 10.129.217.28
+[★]$ nmap -sC -sV 10.129.171.132
 PORT   STATE SERVICE VERSION
 22/tcp open  ssh     OpenSSH 8.9p1 Ubuntu 3ubuntu0.7 (Ubuntu Linux; protocol 2.0)
 | ssh-hostkey: 
@@ -12,8 +12,8 @@ PORT   STATE SERVICE VERSION
 |_http-title: Did not follow redirect to http://editorial.htb
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
-[★]$ echo '10.129.217.28 editorial.htb' | sudo tee -a /etc/hosts
-10.129.217.28 editorial.htb
+[★]$ echo '10.129.171.132 editorial.htb' | sudo tee -a /etc/hosts
+10.129.171.132 editorial.htb
 ```
 
 ### 测试浏览器是否相应本地
@@ -52,7 +52,7 @@ bookfile:
 这个字段的 filename 是空的，表示没有实际文件被上传，或者是文件上传过程中存在问题。也有可能是该请求用来探测系统对文件上传的处理。
 ```
 ### 进一步,双击右键Send to Intruder
-#### 点击添加§。
+#### 点击添加§,127.0.0.1:§80§
 #### 在localhost上查找任何开放的端口,在load导入下面这个文件
 ```
 [*]$ wget https://raw.githubusercontent.com/danielmiessler/SecLists/refs/heads/master/Discovery/Infrastructure/common-http-ports.txt
