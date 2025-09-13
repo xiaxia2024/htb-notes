@@ -268,6 +268,10 @@ r.clone_from(url_to_clone, 'new_changes', multi_options=["-c protocol.ext.allow=
 ```
 #### 这个脚本中有趣的部分是下面这行，它表明它导入了Repo类从git模块：from git import Repo
 代码导入了 Repo 类，Repo 是 GitPython 库的一部分，用于与 Git 仓库进行交互
+```
+prod@editorial:/home/dev/apps$ pip freeze | grep GitPython
+GitPython==3.1.29
+```
 ### 漏洞搜索from git import Repo
 https://nvd.nist.gov/vuln/detail/CVE-2022-24439
 #### 描述 由于用户输入验证不当，gitpython 软件包的所有版本都存在远程代码执行 (RCE) 漏洞，攻击者可以利用该漏洞在 clone 命令中注入恶意构建的远程 URL。攻击者可以利用此漏洞，是因为该库在未对输入参数进行充分过滤的情况下对 git 进行外部调用。
