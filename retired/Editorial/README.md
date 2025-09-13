@@ -183,52 +183,7 @@ Changes not staged for commit:
 	deleted:    app_editorial/static/css/bootstrap-grid.css
 	deleted:    app_editorial/static/css/bootstrap-grid.css.map
 	deleted:    app_editorial/static/css/bootstrap-grid.min.css
-	deleted:    app_editorial/static/css/bootstrap-grid.min.css.map
-	deleted:    app_editorial/static/css/bootstrap-grid.rtl.css
-	deleted:    app_editorial/static/css/bootstrap-grid.rtl.css.map
-	deleted:    app_editorial/static/css/bootstrap-grid.rtl.min.css
-	deleted:    app_editorial/static/css/bootstrap-grid.rtl.min.css.map
-	deleted:    app_editorial/static/css/bootstrap-reboot.css
-	deleted:    app_editorial/static/css/bootstrap-reboot.css.map
-	deleted:    app_editorial/static/css/bootstrap-reboot.min.css
-	deleted:    app_editorial/static/css/bootstrap-reboot.min.css.map
-	deleted:    app_editorial/static/css/bootstrap-reboot.rtl.css
-	deleted:    app_editorial/static/css/bootstrap-reboot.rtl.css.map
-	deleted:    app_editorial/static/css/bootstrap-reboot.rtl.min.css
-	deleted:    app_editorial/static/css/bootstrap-reboot.rtl.min.css.map
-	deleted:    app_editorial/static/css/bootstrap-utilities.css
-	deleted:    app_editorial/static/css/bootstrap-utilities.css.map
-	deleted:    app_editorial/static/css/bootstrap-utilities.min.css
-	deleted:    app_editorial/static/css/bootstrap-utilities.min.css.map
-	deleted:    app_editorial/static/css/bootstrap-utilities.rtl.css
-	deleted:    app_editorial/static/css/bootstrap-utilities.rtl.css.map
-	deleted:    app_editorial/static/css/bootstrap-utilities.rtl.min.css
-	deleted:    app_editorial/static/css/bootstrap-utilities.rtl.min.css.map
-	deleted:    app_editorial/static/css/bootstrap.css
-	deleted:    app_editorial/static/css/bootstrap.css.map
-	deleted:    app_editorial/static/css/bootstrap.min.css
-	deleted:    app_editorial/static/css/bootstrap.min.css.map
-	deleted:    app_editorial/static/css/bootstrap.rtl.css
-	deleted:    app_editorial/static/css/bootstrap.rtl.css.map
-	deleted:    app_editorial/static/css/bootstrap.rtl.min.css
-	deleted:    app_editorial/static/css/bootstrap.rtl.min.css.map
-	deleted:    app_editorial/static/images/login-background.jpg
-	deleted:    app_editorial/static/images/pexels-janko-ferlic-590493.jpg
-	deleted:    app_editorial/static/images/pexels-min-an-694740.jpg
-	deleted:    app_editorial/static/js/bootstrap.bundle.js
-	deleted:    app_editorial/static/js/bootstrap.bundle.js.map
-	deleted:    app_editorial/static/js/bootstrap.bundle.min.js
-	deleted:    app_editorial/static/js/bootstrap.bundle.min.js.map
-	deleted:    app_editorial/static/js/bootstrap.esm.js
-	deleted:    app_editorial/static/js/bootstrap.esm.js.map
-	deleted:    app_editorial/static/js/bootstrap.esm.min.js
-	deleted:    app_editorial/static/js/bootstrap.esm.min.js.map
-	deleted:    app_editorial/static/js/bootstrap.js
-	deleted:    app_editorial/static/js/bootstrap.js.map
-	deleted:    app_editorial/static/js/bootstrap.min.js
-	deleted:    app_editorial/static/js/bootstrap.min.js.map
-	deleted:    app_editorial/templates/about.html
-	deleted:    app_editorial/templates/index.html
+	<SNIP>
 	deleted:    app_editorial/templates/upload.html
 
 no changes added to commit (use "git add" and/or "git commit -a")
