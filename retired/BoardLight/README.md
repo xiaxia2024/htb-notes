@@ -33,4 +33,13 @@ Nmap done: 1 IP address (1 host up) scanned in 7.15 seconds
 [★]$ ffuf -w /usr/share/wordlists/seclists/Discovery/DNS/bitquark-subdomains-top100000.txt:FUZZ -u http://board.htb/ -H 'Host: FUZZ.board.htb' -fs 15949
 
  crm                     [Status: 200, Size: 6360, Words: 397, Lines: 150, Duraion: 826ms]
+
+[★]$ sudo sed -i '/10.129.231.37 board.htb/ s/$/ crm.board.htb/' /etc/hosts
 ```
+![距离那天第三天](images/091302.png)
+#### 尝试admin/admin
+![距离那天第三天](images/091303.png)
+### 版本漏洞搜索 Dolibarr version 17.0.0
+https://nvd.nist.gov/vuln/detail/CVE-2023-30253
+#### 描述17.0.1 之前的 Dolibarr 允许经过身份验证的用户通过大写操作执行远程代码：在注入的数据中使用 <?PHP 而不是 <?php
+
