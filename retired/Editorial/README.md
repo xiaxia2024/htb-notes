@@ -246,7 +246,6 @@ Matching Defaults entries for prod on editorial:
 User prod may run the following commands on editorial:
     (root) /usr/bin/python3
         /opt/internal_apps/clone_changes/clone_prod_change.py *
-prod@editorial:/home/dev/apps$ 
 ```
 #### 输出显示了用户的一些默认设置，例如env_reset执行命令前清理用户环境。secure_path设置安全路径可执行文件。它还指示prod可以作为根用户运行哪些命令。在这种情况下，用户prod可以用root权限运行Python脚本。
 ### Privilege Escalation 特权升级
@@ -268,6 +267,7 @@ r = Repo.init('', bare=True)
 r.clone_from(url_to_clone, 'new_changes', multi_options=["-c protocol.ext.allow=always"])
 ```
 #### 这个脚本中有趣的部分是下面这行，它表明它导入了Repo类从git模块：from git import Repo
+代码导入了 Repo 类，Repo 是 GitPython 库的一部分，用于与 Git 仓库进行交互
 ### 漏洞搜索from git import Repo
 https://nvd.nist.gov/vuln/detail/CVE-2022-24439
 #### 描述 由于用户输入验证不当，gitpython 软件包的所有版本都存在远程代码执行 (RCE) 漏洞，攻击者可以利用该漏洞在 clone 命令中注入恶意构建的远程 URL。攻击者可以利用此漏洞，是因为该库在未对输入参数进行充分过滤的情况下对 git 进行外部调用。
