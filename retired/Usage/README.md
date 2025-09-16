@@ -1,4 +1,6 @@
-## Usage
+## Usage 没通过
+
+### burpsuite抓取的POST，Connection没有close的，可能版本升级了 | 其二email的 格式有有要求的，不会是简单的test | 所以sqlmap不成功 不往下
 
 ```
 [*]$ nmap -sC -sV 10.129.146.187
@@ -48,7 +50,7 @@ SELECT * FROM users WHERE username = 'test' AND password = '123';
 SELECT * FROM users WHERE username = 'test' OR 1=1;-- -' AND password = '123';
 ```
 #### 因为 OR 1=1 永远为真，这样可能导致数据库返回所有用户的信息。
-### burpsuite本地拦截login的登录，这很重要！
+### burpsuite本地拦截
 ```
 POST /forget-password HTTP/1.1
 Host: usage.htb
@@ -115,4 +117,4 @@ it is recommended to perform only basic UNION tests if there is not at least one
 
 [02:54:57] [WARNING] if UNION based SQL injection is not detected, please consider and/or try to force the back-end DBMS (e.g. '--dbms=mysql') 
 ```
-#### 看到一个非默认数据库，即usage_blog。我们继续枚举它的表，使用——tables标志:
+#### 并没有看到一个非默认数据库，即usage_blog
