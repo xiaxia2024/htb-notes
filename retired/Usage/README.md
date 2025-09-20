@@ -244,7 +244,7 @@ https://github.com/IDUZZEL/CVE-2023-24249-Exploit
 ![918空鸣918台风918忌日](images/091809.png)
 #### 在按下Submit之前，我们打开BurpSuite代理来拦截上传请求。点击Submit，直接联网
 ![918空鸣918台风918忌日](images/091810.png)
-#### 直接在raws上修改,只在shell.jpg后面加上.php；Forword；浏览器就有了：
+#### 直接在raw上修改,只在shell.jpg后面加上.php；Forword；浏览器就有了：
 ![918空鸣918台风918忌日](images/091811.png)
 #### 一旦我们转发请求，图像上传成功，我们可以复制链接到它所在的位置存储
 #### 需要在新的连接输入：http ://admin.usage.htb/uploads/images/shell.jpg.shell?melo=id
