@@ -1,4 +1,4 @@
-<img width="1354" height="369" alt="截屏2025-09-18 20 38 33" src="https://github.com/user-attachments/assets/535a012a-9eed-4c59-a564-e235d64ad5aa" />## Usage 没通过
+## Usage 没通过
 
 ### 500 是 HTTP 状态码，叫 500 Internal Server Error，表示服务器在处理请求时内部出错（代码崩溃、后端异常、资源耗尽等）
 #### 其一什么时候改用 Connection: close，服务器在连接复用时表现异常（比如连接复用导致响应错乱、状态混淆或500错误）
