@@ -242,9 +242,10 @@ https://github.com/IDUZZEL/CVE-2023-24249-Exploit
 [★]$ mv shell.php shell.jpg
 ```
 ![918空鸣918台风918忌日](images/091808.png)
-#### 在按下Submit之前，我们打开BurpSuite代理来拦截上传请求。
+#### 在按下Submit之前，我们打开BurpSuite代理来拦截上传请求。点击Submit，直接联网
 ![918空鸣918台风918忌日](images/091809.png)
-#### Ctrl + R,Shift + Ctrl + R,只在shell.jpg后面加上.php，Send；之后让浏览器连接上网，再Forword；浏览器就有了：
+#### 直接在raws上修改,只在shell.jpg后面加上.php；Forword；浏览器就有了：
 ![918空鸣918台风918忌日](images/091810.png)
 #### 一旦我们转发请求，图像上传成功，我们可以复制链接到它所在的位置存储
-#### 通过在新选项卡中打开该链接，我们可以通过附加？甜瓜={命令}到URL。例如，要运行id命令，我们访问：
+#### 需要在新的连接输入：http ://admin.usage.htb/uploads/images/shell.jpg.shell?melo=id
+![必须像正常一样生活](images/092001.png)
