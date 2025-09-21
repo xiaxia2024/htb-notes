@@ -23,38 +23,7 @@ PORT     STATE SERVICE VERSION
 |     Connection: close
 |     <!DOCTYPE html>
 |     <html lang="en">
-|     <head>
-|     <meta charset="UTF-8">
-|     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-|     <title>Under Construction</title>
-|     <style>
-|     body {
-|     font-family: 'Arial', sans-serif;
-|     background-color: #f7f7f7;
-|     margin: 0;
-|     padding: 0;
-|     display: flex;
-|     justify-content: center;
-|     align-items: center;
-|     height: 100vh;
-|     .container {
-|     text-align: center;
-|     background-color: #fff;
-|     border-radius: 10px;
-|     box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
-|   RTSPRequest: 
-|     <!DOCTYPE HTML>
-|     <html lang="en">
-|     <head>
-|     <meta charset="utf-8">
-|     <title>Error response</title>
-|     </head>
-|     <body>
-|     <h1>Error response</h1>
-|     <p>Error code: 400</p>
-|     <p>Message: Bad request version ('RTSP/1.0').</p>
-|     <p>Error code explanation: 400 - Bad request syntax or unsupported method.</p>
-|     </body>
+ <SNIP>
 |_    </html>
 ```
 #### 访问浏览器5000端口
