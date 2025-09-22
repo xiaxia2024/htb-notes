@@ -1,4 +1,17 @@
 ## Perfection
+
+#### 主知识1识别hash标识符
+```
+[★]$ while read -r H; do printf "%s\n" "$H"; hashid "$H"; echo; done < hashes.txt > hash_identify_results.txt
+```
+#### 主知识2
+```
+ERB (Embedded Ruby)
+Ruby 最常见的模板引擎（Rails 默认）。
+使用 <% %>、<%= %> 语法，而不是 {{ }}。
+示例：
+<h1>Hello <%= @user.name %></h1>
+```
 ```
 [★]$ nmap 10.129.229.121 -sC -sV
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-09-21 09:54 CDT
