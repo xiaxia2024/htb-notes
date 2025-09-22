@@ -12,6 +12,7 @@ Ruby 最常见的模板引擎（Rails 默认）。
 示例：
 <h1>Hello <%= @user.name %></h1>
 ```
+#### 开始扫描
 ```
 [★]$ nmap 10.129.229.121 -sC -sV
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-09-21 09:54 CDT
