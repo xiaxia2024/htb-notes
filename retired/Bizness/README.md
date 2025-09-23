@@ -77,9 +77,20 @@ sudo tcpdump -i 2 icmp
 ```
 #### 然后，我们使用以下参数运行该漏洞：
 ```
-推荐解决办法 A：安装/切换到 OpenJDK 11（Debian/Kali）
-sudo apt update
-sudo apt install openjdk-11-jre-headless -y
-# 如果你也需要编译功能，改成 openjdk-11-jdk-headless
-sudo update-alternatives --config java   # 按提示选 11 的条目
+[★]$ sudo apt install openjdk-11-jre-headless -y
+[★]$ sudo update-alternatives --config java
+There are 2 choices for the alternative java (providing /usr/bin/java).
+
+  Selection    Path                                         Priority   Status
+------------------------------------------------------------
+* 0            /usr/lib/jvm/java-17-openjdk-amd64/bin/java   1711      auto mode
+  1            /usr/lib/jvm/java-11-openjdk-amd64/bin/java   1111      manual mode
+  2            /usr/lib/jvm/java-17-openjdk-amd64/bin/java   1711      manual mode
+
+Press <enter> to keep the current choice[*], or type selection number: 1
+update-alternatives: using /usr/lib/jvm/java-11-openjdk-amd64/bin/java to provide /usr/bin/java (java) in manual mode
+[★]$ java -version
+openjdk version "11.0.22" 2024-01-16
+OpenJDK Runtime Environment (build 11.0.22+7-post-Debian-2)
+OpenJDK 64-Bit Server VM (build 11.0.22+7-post-Debian-2, mixed mode, sharing)
 ```
