@@ -2,6 +2,7 @@
 
 #### Apache OFBiz 默认数据库：
 ##### OFBiz 自带一个 Apache Derby（嵌入式 Java 数据库），作为开箱即用的默认数据库
+#### 使用python3转十六进制
 ```
 [★]$ nmap 10.129.96.208 -sC -sV
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-09-22 08:52 CDT
