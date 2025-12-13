@@ -65,6 +65,7 @@ Host script results:
 |_    Message signing enabled but not required
 ```
 #### 访问80没有什么，访问端口3000,点击Expore
+![图片](image/121301.png)
 #### 点击Explore，我们会看到一个名为dev-scripts的存储库，它属于ellen.freeman。的存储库是用Python编写的。
 #### 在dev-scripts存储库中，我们看到一个名为repos.py的文件
 #### 回顾rerepository .py文件的内容，我们注意到个人访问令牌是硬编码的直接放入脚本中。
@@ -150,5 +151,6 @@ def format_domain(domain):
 //-28,8：表示旧文件（修改前）从第 28 行开始，有 8 行内容。
 //+26,13：表示新文件（修改后）从第 26 行开始，有 13 行内容。
 ```
-
+### 操作_Update repos.py
+![图片](image/121302.png)
 
