@@ -153,4 +153,57 @@ def format_domain(domain):
 ```
 ### 操作_Update repos.py
 ![图片](image/121302.png)
+```
+[★]$ python3 repo.py http://10.129.35.179:3000
+Repositories:
+- ellen.freeman/dev-scripts
+- ellen.freeman/website
+```
+```
+[★]$ git clone http://43ce39bb0bd6bc489284f2905f033ca467a6362f@10.129.35.179:3000/ellen.freeman/website.git
+Cloning into 'website'...
+remote: Enumerating objects: 165, done.
+remote: Counting objects: 100% (165/165), done.
+remote: Compressing objects: 100% (128/128), done.
+remote: Total 165 (delta 35), reused 153 (delta 31), pack-reused 0
+Receiving objects: 100% (165/165), 7.16 MiB | 1.56 MiB/s, done.
+Resolving deltas: 100% (35/35), done.
+[★]$ ls
+repo.py  website
+[★]$ cd website
+[★]$ ls
+assets  changelog.txt  index.html  readme.md
+[★]$ cat readme.md
+# New Project Website
 
+CI/CD integration is now active - changes to the repository will automatically be deployed to the webserver
+```
+#### CI/CD集成现在是活动的——对存储库的更改将自动部署到web服务器
+#### 这表明对该存储库的任何更改都会自动更改托管的网站。如果我们查看这个目录下的index.html页面，我们找到了网站的HTML内容之前。这意味着如果我们能够提交到存储库，它将被自动推送到的网站。我们通过创建一个简单的HTML文件来进行测试。
+```
+[★]$ echo '<hl>test</hl>' > test.html
+然后使用git add添加新文件，并配置用户详细信息。
+[★]$ git add test.html
+[★]$ git config --global user.name "ellen.freeman"
+[★]$ git config --global user.email "ellen.freeman"
+然后，我们提交阶段性的更改
+[★]$ git commit -m "test"
+[main 2e3bbdf] test
+ 1 file changed, 1 insertion(+)
+ create mode 100644 test.html
+最后，我们将提交推到远程存储库，这将触发自动部署。
+[★]$ git push
+Enumerating objects: 4, done.
+Counting objects: 100% (4/4), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (3/3), 264 bytes | 264.00 KiB/s, done.
+Total 3 (delta 1), reused 0 (delta 0), pack-reused 0
+remote: . Processing 1 references
+remote: Processed 1 references in total
+To http://10.129.35.179:3000/ellen.freeman/website.git
+   73cdcc1..2e3bbdf  main -> main
+现在，当我们向服务器运行curl请求时，我们看到新文件正在被提供并呈现为预期。
+[★]$ curl http://10.129.35.179/test.html
+<hl>test</hl>
+```
