@@ -68,7 +68,7 @@ Host script results:
 ![图片](image/121301.png)
 #### 点击Explore，我们会看到一个名为dev-scripts的存储库，它属于ellen.freeman。的存储库是用Python编写的。
 #### 在dev-scripts存储库中，我们看到一个名为repos.py的文件
-#### 回顾rerepository .py文件的内容，我们注意到个人访问令牌是硬编码的直接放入脚本中。
+#### 回顾repos.py文件的内容，我们注意到个人访问令牌是硬编码的直接放入脚本中。
 ```
 //这个脚本的作用是通过 Gitea API 获取用户的仓库列表。
 import requests //用于发送 HTTP 请求（GET/POST 等）
