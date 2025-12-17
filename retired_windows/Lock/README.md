@@ -28,7 +28,7 @@ meterpreter //交互式内存马
    ↓
 [可选：meterpreter 控制]
 ```
-
+```
 [★]$ nmap -sC -sV 10.129.234.64
 PORT     STATE SERVICE       VERSION
 80/tcp   open  http          Microsoft IIS httpd 10.0
