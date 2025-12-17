@@ -1,6 +1,34 @@
 ## Lock
 
+| 类型      |用到               |
+| ------- | -------------------- |
+| 漏洞      | CVE-2023-49147       |
+| 错误配置    | mRemoteNG config.xml |
+| 凭据复用    | RDP 登录               |
+| 横向 / 提权 | SYSTEM → RDP         |
+
 ```
+msfconsole -q -x " " //监听器（Listener）
+multi/handler //万用监听器
+meterpreter //交互式内存马
+```
+### 攻击链
+```
+[低权用户]
+   ↓
+[CVE-2023-49147 本地提权]
+   ↓
+[SYSTEM 权限]
+   ↓
+[读取 mRemoteNG config.xml]
+   ↓
+[解密 RDP 凭据]
+   ↓
+[RDP 登录]
+   ↓
+[可选：meterpreter 控制]
+```
+
 [★]$ nmap -sC -sV 10.129.234.64
 PORT     STATE SERVICE       VERSION
 80/tcp   open  http          Microsoft IIS httpd 10.0
