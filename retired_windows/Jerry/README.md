@@ -1,4 +1,8 @@
 ## Jerry
+```
+Service discovery → Tomcat Manager reachable → Credential enumeration → tomcat:s3cret 成功登录 → WAR 上传（功能滥用）
+via exploit/multi/http/tomcat_mgr_upload → Java meterpreter 启动 → 提权（系统上下文）。
+```
 
 ```
 [★]$ nmap -sC -sV 10.129.136.9
