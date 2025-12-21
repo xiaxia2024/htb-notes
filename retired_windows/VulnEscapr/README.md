@@ -33,7 +33,7 @@ Host script results:
 这条linux命令相当于：
 【1】在本机MacBook Pro 搜索OpenVPN Connect macOS 下载OpenVPN Connect.app 完成导入.ovpn文件
 
-【2】打开Parallels Desktop的win11, Win + R：输入mstsc,连接远程计算机
+【2】打开Parallels Desktop的win11, Win + R：输入mstsc,连接远程桌面连接
 在连接时，我们看到一条消息，说明我们可以使用用户名KioskUser0和没有密码。
 ```
 #### Windows Assigned Access（Kiosk）逃逸模型
