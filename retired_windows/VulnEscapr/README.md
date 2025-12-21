@@ -29,10 +29,14 @@ Host script results:
 #### 这题要在 Windows 环境下做！！！！(不困了）
 ```
 [★]$ xfreerdp /v:10.129.234.51 /dynamic-resolution -sec-nla
+
+这条linux命令相当于：
+【1】在本机MacBook Pro 搜索OpenVPN Connect macOS 下载OpenVPN Connect.app 完成导入.ovpn文件
+
+【2】打开Parallels Desktop的win11, Win + R：输入mstsc,连接远程计算机
+在连接时，我们看到一条消息，说明我们可以使用用户名KioskUser0和没有密码。
 ```
 #### Windows Assigned Access（Kiosk）逃逸模型
-#### 在连接时，我们看到一条消息，说明我们可以使用用户名KioskUser0和没有密码。
-
 #### 我们指定了上面的用户名，我们还注意到机器语言被设置为韩语。后输入用户名，我们按回车键，就登录到远程机器上了。
 ### Foothold
 #### 登录后，我们注意到背景提到釜山世博会，我们是在一个非常有限的环境欠没有任务栏或其他图标。这台机器可能是一台计算机，用于在其中一个信息亭举行会议。
