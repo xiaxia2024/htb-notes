@@ -35,6 +35,10 @@ Host script results:
 
 【2】打开Parallels Desktop的win11, Win + R：输入mstsc,连接远程桌面连接
 在连接时，我们看到一条消息，说明我们可以使用用户名KioskUser0和没有密码。
+
+【3】按键fn + command + X
+可以输入cmd ，为了测试有反应
+主要输入file:///C:// 回车 ，有个URL，继续输入file:///C://
 ```
 #### Windows Assigned Access（Kiosk）逃逸模型
 #### 我们指定了上面的用户名，我们还注意到机器语言被设置为韩语。后输入用户名，我们按回车键，就登录到远程机器上了。
@@ -47,3 +51,40 @@ Host script results:
 #### 就是我们现在看到的那个。其中一种绕过绕过了默认的file://方案在Edge上用于浏览文件系统。让我们输入file:///C://作为URL
 
 #### 我们注意到一个名为_admin的文件夹，并为以后注意它。暂时，让我们导航到哪里PowerShell位于C:\Windows\System32\WindowsPowerShell\v1.0\。
+
+#### 打开资源管理器后，我们注意到我们无法导航到系统上的其他文件夹，然而，我们看到powershell.exe确实被“下载”并放置在当前用户的下载文件夹中。我们还知道，唯一允许运行的应用程序是Microsoft Edge和可执行程序Edge被称为msedge.exe，所以让我们尝试将powershell.exe重命名为msedge.exe，看看是否可以绕过现有的限制。注意：Windows默认情况下省略文件后缀，因此只需将powershell重命名为msedge即可工作
+
+
+### Privilege Escalation
+#### 在这个文件夹中，我们看到了几个有趣的文件夹以及一个名为profiles.xml的文件。
+
+
+#### XML文件显示此文件夹由Remote Desktop Plus使用，该应用程序提供围绕默认Windows RDP协议的额外功能。该文件还保存了一个加密的密码。我们可以在C:\Program Files （x86）中找到这个应用程序。让我们运行一下。
+
+
+#### 应用程序似乎没有任何现有的配置，但是有一个Manage Profiles按钮。让我们点击它。
+
+#### 似乎没有加载任何配置文件，但我们可以单击Import和Export，然后单击Import配置文件来尝试加载我们之前找到的配置文件。
+
+#### 我们很快就记起，我们无法访问文件系统的其余部分，因此我们必须先进行复制将包含概要文件的_admin文件夹放到Downloads文件夹中。让我们使用现有的PowerShell窗口。
+```
+PS C:\Program Files (x86)\Remote Desktop Plus> copy -r C:\_admin\ C:\Users\kioskUser0\Downloads\
+```
+#### 复制完文件夹后，让我们从Remote Desktop Plus加载profiles.xml
+
+#### 成功导入配置文件。
+#### 如果我们单击Edit按钮，我们可以看到这个配置文件名为admin，并持有远程密码连接，可能是我们之前看到的加密密码
+
+#### 我们无法看到实际的密码，因为它在应用程序窗口中被替换为*，但是，有一个一个叫做BulletsPassView的程序，我们可以用它来暴露隐藏在后面的密码Windows中的星星。让我们从本地下载这个应用程序，并使用PowerShell从远程机器
+https://www.nirsoft.net/utils/bullets_password_view.html
+```
+MacBook-Pro Downloads % unzip bulletspassview.zip 
+Archive:  bulletspassview.zip
+  inflating: BulletsPassView.exe     
+  inflating: BulletsPassView.chm     
+  inflating: readme.txt              
+MacBook-Pro Downloads % python3 -m http.server 8000
+Serving HTTP on :: port 8000 (http://[::]:8000/) ...
+
+```
+#### 在远程机器的C:\目录下创建一个名为temp的文件夹后，让我们在本地启动一个Python web服务器，在我们下载BulletsPassView的同一个文件夹中。
