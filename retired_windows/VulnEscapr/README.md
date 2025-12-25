@@ -111,3 +111,11 @@ Mode                 LastWriteTime         Length Name
 PS C:\temp> ./BPV.exe
 ```
 #### 程序显示隐藏密码为Twisting3021。注意：为了正确显示密码，远程桌面Plus需要在编辑中前面展示的配置文件页面。我们可以推测这个密码属于名为admin的用户。
+
+```
+Secure=False 的真实含义
+在 Remote Desktop Plus 里：
+Secure=True → DPAPI（用户 + 机器绑定）
+Secure=False → 程序内置密钥对称加密
+密钥是写死在程序里的
+```
