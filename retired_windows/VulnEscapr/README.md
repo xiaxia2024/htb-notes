@@ -68,8 +68,6 @@ Host script results:
 
 #### 我们很快就记起，我们无法访问文件系统的其余部分，因此我们必须先进行复制将包含概要文件的_admin文件夹放到Downloads文件夹中。让我们使用现有的PowerShell窗口。
 ```
-PS C:\Program Files (x86)\Remote Desktop Plus> copy -r C:\_admin\ C:\Users\kioskUser0\Downloads\
-
 PS C:\Users\kioskUser0\Downloads> cd 'C:\Program Files (x86)\Remote Desktop Plus'  
 PS C:\Program Files (x86)\Remote Desktop Plus> copy -r C:\_admin\ C:\Users\kioskUser0\Downloads\
 PS C:\Program Files (x86)\Remote Desktop Plus> dir
