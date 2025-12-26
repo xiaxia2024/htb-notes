@@ -85,11 +85,11 @@ PS C:\Program Files (x86)\Remote Desktop Plus> ./rdp.exe
 #### 我们无法看到实际的密码，因为它在应用程序窗口中被替换为*，但是，有一个一个叫做BulletsPassView的程序，我们可以用它来暴露隐藏在后面的密码Windows中的星星。让我们从本地下载这个应用程序，并使用PowerShell从远程机器
 https://www.nirsoft.net/utils/bullets_password_view.html
 ```
-MacBook-Pro Downloads % unzip bulletspassview.zip 
-Archive:  bulletspassview.zip
+MacBook-Pro Downloads % unzip bulletspassview-x64.zip 
+Archive:  bulletspassview-x64.zip
   inflating: BulletsPassView.exe     
   inflating: BulletsPassView.chm     
-  inflating: readme.txt              
+  inflating: readme.txt            
 MacBook-Pro Downloads % python3 -m http.server 8000
 Serving HTTP on :: port 8000 (http://[::]:8000/) ...
 
