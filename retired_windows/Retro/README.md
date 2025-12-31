@@ -62,7 +62,7 @@ Host script results:
 |_clock-skew: mean: 2s, deviation: 0s, median: 2s
 
 ```
-#### 加入域名
+#### 加入域名 完全限定域名FQDN
 ```
 [★]$ echo "10.129.234.44 retro.vl dc.retro.vl" | sudo tee -a /etc/hosts
 ```
