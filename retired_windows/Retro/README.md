@@ -5,6 +5,18 @@ certipy auth -pfx administrator.pfx
 KDC_ERR_PADATA_TYPE_NOSUPP //不支持你用这种证书方式走 Kerberos;
 原因：域控配置不支持 PKINIT（证书 Kerberos 登录）
 ```
+```
+CN = DC.retro.vl
+↓
+确认这是域控
+↓
+默认尝试：
+  - LDAP / LDAPS
+  - Kerberos
+  - ADCS
+↓
+certipy find
+```
 #### 弱密码 / 预创建计算机账户 → 重置机器账户密码 → ADCS ESC1 → 伪造管理员证书 → LDAP Shell → 新建域管 → dump 全域 hash
 ```
 倒推：
