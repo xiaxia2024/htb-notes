@@ -131,7 +131,8 @@ SMB         10.129.234.44   445    DC               SYSVOL                      
 SMB         10.129.234.44   445    DC               Trainees        READ
 ```
 #### 使用smbclient连接到共享
-```\[★]$ smbclient //retro.vl/Trainees -U 'Guest'
+```
+[★]$ smbclient //retro.vl/Trainees -U 'Guest'
 Password for [WORKGROUP\Guest]:
 Try "help" to get a list of possible commands.
 smb: \> ls
