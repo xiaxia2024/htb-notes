@@ -218,6 +218,7 @@ Starting Neo4j.
 ```
 #### 输入帐号 neo4j 密码neo4j
 #### 点击右上角Upload Data, 然后导入数据 ‘使用Bloodhound枚举Active Directory环境’产生的7个.json文件
+![图片](image/2026010702.png)
 #### 数据导入完成之后搜索用户p.agila
 ![图片](image/2026010703.png)
 #### 要查看该用户的对象控件，我们导航到节点信息->出站对象控制->传递对象控制。Node Info -> Outbound Object Control -> Transitive Object Control 
