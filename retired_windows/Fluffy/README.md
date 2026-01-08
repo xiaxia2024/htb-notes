@@ -228,12 +228,13 @@ Starting Neo4j.
 ![图片](image/2026010705.png)
 ```
 从这个输出中，有两件事需要注意。
-1. p.a agila用户是服务帐户管理器组的一部分，该组具有GenericAll ACL在服务帐户组上。
-2. 服务帐户组对ca svc用户具有GenericWrite ACL，该用户属于证书发布者组。
-进一步枚举服务帐户（按照上述方法查看传递对象控件Transitive Object Control ）显示，该组不仅在ca svc上有GenericWrite，而且在其他两个帐户上也有GenericWrite。
-Winrm SVC和ldap SVC
+1. p.agila用户是服务帐户管理器组的一部分，该组具有GenericAll ACL在服务帐户组上。
+2. 服务帐户组对ca_svc用户具有GenericWrite ACL，该用户属于证书发布者组。
+进一步枚举服务帐户（按照上述方法查看传递对象控件Transitive Object Control ）显示，
+该组不仅在ca_svc上有GenericWrite，而且在其他两个帐户上也有GenericWrite。
+Winrm_SVC和ldap_SVC
 
-还应该注意的是，winrm svc用户是远程管理用户的一部分，它允许使用WinRM连接到目标。
+还应该注意的是，winrm_svc用户是远程管理用户的一部分，它允许使用WinRM连接到目标。
 要利用这一点，必须使用以下攻击路径。
 首先，应该使用GenericAll ACL将我们自己添加到服务帐户中组。
 为此，让我们使用bloodyAD。
