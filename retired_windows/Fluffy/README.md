@@ -337,13 +337,11 @@ ADCS        10.129.232.88   389    DC01             Found PKI Enrollment Server:
 ADCS        10.129.232.88   389    DC01             Found CN: fluffy-DC01-CA
 ```
 #### '(objectClass=pKIEnrollmentService)'这是一个 LDAP 搜索条件,在整个 AD 里，找所有 证书颁发机构（CA）对象
-```
-只要能在 LDAP 里搜到这个 objectClass，就说明
+#### 只要能在 LDAP 里搜到这个 objectClass，就说明
 | 能说明什么           | 是否成立 |
 | --------------- | ---- |
 | 域内启用了 AD CS     | ✅    |
 | 存在至少一个 CA       | ✅    |
 | CA 对象可被 LDAP 枚举 | ✅    |
 | 有可能存在 ESC 漏洞    | ✅    |
-```
 #### 由于我们知道ADCS安装在域控制器上，我们可以使用证书来查找易受攻击的漏洞模板。为此，我们必须使用检索到的ca_svc用户的RC4散列早些时候。
