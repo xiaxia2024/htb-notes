@@ -364,7 +364,7 @@ Windows 安全中心
 ⏱ 只在你运行工具时关闭，用完再开
 ```
 ```
-PS C:\Users\11xiaohei\Desktop> echo $env:PROCESSOR_ARCHITECTURE
+PS C:\Users\Desktop> echo $env:PROCESSOR_ARCHITECTURE
 ARM64
 ```
 #### ARM64 + Defender + x64 红队工具 = 地狱模式
