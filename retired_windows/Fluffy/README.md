@@ -226,6 +226,8 @@ Starting Neo4j.
 ![图片](image/2026010704.png)
 #### 点击[SERVICE ACCOUNTS@FLUFFY.HTB]-> Transitive Object Control 
 ![图片](image/2026010705.png)
+#### service account managers该群体对其他群体拥有哪些ACE优势service accounts？
+#### GenericAll（最高价值）含义：对 Service Accounts 对象拥有完全控制权
 ```
 从这个输出中，有两件事需要注意。
 1. p.agila用户是服务帐户管理器组的一部分，该组具有GenericAll ACL在服务帐户组上。
