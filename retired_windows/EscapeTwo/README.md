@@ -238,6 +238,39 @@ sa@sequel.htb:MSSQLP@ssw0rd!
 //看到邮箱 → 保存到变量 ； next：继续读下一行 ； 此时 awk 进入“等待 password”状态
 //至少 6 位； 包含特殊字符（弱排除名字）； 并且必须已经捕获 email； 防止串到下一个用户
 ```
+#### 用户和密码分开
+```
+[★]$ awk '
+/@sequel\.htb$/ {
+    email = $0
+    pass = ""
+    next
+} 
+
+/^[A-Za-z0-9@!#\$%\^&\*]{6,}$/ && email {
+    pass = $0
+    print email ":" pass
+    email = ""
+}
+' output.txt > user_password.txt
+★]$ cat user_password.txt
+angela@sequel.htb:angela
+oscar@sequel.htb:86LxLBMgEWaKUnBG
+kevin@sequel.htb:Md9Wlq1E5bZnVDVo
+sa@sequel.htb:MSSQLP@ssw0rd!
+[★]$ awk -F'[@:]' '{print $1}' user_password.txt > user.txt
+[★]$ cat user.txt
+angela
+oscar
+kevin
+sa
+[★]$ awk -F: '{print $2}' user_password.txt > password.txt
+[★]$ cat password.txt
+angela
+86LxLBMgEWaKUnBG
+Md9Wlq1E5bZnVDVo
+MSSQLP@ssw0rd!
+```
 ```
 //可以学习的一个点
 $ cat accounts/xl/sharedStrings.xml | xmllint --xpath '//*[local-name()="t"]/text()' - | awk 'ORS=NR%5?",":"\n"'; echo
@@ -263,5 +296,37 @@ local-name()="t"：只选择本地名字为 t 的节点（Excel 的 sharedString
 
 ; echo
 awk 的这段写法可能在最后一行后并不会输出一个额外的换行（例如当最后一个 ORS 被设为逗号时），echo 在命令末尾的作用就是确保终端上有一个结尾换行，让输出看起来整洁。也有些人直接写 printf '\n'
+
+[~/accounts/xl][★]$ cat sharedStrings.xml | xmllint --xpath '//*[local-name()="t"]/text()' - | awk 'ORS=NR%5?",":"\n"'; echo
+First Name,Last Name,Email,Username,Password
+Angela,Martin,angela@sequel.htb,angela,0fwz7Q4mSpurIt99
+Oscar,Martinez,oscar@sequel.htb,oscar,86LxLBMgEWaKUnBG
+Kevin,Malone,kevin@sequel.htb,kevin,Md9Wlq1E5bZnVDVo
+NULL,sa@sequel.htb,sa,MSSQLP@ssw0rd!,
 ```
 https://en.wikipedia.org/wiki/List_of_file_signatures
+#### 修改文件
+```
+[★]$ xxd accounts.xlsx | head -1
+00000000: 5048 0403 1400 0808 0800 f655 c958 0000  PH.........U.X..
+[★]$ xxd accounting_2024.xlsx | head -1
+00000000: 5048 0403 1400 0600 0800 0000 2100 4137  PH..........!.A7
+
+[★]$ printf '\x50\x4B\x03\x04' | dd of=accounts.xlsx bs=1 seek=0 count=4 conv=notrunc
+4+0 records in
+4+0 records out
+4 bytes copied, 9.4096e-05 s, 42.5 kB/s
+[★]$ printf '\x50\x4B\x03\x04' | dd of=accounting_2024.xlsx bs=1 seek=0 count=4 conv=notrunc
+4+0 records in
+4+0 records out
+4 bytes copied, 9.2253e-05 s, 43.4 kB/s
+\\of=accounts.xlsx:输出文件 | bs=1:每次写 1 字节 | seek=0:从第 0 字节开始写
+\\ count=4:写 4 个字节 | conv=notrunc:不截断文件（只覆盖，不删后面内容）
+
+[★]$ xxd accounts.xlsx | head -1
+00000000: 504b 0304 1400 0808 0800 f655 c958 0000  PK.........U.X..
+[★]$ xxd accounting_2024.xlsx | head -1
+00000000: 504b 0304 1400 0600 0800 0000 2100 4137  PK..........!.A7
+
+[★]$ open accounts.xlsx
+```
