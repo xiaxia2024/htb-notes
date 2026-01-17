@@ -238,3 +238,30 @@ sa@sequel.htb:MSSQLP@ssw0rd!
 //看到邮箱 → 保存到变量 ； next：继续读下一行 ； 此时 awk 进入“等待 password”状态
 //至少 6 位； 包含特殊字符（弱排除名字）； 并且必须已经捕获 email； 防止串到下一个用户
 ```
+```
+//可以学习的一个点
+$ cat accounts/xl/sharedStrings.xml | xmllint --xpath '//*[local-name()="t"]/text()' - | awk 'ORS=NR%5?",":"\n"'; echo
+
+//解析：
+xmllint --xpath '//*[local-name()="t"]/text()' -
+
+【1】xmllint：一个常见的 XML 工具（libxml2 自带）；
+【2】--xpath 'EXPR'：根据 XPath 表达式抽取节点或节点值并打印
+【3】//*[local-name()="t"]/text()：//*：匹配文档中所有节点（不管名字空间）
+local-name()="t"：只选择本地名字为 t 的节点（Excel 的 sharedStrings 中文本节点通常是 <t>，用 local-name() 可以避开 XML 命名空间问题）
+/text()：取这些 <t> 节点的文本节点（纯文本）
+最后的 -：告诉 xmllint 从标准输入读取 XML（因为前面用了 cat）
+
+| awk 'ORS=NR%5?",":"\n"'
+
+这是 awk 的一段简写程序（没有显式的模式或动作），行为要点：
+【1】NR：awk 的内置变量，表示当前记录（行）号，从 1 开始递增
+【2】ORS：输出记录分隔符（Output Record Separator），awK 输出每行后会打印 ORS（默认是 \n）
+【3】'ORS=NR%5?",":"\n"'：每读一行就把 ORS 重新设置为：
+如果 NR % 5 非零（即该行不是第 5 的倍数），ORS 设为 ,（逗号）；
+如果 NR % 5 == 0（第 5、10、15...行），ORS 设为换行 \n
+
+; echo
+awk 的这段写法可能在最后一行后并不会输出一个额外的换行（例如当最后一个 ORS 被设为逗号时），echo 在命令末尾的作用就是确保终端上有一个结尾换行，让输出看起来整洁。也有些人直接写 printf '\n'
+```
+https://en.wikipedia.org/wiki/List_of_file_signatures
