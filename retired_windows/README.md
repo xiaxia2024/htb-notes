@@ -6,3 +6,6 @@ Retro:ESC1 //创建用户，任意用户可以拿到全句的票据
 
 Fluffy:ESC16
 ```
+
+### 关于 文件签名（file signatures）的列表和解释：
+https://en.wikipedia.org/wiki/List_of_file_signatures
