@@ -517,3 +517,35 @@ LDAP        10.129.65.178   389    DC01             Compressing output into /hom
 [★]$ ls /home/syareya55/.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip
 /home/syareya55/.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip
 ```
+#### 打开bloodhound
+```
+[★]$ sudo neo4j console
+Directories in use:
+home:         /var/lib/neo4j
+config:       /etc/neo4j
+logs:         /var/log/neo4j
+plugins:      /var/lib/neo4j/plugins
+import:       /var/lib/neo4j/import
+data:         /var/lib/neo4j/data
+certificates: /var/lib/neo4j/certificates
+licenses:     /var/lib/neo4j/licenses
+run:          /var/lib/neo4j/run
+Starting Neo4j.
+2026-01-18 08:25:21.222+0000 INFO  Logging config in use: File '/etc/neo4j/user-logs.xml'
+2026-01-18 08:25:21.237+0000 INFO  Starting...
+2026-01-18 08:25:21.983+0000 INFO  This instance is ServerId{d8173e88} (d8173e88-c17d-4348-ba6f-76a2369f3935)
+2026-01-18 08:25:23.041+0000 INFO  ======== Neo4j 5.26.1 ========
+2026-01-18 08:25:24.428+0000 INFO  Anonymous Usage Data is being sent to Neo4j, see https://neo4j.com/docs/usage-data/
+2026-01-18 08:25:24.457+0000 INFO  Bolt enabled on localhost:7687.
+2026-01-18 08:25:24.982+0000 INFO  HTTP enabled on localhost:7474.
+2026-01-18 08:25:24.983+0000 INFO  Remote interface available at http://localhost:7474/
+
+打开浏览器http://localhost:7474
+输入用户/密码：neo4j/neo4j
+
+[★]$ bloodhound
+输入用户/密码：neo4j/neo4j
+然后upload data:选择文件夹的时候：Ctrl+H 可以看到隐藏的.nxc文件夹.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip导入
+搜索：sql_svc@sequel.htb并标记为拥有'Mark User as Owned'
+```
+
