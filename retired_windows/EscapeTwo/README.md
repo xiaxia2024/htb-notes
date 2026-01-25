@@ -1,8 +1,10 @@
 ## EscapeTwo
 #### ESC4
 #### 作者0xdf有讲到（Certipy版本4.8.2）到本文发布（Certipy 5.0.2）的区别
-#### ca_svc 是 Cert Publishers（证书发布者）组的成员
 https://0xdf.gitlab.io/2025/05/24/htb-escapetwo.html
+#### ca_svc 是 Cert Publishers（证书发布者）组的成员
+#### 证书发布者组织可以利用的易受攻击证书模板的名称是什么？DunderMifflinAuthentication
+
 ```
 [★]$ nmap -sC -sV 10.129.63.253 
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-01-16 02:18 CST
