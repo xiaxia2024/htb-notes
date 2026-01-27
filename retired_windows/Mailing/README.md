@@ -1,4 +1,27 @@
 ## Mailing
+### 总结
+```
+[1]
+X-Powered-By: PHP/8.3.3
+X-Powered-By: ASP.NET
+->PHP + ASP.NET 混合环境（Windows IIS 服务器）
+前端 download.php 是 PHP
+底层是 Windows（因为有 ASP.NET、C:\ 路径）
+大概率是 IIS + PHP + .NET + Windows Server
+这给你三个重要信息：
+✅ 操作系统：Windows
+✅ Web服务：IIS
+✅ 有可能跑 .NET 程序（如 hMailServer、Outlook 组件）->Windows Mail / hMailServer / Outlook 漏洞
+[2]Google 搜：通过数据库/文件夹而非图形用户界面更改帐户名称
+这是 hMailServer 的真实后端配置文件,里面存的是 MD5 格式密码
+➡ 升级为：邮件系统控制权
+[3]587 = SMTP Submission Port（邮件提交端口）
+客户端（Outlook、Thunderbird）用它来：
+👉 登录邮箱
+👉 发邮件
+[4]Google 搜：windows mail cve
+->Windows 邮件客户端（Outlook / Windows Mail）漏洞
+```
 ```
 [★]$ nmap -sC -sV 10.129.232.39
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-01-26 02:10 CST
@@ -161,6 +184,7 @@ Priority: u=0, i
 ### Directory Brute Force 目录暴力破解
 #### 我将对该站点运行feroxbuster，并包含-x php，aspx，因为我知道该站点是php，并检查ASP。NET文件以及：
 ```
+[$] feroxbuster -u http://mailing.htb -x php,aspx
 ```
 #### 我已经知道download.php了，其他的看起来都没什么意思。
 #### 3.Shell as maya
