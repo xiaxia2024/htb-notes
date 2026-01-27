@@ -135,7 +135,7 @@ session setup failed: NT_STATUS_ACCESS_DENIED
 #### 该网站是为提供邮件服务器的组织提供的：在网页上点击 Installation:Download Instructions
 #### 网站上有三个名字我会记下的。
 #### “下载说明”按钮是http://mailing.htb/download.php?file=instructions.pdf的链接。这是一个16页的PDF文件，包含了在Windows和Ubuntu上设置邮件客户端的说明，涵盖了Windows mail和Thunderbird。文档中需要注意的一点是示例中使用的电子邮件地址：
-![图片](mages\2026012601.png)
+![图片](mages/2026012601.png)
 #### maya@mailing.htb与上面的名称匹配。我会注意到这一点，另外两个用户可能是ruy@mailing.htb和gregory@mailing.htb。
 ### 技术堆栈
 #### HTTP响应头有一个很好的信息：
@@ -156,7 +156,7 @@ Sec-GPC: 1
 Priority: u=0, i
 ```
 #### Fn12抓取的信息：
-![图片](mages\2026012602.png)
+![图片](mages/2026012602.png)
 #### 它是IIS，同时运行ASP.NET和PHP。  PHP并不奇怪，因为我已经确定了download.php。
 ### Directory Brute Force 目录暴力破解
 #### 我将对该站点运行feroxbuster，并包含-x php，aspx，因为我知道该站点是php，并检查ASP。NET文件以及：
@@ -233,7 +233,7 @@ if (isset($_GET['file'])) {
 #### hMailServer将它的配置数据存储在hMailServer.ini中。有很多地方似乎可以根据不同的文档页面和搜索找到这个。我最终会找到这个论坛帖子，其中一个响应者建议C:\Program Files （x86）\ hMailServer\Bin\：
 https://hmailserver.com/forum/viewtopic.php?t=39079
 #### google搜索：通过数据库/文件夹而非图形用户界面更改帐户名称
-![图片](mages\2026012603.png)
+![图片](mages/2026012603.png)
 #### 我假设帐户表名称，你指的是电子邮件帐户名称。
 #### 我不会用你问的方法做这件事。
 #### 使用hMailAdmin修改Email帐户名称。请参阅此文档https://www.hmailserver.com/documentati…e账户
