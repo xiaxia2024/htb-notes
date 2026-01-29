@@ -16,7 +16,7 @@ https://en.wikipedia.org/wiki/List_of_file_signatures
 | `FF D8 FF E0` | JPEG image   | `.jpg`    |             |
 | `25 50 44 46` | PDF document | `.pdf`    |             |
 
-### Minecraft关于Log4j的开发
+### Minecraft关于Log4j的开发[Java库的名称log4j]from Crafty
 ```
 [1]我的世界https://github.com/MCCTeam/Minecraft-Console-Client
 [2]Java SE 8 Archive Downloads (JDK 8u202 and earlier)：
