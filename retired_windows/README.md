@@ -27,3 +27,6 @@ https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html
 https://github.com/antonioCoco/RunasCs
 [★]$ wget https://github.com/antonioCoco/RunasCs/releases/download/v1.5/RunasCs.zip
 ```
+
+### Apache Directory Studio = 图形化 LDAP 管理工具
+https://directory.apache.org/studio/
