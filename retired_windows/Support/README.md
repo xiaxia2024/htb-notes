@@ -291,4 +291,64 @@ userAccountControl: 512
 ### Apache Directory Studio
 #### 除了ldapsearch，我们还可以使用Apache Directory Studio程序，它可以从这里下载。它提供了一个图形界面，可以用来更有效地查看LDAP数据。下载并在本地运行它
 https://directory.apache.org/studio/
+```
+[★]$ gunzip ApacheDirectoryStudio-2.0.0.v20210717-M17-linux.gtk.x86_64.tar.gz
+[~/Downloads][★]$ ls
+ ApacheDirectoryStudio-2.0.0.v20210717-M17-linux.gtk.x86_64.tar
+[~/Downloads][★]$ tar -xvf ApacheDirectoryStudio-2.0.0.v20210717-M17-linux.gtk.x86_64.tar
+[★]$ cd ApacheDirectoryStudio
+[~/Downloads/ApacheDirectoryStudio][★]$ ls
+ApacheDirectoryStudio      artifacts.xml  features  LICENSE  p2
+ApacheDirectoryStudio.ini  configuration  icon.xpm  NOTICE   plugins
+[~/Downloads/ApacheDirectoryStudio][★]$ ./ApacheDirectoryStudio
+```
+#### 接下来，让我们通过单击屏幕左上角的LDAP按钮来添加到LDAP服务器的连接。
+#### LDAP --> New Connetction
+![图片](mages/2026013002.png)
+#### 输入Support作为连接名称，支持。作为主机名，然后单击Next
+```
+Bind DN or suer: ldap@support.htb
+Bind password:nvEfEK16^1aM4$e7AclUf8x$tRWxPWO1%lmz  //Ctrl+V
+点击Finish
+```
+#### 在下一个窗口中，确保选择Simple Authentication作为身份验证方法，以“ldap@support.htb”为绑定DN，并粘贴密码为“nvEfEK16^1aM4$e7AclUf8x$tRWxPWO1%lmz”在绑定密码字段中。然后单击检查身份验证按钮，以确保一切能正常工作
+#### 回到Apache Directory Studio实用程序的主屏幕，我们可以在左下角。双击它将允许我们连接到远程LDAP服务器并列出所有LDAP对象。
+```
+//会出现的问题,连接超时
+Error while opening connection
+ -  MSG_04177_CONNECTION_TIMEOUT (5000)
+org.apache.directory.studio.connection.core.io.StudioLdapException:  MSG_04177_CONNECTION_TIMEOUT (5000)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.toStudioLdapException(DirectoryApiConnectionWrapper.java:1350)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.access$2(DirectoryApiConnectionWrapper.java:1342)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper$1.run(DirectoryApiConnectionWrapper.java:258)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.runAndMonitor(DirectoryApiConnectionWrapper.java:1261)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.doConnect(DirectoryApiConnectionWrapper.java:280)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.connect(DirectoryApiConnectionWrapper.java:144)
+	at org.apache.directory.studio.connection.core.jobs.OpenConnectionsRunnable.run(OpenConnectionsRunnable.java:111)
+	at org.apache.directory.studio.connection.core.jobs.StudioConnectionJob.run(StudioConnectionJob.java:109)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:63)
+Caused by: org.apache.directory.ldap.client.api.exception.LdapConnectionTimeOutException: MSG_04177_CONNECTION_TIMEOUT (5000)
+	at org.apache.directory.ldap.client.api.LdapNetworkConnection.tryConnect(LdapNetworkConnection.java:732)
+	at org.apache.directory.ldap.client.api.LdapNetworkConnection.connect(LdapNetworkConnection.java:970)
+	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper$1.run(DirectoryApiConnectionWrapper.java:227)
+	... 6 more
 
+ MSG_04177_CONNECTION_TIMEOUT (5000)
+
+安装官方文档的下一步是：在打开DC=support，DC=htb之后，我们注意到一个具有Common Name of users的对象。这个对象包含远程计算机上的所有系统用户。让我们打开它，进一步列举。
+在文件夹CN=support  -->’Attribute Description‘:info有密码
+
+同上比较：
+distinguishedName: CN=support,CN=Users,DC=support,DC=htb
+instanceType: 4
+whenCreated: 20220528111200.0Z
+whenChanged: 20220528111201.0Z
+uSNCreated: 12617
+info: Ironside47pleasure40Watchful  //这里密码
+
+info 字段本来常见内容应该是：
+“IT Support Account”
+“Temporary account”
+“Helpdesk user”
+```
+#### 在用户列表中，有一个似乎很突出，叫做“支持”。查看这个用户的属性，我们发现a非默认标签名为info，值为Ironside47pleasure40Watchful。这看起来很像密码。再往下看，我们还可以看到该用户是Remote Management Users的成员组，允许它们通过WinRM进行连接。为此，让我们尝试使用evil-winrm来连接使用已识别的密码远程联系支持用户。
