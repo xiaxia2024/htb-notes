@@ -67,6 +67,13 @@ smb: \> dir
 		4026367 blocks of size 4096. 959284 blocks available
 smb: \> get UserInfo.exe.zip
 getting file \UserInfo.exe.zip of size 277499 as UserInfo.exe.zip (2631.0 KiloBytes/sec) (average 2631.0 KiloBytes/sec)
+
+smb: \> get WiresharkPortable64_3.6.5.paf.exe
+getting file \WiresharkPortable64_3.6.5.paf.exe of size 44398000 as WiresharkPortable64_3.6.5.paf.exe (21222.4 KiloBytes/sec) (average 21222.4 KiloBytes/sec)
+
+smb: \> get windirstat1_1_2_setup.exe
+getting file \windirstat1_1_2_setup.exe of size 79171 as windirstat1_1_2_setup.exe (1227.2 KiloBytes/sec) (average 1227.2 KiloBytes/sec)
+
 smb: \> exit
 ```
 #### 实际上，我们能够匿名地连接到共享并列出可用的文件。该共享包含很少有应用程序安装程序，如putty或WireShark，但有一个文件脱颖而出。特别zip看起来不像是一个知名的应用程序。让我们将其下载到本地并进行研究进一步。
