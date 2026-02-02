@@ -1,8 +1,7 @@
 ## Support
+#### 漏洞为BloodHound里面的点击GenericAll的右键Help，基于资源的约束授权（RBCD），S4U攻击得到票据，使用Impacket包
 ### 总结
 ```
-总结
-
 [★]$ smbclient \\\\10.129.230.181\\support-tools
 
   UserInfo.exe.zip                    
