@@ -1,4 +1,6 @@
 ## Timelapse
+
+#### Get-ChildItem -Path C:\ -Filter root.txt -Recurse -ErrorAction SilentlyContinue
 ```
 [★]$ nmap -sV -sC 10.129.227.113
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-02 02:25 CST
