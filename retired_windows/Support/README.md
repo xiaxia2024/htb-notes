@@ -117,6 +117,7 @@ linux-x64
 
 ```
 #### 现在让我们加载UserInfo可执行文件，以便对其进行反编译。点击文件，选择打开，找到在文件浏览器中找到目标二进制文件并选择它。
+![图片](images/2026013001.png)
 #### 导入二进制文件后，ILSpy将负责反编译，我们将能够查看源代码。看一下代码，我们很快注意到一个名为LdapQuery的函数以及另外两个函数函数FindUser和GetUser。
 #### 点击UserInfo.Services->LdapQuery
 ```
@@ -311,7 +312,7 @@ ApacheDirectoryStudio.ini  configuration  icon.xpm  NOTICE   plugins
 ```
 #### 接下来，让我们通过单击屏幕左上角的LDAP按钮来添加到LDAP服务器的连接。
 #### LDAP --> New Connetction
-![图片](mages/2026013002.png)
+![图片](images/2026013002.png)
 #### 输入Support作为连接名称，支持。作为主机名，然后单击Next
 ```
 Bind DN or suer: ldap@support.htb
@@ -538,9 +539,9 @@ libffmpeg.so            resources
 #### 在BloodHound搜索框输入：SUPPORT@SUPPORT.HTB，双击选择‘！ Mark User as Owned'
 #### 我们可以看到组委托对象控制部分显示值为1。该值显示用户所属的组是否有权访问控制对象在域中。让我们点击它来查看更多细节。
 #### 'Node Info' -> 'Group Delegated Object Control'
-![图片](mages/2026013101.png)
+![图片](images/2026013101.png)
 #### 实际上，输出显示Shared Support Accounts组在系统上具有GenericAll特权由于支持用户是该组的成员，因此他们也具有所有权限直流。右键单击GenericAll行并选择Help可提供有关此操作的更多信息特权以及如何利用它。
-![图片](mages/2026013102.png)
+![图片](images/2026013102.png)
 #### BloodHound提到，由于GenericAll特权，我们可以执行基于资源的约束授权（RBCD）攻击并升级我们的特权。
 ### Resource Based Constrained Delegation 基于资源的约束授权
 https://book.hacktricks.wiki/en/windows-hardening/active-directory-methodology/resource-based-constrained-delegation.html
