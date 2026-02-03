@@ -9,14 +9,14 @@ Retro:ESC1 //创建用户，任意用户可以拿到全句的票据
 Fluffy:ESC16
 ```
 
-### 关于 文件签名（file signatures）的列表和解释：
+#### 关于 文件签名（file signatures）的列表和解释：
 https://en.wikipedia.org/wiki/List_of_file_signatures
 | Hex Signature | Meaning      | Extension |             |
 | ------------- | ------------ | --------- | ----------- |
 | `FF D8 FF E0` | JPEG image   | `.jpg`    |             |
 | `25 50 44 46` | PDF document | `.pdf`    |             |
 
-### Minecraft关于Log4j的开发[Java库的名称log4j]from Crafty
+#### Minecraft关于Log4j的开发[Java库的名称log4j]from Crafty
 ```
 [1]我的世界https://github.com/MCCTeam/Minecraft-Console-Client
 [2]Java SE 8 Archive Downloads (JDK 8u202 and earlier)：
@@ -28,7 +28,20 @@ https://github.com/antonioCoco/RunasCs
 [★]$ wget https://github.com/antonioCoco/RunasCs/releases/download/v1.5/RunasCs.zip
 ```
 
-### Apache Directory Studio = 图形化 LDAP 管理工具
+#### Apache Directory Studio = 图形化 LDAP 管理工具
 https://directory.apache.org/studio/
 
-### 漏洞为BloodHound里面的点击GenericAll的右键Help，基于资源的约束授权（RBCD），S4U攻击得到票据，使用Impacket包 ｜ form Support
+#### 漏洞为BloodHound里面的点击GenericAll的右键Help，基于资源的约束授权（RBCD），S4U攻击得到票据，使用Impacket包 ｜ form Support
+
+#### form Timelapse
+```
+[★]$ zip2john winrm_backup.zip > zip.john
+[★]$ john zip.john -wordlist:rockyou.txt
+[★]$ unzip winrm_backup.zip
+
+[★]$ python3 /usr/share/john/pfx2john.py legacyy_dev_auth.pfx > pfx.john
+[★]$ john pfx.john -wordlist:rockyou.txt
+
+[★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nocerts -out key.pem -nodes
+[★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nokeys -out cert.pem 
+```
