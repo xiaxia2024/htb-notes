@@ -490,4 +490,12 @@ dir
 
 C:\Users>type svc-printer\Desktop\user.txt
 C:\Users\Administrator\Desktop>type root.txt
+
+C:\Users>exit
+exit
+(Meterpreter 4)(C:\Windows\system32) > exit
+[*] Shutting down session: 4
+
+[*] 10.129.10.164 - Meterpreter session 4 closed.  Reason: Died
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> exit
 ```
