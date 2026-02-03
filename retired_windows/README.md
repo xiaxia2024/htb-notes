@@ -45,3 +45,4 @@ https://directory.apache.org/studio/
 [★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nocerts -out key.pem -nodes
 [★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nokeys -out cert.pem 
 ```
+#### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return
