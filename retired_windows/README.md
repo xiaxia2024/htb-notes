@@ -31,9 +31,9 @@ https://github.com/antonioCoco/RunasCs
 #### Apache Directory Studio = 图形化 LDAP 管理工具
 https://directory.apache.org/studio/
 
-#### 漏洞为BloodHound里面的点击GenericAll的右键Help，基于资源的约束授权（RBCD），S4U攻击得到票据，使用Impacket包 ｜ form Support
+#### 漏洞为BloodHound里面的点击GenericAll的右键Help，基于资源的约束授权（RBCD），S4U攻击得到票据，使用Impacket包 | form Support
 
-#### form Timelapse
+#### LAPS_Readers：有权限读取 LAPS 管理的本地管理员密码；LAPS 的 PowerShell 模块：AdmPwd.PS | form Timelapse
 ```
 [★]$ zip2john winrm_backup.zip > zip.john
 [★]$ john zip.john -wordlist:rockyou.txt
