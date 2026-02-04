@@ -51,7 +51,7 @@ https://directory.apache.org/studio/
 $env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
 ```
 ### Server Operators:
-#### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return、Deiver
+#### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return、Deiver、Love
 #### 相同的特点是IIS是打印机，一个是Updata,一个是Submit
 #### PowerShell的历史文件路径
 ```
@@ -64,3 +64,6 @@ Get-ChildItem -Path C:\ -Filter root.txt -Recurse -ErrorAction SilentlyContinue
 CMD 里：
 dir C:\root.txt /s
 ```
+
+### //Windows AppLocker（应用程序白名单）策略 :
+#### PS C:\xampp\htdocs\omrs\images> get-applockerpolicy -effective | select -expandproperty rulecollections  
