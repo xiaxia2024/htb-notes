@@ -1,4 +1,5 @@
 1.nc64.exe https://github.com/int0x33/nc.exe/tree/master
+
 2.[★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe
 
 ```
@@ -47,4 +48,8 @@ https://directory.apache.org/studio/
 [★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nokeys -out cert.pem 
 ```
 ### Server Operators:
-#### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return
+#### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return、Deiver
+#### PowerShell的历史文件路径
+```
+cat C:\Users\tony\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+```
