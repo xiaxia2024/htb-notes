@@ -47,7 +47,8 @@ https://directory.apache.org/studio/
 [★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nocerts -out key.pem -nodes
 [★]$ openssl pkcs12 -in legacyy_dev_auth.pfx -nokeys -out cert.pem
 
-//PowerShell 历史记录文件的完整路径是什么？（从哪个路径开始$env:？）$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
+//PowerShell 历史记录文件的完整路径是什么？（从哪个路径开始$env:？）
+$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
 ```
 ### Server Operators:
 #### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return、Deiver
