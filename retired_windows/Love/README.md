@@ -1,4 +1,7 @@
 ## Love
+
+#### .msi 是 Windows 的安装包格式（Microsoft Installer），就像：Linux 的 .deb,macOS 的 .pkg
+#### PS C:\xampp\htdocs\omrs\images> get-applockerpolicy -effective | select -expandproperty rulecollections  //Windows AppLocker（应用程序白名单）策略 
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.48.103 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sV 10.129.48.103
@@ -131,7 +134,8 @@ PublisherExceptions : {}
 HashExceptions      : {}
 Id                  : 64ad46ff-0d71-4fa0-a30b-3f3d30c5433d
 Name                : (Default Rule) All Windows Installer files 
-Description         : Allows members of the local Administrators group to run all Windows Installer files.//意味着：.msi 安装包、Windows Installer 目录里的程序是允许执行的
+Description         : Allows members of the local Administrators group to run all Windows Installer files.
+//意味着：.msi 安装包、Windows Installer 目录里的程序是允许执行的
 UserOrGroupSid      : S-1-5-32-544
 Action              : Allow
 
