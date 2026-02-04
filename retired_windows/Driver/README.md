@@ -514,3 +514,22 @@ C:\Windows\system32>whoami
 whoami
 nt authority\system
 
+C:\>dir C:\root.txt /s
+dir C:\root.txt /s
+ Volume in drive C has no label.
+ Volume Serial Number is DB41-39A3
+
+ Directory of C:\Users\Administrator\Desktop
+
+02/04/2026  07:08 AM                34 root.txt
+               1 File(s)             34 bytes
+
+     Total Files Listed:
+               1 File(s)             34 bytes
+               0 Dir(s)   6,179,823,616 bytes free
+
+C:\>type C:\Users\Administrator\Desktop\root.txt
+```
+
+
+
