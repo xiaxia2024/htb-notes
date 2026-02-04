@@ -154,6 +154,8 @@ liltony          (tony)
 1g 0:00:00:00 DONE (2026-02-03 03:08) 33.33g/s 1092Kp/s 1092Kc/s 1092KC/s !!!!!!..eatme1
 Use the "--show --format=netntlmv2" options to display all of the cracked passwords reliably
 Session completed.
+
+//Net-NTLMv2 哈希（Responder 常见格式），在 Hashcat 里对应的模式是：✅ 5600 = NetNTLMv2
 ```
 #### 密码被成功破解，我们得到了密码。使用这些凭证，我们可以尝试使用WinRM登录到远程机器。
 ```
