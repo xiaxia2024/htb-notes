@@ -52,7 +52,15 @@ $env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
 ```
 ### Server Operators:
 #### Metasploit Framework（MSF） 是一个开源的 渗透测试与漏洞利用框架（penetration testing framework）| from Return、Deiver
+#### 相同的特点是IIS是打印机，一个是Updata,一个是Submit
 #### PowerShell的历史文件路径
 ```
 cat C:\Users\tony\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+```
+_____________________________
+```
+PowerShell 里：
+Get-ChildItem -Path C:\ -Filter root.txt -Recurse -ErrorAction SilentlyContinue
+CMD 里：
+dir C:\root.txt /s
 ```
