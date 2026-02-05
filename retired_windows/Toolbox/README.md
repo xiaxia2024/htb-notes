@@ -55,3 +55,23 @@ Host script results:
 #### Nmap输出显示端口21 （FTP）、22 （SSH）、135 （RPC）、139 （NetBIOS）、443 （Apache）、445已获取SMB和5985 （Windows Remote Management）。
 #### 这是一台Windows电脑，但是Apache服务器被检测到运行在Debian服务器上。这表明某种虚拟化/容器化在这里发挥了作用。
 #### Nmap输出还显示FTP服务器配置为匿名访问。首先，添加防火墙规则允许目标机器连接到我们（如果被动模式传输是启用)。
+```
+[★]$ ftp 10.129.96.171
+Connected to 10.129.96.171.
+220-FileZilla Server 0.9.60 beta
+220-written by Tim Kosse (tim.kosse@filezilla-project.org)
+220 Please visit https://filezilla-project.org/
+Name (10.129.96.171:root): anonymous
+331 Password required for anonymous
+Password: 
+230 Logged on
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> ls
+229 Entering Extended Passive Mode (|||58783|)
+150 Opening data channel for directory listing of "/"
+-r-xr-xr-x 1 ftp ftp      242520560 Feb 18  2020 docker-toolbox.exe
+226 Successfully transferred "/"
+ftp> exit
+221 Goodbye
+```
