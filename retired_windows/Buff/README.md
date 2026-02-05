@@ -137,6 +137,7 @@ Uploaded!
 buff\shaun
 ```
 ```
+[★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe
 [★]$ python3 -m http.server  8011
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 
