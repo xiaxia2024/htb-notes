@@ -67,3 +67,8 @@ dir C:\root.txt /s
 
 ### //Windows AppLocker（应用程序白名单）策略 :
 #### PS C:\xampp\htdocs\omrs\images> get-applockerpolicy -effective | select -expandproperty rulecollections  
+
+### Docker-Toolbox 运行的是 boot2docker Linux 发行版。
+#### 该发行版中 docker 用户的默认密码是什么？docker/tcuser
+#### docker-toolbox有默认情况下访问c:\Users文件夹，该文件夹挂载在/c/Users 
+#### 关于sqlmap | from Toolbox
