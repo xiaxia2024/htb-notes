@@ -15,8 +15,7 @@ BUG_REPORT_URL="https://github.com/boot2docker/boot2docker/issues"
 ```
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.96.171 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
-┌─[us-dedivip-2]─[10.10.14.93]─[syareya55@htb-jhoyqs8t8m]─[~]
-└──╼ [★]$ nmap -p$ports -sC -sV 10.129.96.171
+[★]$ nmap -p$ports -sC -sV 10.129.96.171
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-04 23:36 CST
 Nmap scan report for 10.129.96.171
 Host is up (0.0087s latency).
