@@ -64,7 +64,7 @@ Get-ChildItem -Path C:\ -Filter root.txt -Recurse -ErrorAction SilentlyContinue
 CMD 里：
 dir C:\root.txt /s
 ```
-
+_____________________________
 ### //Windows AppLocker（应用程序白名单）策略 :
 #### PS C:\xampp\htdocs\omrs\images> get-applockerpolicy -effective | select -expandproperty rulecollections  
 _____________________________
