@@ -11,6 +11,95 @@ PORT     STATE SERVICE VERSION
 |_http-server-header: Apache/2.4.43 (Win64) OpenSSL/1.1.1g PHP/7.4.6
 | http-open-proxy: Potentially OPEN proxy.
 |_Methods supported:CONNECTION
+_______________
+[★]$ nmap -p- --min-rate 1000 -oA nmap-alltcp 10.129.2.18
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-06 01:34 CST
+Nmap scan report for 10.129.2.18
+Host is up (0.049s latency).
+Not shown: 65534 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+8080/tcp open  http-proxy
+_______________
+[★]$ nmap -p 7680,8080 -sC -sV -oA nmap-tcpscans 10.129.2.18
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-06 01:33 CST
+Nmap scan report for 10.129.2.18
+Host is up (0.057s latency).
+
+PORT     STATE    SERVICE   VERSION
+7680/tcp filtered pando-pub
+8080/tcp open     http      Apache httpd 2.4.43 ((Win64) OpenSSL/1.1.1g PHP/7.4.6)
+| http-open-proxy: Potentially OPEN proxy.
+|_Methods supported:CONNECTION
+|_http-title: mrb3n's Bro Hut
+|_http-server-header: Apache/2.4.43 (Win64) OpenSSL/1.1.1g PHP/7.4.6
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 24.80 seconds
+```
+```
+[★]$ gobuster dir -u http://10.129.2.18:8080 -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -x php -t 40 -o gobuster-root-small-php
+===============================================================
+Gobuster v3.6
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://10.129.2.18:8080
+[+] Method:                  GET
+[+] Threads:                 40
+[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.6
+[+] Extensions:              php
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+/img                  (Status: 301) [Size: 339] [--> http://10.129.2.18:8080/img/]
+/profile              (Status: 301) [Size: 343] [--> http://10.129.2.18:8080/profile/]
+/index.php            (Status: 200) [Size: 4969]
+/about.php            (Status: 200) [Size: 5337]
+/home.php             (Status: 200) [Size: 143]
+/contact.php          (Status: 200) [Size: 4169]
+/Home.php             (Status: 200) [Size: 143]
+/register.php         (Status: 200) [Size: 137]
+/upload               (Status: 301) [Size: 342] [--> http://10.129.2.18:8080/upload/]
+/feedback.php         (Status: 200) [Size: 4252]
+/upload.php           (Status: 200) [Size: 107]
+/license              (Status: 200) [Size: 18025]
+/Contact.php          (Status: 200) [Size: 4169]
+/edit.php             (Status: 200) [Size: 4282]
+/About.php            (Status: 200) [Size: 5337]
+/Index.php            (Status: 200) [Size: 4969]
+/up.php               (Status: 200) [Size: 209]
+/packages.php         (Status: 200) [Size: 7791]
+/examples             (Status: 503) [Size: 1057]
+/include              (Status: 301) [Size: 343] [--> http://10.129.2.18:8080/include/]
+/licenses             (Status: 403) [Size: 1202]
+/facilities.php       (Status: 200) [Size: 5961]
+```
+```
+[★]$ searchsploit gym management
+---------------------------------------------- ---------------------------------
+ Exploit Title                                |  Path
+---------------------------------------------- ---------------------------------
+Gym Management System 1.0 - 'id' SQL Injectio | php/webapps/48936.txt
+Gym Management System 1.0 - Authentication By | php/webapps/48940.txt
+Gym Management System 1.0 - Stored Cross Site | php/webapps/48941.txt
+Gym Management System 1.0 - Unauthenticated R | php/webapps/48506.py //这个
+GYM MS - GYM Management System - Cross Site S | php/webapps/51777.txt
+---------------------------------------------- ---------------------------------
+Shellcodes: No Results
+
+[★]$ searchsploit -m php/webapps/48506.py
+  Exploit: Gym Management System 1.0 - Unauthenticated Remote Code Execution
+      URL: https://www.exploit-db.com/exploits/48506
+     Path: /usr/share/exploitdb/exploits/php/webapps/48506.py
+    Codes: N/A
+ Verified: False
+File Type: Python script, ASCII text executable
+Copied to: /home/syareya55/48506.py
+
+[★]$ ls
+48506.py
 ```
 #### 在浏览器8080端口，Contact：
 ```
