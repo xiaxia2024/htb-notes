@@ -135,10 +135,88 @@ bash: cd: desktop: No such file or directory
 [★]$ ls Desktop
 htb_vpn_logs.log  my_credentials.txt  my_data  README.license
 
+//Notes to do.txt包含关于已安装的任务的已完成和未完成任务的信息监控应用程序
 [★]$ cat 'Nathan\\Notes to do.txt'
 1) Change the password for NVMS - Complete
 2) Lock down the NSClient Access - Complete
 3) Upload the passwords
 4) Remove public access to NVMS
 5) Place the secret files in SharePoint
+
+[★]$ ls Desktop
+htb_vpn_logs.log  my_credentials.txt  my_data  README.license
+[★]$ cat Desktop/my_credentials.txt
+Username: syareya55
+Password: cqroAqyi
 ```
+#### 在浏览器中检查80端口，可以看到NVMS-1000网络监控的登录页面软件。默认凭证admin / 123456或其他常见凭证不给我们访问。
+```
+[★]$ gobuster dir -u http://10.129.227.77 -w /usr/share/wordlists/dirbuster/directory-list-lowercase-2.3-medium.txt -t 40 -o gobuster-80-root-medium
+===============================================================
+Gobuster v3.6
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://10.129.227.77
+[+] Method:                  GET
+[+] Threads:                 40
+[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-lowercase-2.3-medium.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.6
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+
+Error: the server returns a status code that matches the provided options for non existing urls. http://10.129.227.77/41b172ec-d70c-40c2-a83c-d7619ddf5e13 => 200 (Length: 118). To continue please exclude the status code or the length
+```
+![images/2026020801.png)
+```
+[★]$ curl http://10.129.227.77/41b172ec-d70c-40c2-a83c-d7619ddf5e13
+<?xml version="1.0" encoding="UTF-8"?>
+<response>	<status>fail</status>
+	<errorCode>536870934</errorCode>
+</response>
+```
+#### 我尝试了wfuzz，在那里我可以根据响应长度进行过滤。它可以处理几千个请求，但每次都失败了：
+```
+[★]$ wfuzz -c -u http://10.129.227.77/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-lowercase-2.3-medium.txt --hh 118
+ /usr/lib/python3/dist-packages/wfuzz/__init__.py:34: UserWarning:Pycurl is not compiled against Openssl. Wfuzz might not work correctly when fuzzing SSL sites. Check Wfuzz's documentation for more information.
+********************************************************
+* Wfuzz 3.1.0 - The Web Fuzzer                         *
+********************************************************
+
+Target: http://10.129.227.77/FUZZ
+Total requests: 207643
+
+=====================================================================
+ID           Response   Lines    Word       Chars       Payload        
+=====================================================================
+
+000000001:   200        12 L     22 W       338 Ch      "# directory-li
+                                                        st-lowercase-2.
+                                                        3-medium.txt"  
+000000007:   200        12 L     22 W       338 Ch      "# license, vis
+                                                        it http://creat
+                                                        ivecommons.org/
+                                                        licenses/by-sa/
+                                                        3.0/"          
+000000003:   200        12 L     22 W       338 Ch      "# Copyright 20
+                                                        07 James Fisher
+                                                        "              
+000000014:   200        12 L     22 W       338 Ch      "http://10.129.
+                                                        227.77/"       
+000000013:   200        12 L     22 W       338 Ch      "#"            
+```
+### Vulnerabilities  缺陷
+#### searchsplit显示了此应用程序中的目录遍历漏洞：
+```
+[★]$ searchsploit "nvms 1000"
+---------------------------------------------- ---------------------------------
+ Exploit Title                                |  Path
+---------------------------------------------- ---------------------------------
+NVMS 1000 - Directory Traversal               | hardware/webapps/47774.txt
+TVT NVMS 1000 - Directory Traversal           | hardware/webapps/48311.py
+---------------------------------------------- ---------------------------------
+Shellcodes: No Results
+```
+#### 在阅读文本文件,它基本上是说我可以请求  /../../../../../../../../../../../../windows/win.ini和得到它。我会将请求发送到打嗝中继器，它会工作：
