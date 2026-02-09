@@ -628,3 +628,7 @@ tcp   LISTEN 0      128                                            [::1]:8443   
 #### 我们创建一个执行nc.exe的新脚本（它可以使用scp上传，也可以直接从我们的smb-share上传），并向我们的机器返回一个反向shell。
 #### 该漏洞说明系统需要重新启动才能触发该漏洞，然而在挖掘web控制台时，我发现可以直接从web控制台执行脚本。
 #### 通过在web控制台中输入脚本的别名，我们可以手动执行负载。
+```
+[★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe
+```
+
