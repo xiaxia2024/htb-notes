@@ -721,3 +721,14 @@ command = 11
 interval = 1m
 PS C:\Program Files\NSClient++>
 ```
+#### 1.侦听nc 的问题，在pwnbox上无法使用rlwrap ,反弹又是明文
+#### 2.在kali上可以使用rlwrap nc侦听https://127.0.0.1:8443 , 但有问题的是浏览器会打不开的情况，就算是google浏览器chromu啥的也不行
+————————————————————
+### 安装官方文档
+https://rohnspowershellblog.wordpress.com/2013/03/19/viewing-service-acls/
+#### NSClient在NT AUTHORITY\SYSTEM上下文中运行，成功开发后，命令执行将在此上下文中实现。这个漏洞有效的先决条件是服务重新启动。让我们检查一下NSCP服务的权限，看看我们是否有权限重新启动它。这篇由Rohn Edwards撰写的博客文章展示了我们如何获得服务权限PowerShell。我们可以使用Msxml2。xmlhttpcom对象下载摇篮下载和在内存中执行脚本。然而，我们被拒绝访问服务控制管理器，因此我们必须承担服务重新启动
+```
+nadine@SERVMON C:\Users\Nadine> cmd /c "C:\Program Files\NSClient++\nscp.exe" --
+version
+NSClient++, Version: 0.5.2.35 2018-01-28, Platform: x64
+```
