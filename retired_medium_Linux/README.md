@@ -8,7 +8,7 @@ Google搜索：0xdf 404 templates
 
 https://0xdf.gitlab.io/cheatsheets/404
 ```
-|在这种 Flask / 轻量项目里，最常见几种是：|
+|在这种 Flask | 轻量项目里，最常见几种是：|
 |方式	|典型文件|
 |SQLite	|db.sqlite3, database.db|
 |JSON 存储	|db.json, users.json, data.json|
