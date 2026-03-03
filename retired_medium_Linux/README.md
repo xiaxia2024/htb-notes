@@ -1,6 +1,6 @@
 ## Linux_Medium
 ### https:// ippsec.rocks 搜索关键词漏洞 
-### https://crackstation.net/ 解编码
+### https://crackstation.net 解编码
 
 #### 通过Web的404可以知道web的框架；如Flask为python;flask-unsign是用来解析Flask应用的签名cookie的
 ```
