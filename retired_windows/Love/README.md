@@ -36,13 +36,13 @@ Service Info: Hosts: www.example.com, LOVE, www.love.htb; OS: Windows; CPE: cpe:
  [★]$ echo '10.129.48.103 www.love.htb staging.love.htb' | sudo tee -a /etc/hosts
 ```
 #### 如果我们在网上搜索'voting system exploit'(“投票系统利用”)，我们会遇到一个经过身份验证的RCE漏洞投票制度。
-![图片](image/2026020401.png)
+![图片](images/2026020401.png)
 #### 由于我们还没有获得任何凭证，也无法注册帐户，所以我们继续注册进一步搜索有关目标的更多信息。在浏览staging.love.htb网站时，我们发现有一个网站声称可以扫描文件以查找恶意软件签名。如果选择beta选项，我们将被转移到beta.php，在那里我们找到文件扫描应用程序。
 #### 我也没找到beta.php 直接登就好了http://staging.love.htb/bata.php 爱不需要讲武德
 #### 在Specify the file url:输入http:127.0.0.1:5000
-![图片](image/2026020402.png)
+![图片](images/2026020402.png)
 #### 我还是做了对比端口5000无法访问，目录存在，但不能列目录 = 403
-![图片](image/2026020403.png)
+![图片](images/2026020403.png)
 #### Finally, we have the credentials for OMRS admin : @LoveIsInTheAir!!!!
 ### Foothold
 #### 由于我们已经获得了用户admin的凭据，现在可以运行经过身份验证的投票了系统利用。我们首先在执行之前修改代码中的一些值：
