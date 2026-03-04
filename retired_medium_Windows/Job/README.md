@@ -40,3 +40,13 @@ Host script results:
 |_    Message signing enabled but not required
 
 ```
+```
+[★]$ echo '10.129.234.73 job.local' | sudo tee -a /etc/hosts
+10.129.234.73 job.local
+```
+#### 打开浏览器的内容是：
+#### We are looking for developers!我们正在寻找开发人员！
+#### Please send your application to career@job.local! We recently switched to using open source products - please send your cv as a libre office document.
+#### 请将您的申请发送至 career@job.local！我们最近改用开源产品了——请将您的简历以 libre office 文档的形式发送。
+#### 如果远程主机上的 LibreOffice 启用了宏，我们可以上传一个带有嵌入式恶意宏的文档，该宏可执行任意代码。
+#### 让我们使用 Metasploit 框架的 openoffice_document_macro 模块来生成恶意文档。这会生成一个带有恶意宏的 .odt 文件，该宏会在远程主机上下载配置的负载并执行它。
