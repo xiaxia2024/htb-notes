@@ -536,3 +536,5 @@ nt authority\system
 
 c:\ProgramData>type ..\Users\Administrator\Desktop\root.txt
 ```
+### 退出反弹的网页
+![图片](images/2026030400.png)
