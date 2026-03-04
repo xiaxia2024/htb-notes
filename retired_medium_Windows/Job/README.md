@@ -158,7 +158,7 @@ REM  *****  BASIC  *****
       end select
     End Function
 ```
-#### 点击了Save 关掉了
+#### 修改为10.10.15.132:8011；点击了Save 关掉了 
 ![图片](images/20260304.png)
 #### 现在，让我们创建一个 PowerShell 反向 shell 文件。网上有很多相关的示例，但我们将使用由 SeTools 创建的这个示例。
 https://amanutkhedkar.medium.com/powershell-reverse-shell-via-social-engineering-toolkit-591ca034a12d
