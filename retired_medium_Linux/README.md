@@ -15,6 +15,7 @@ SQLite:	  db.sqlite3, database.db
 JSON存储	: db.json, users.json, data.json
 YAML:     config.yaml
 ```
+#### tcpwrapped 是：端口 被访问控制保护；可能只允许 本机访问 (127.0.0.1)
 #### 子域名爆破
 ```
 [★]$ ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u http://watcher.vl/ -H 'Host: FUZZ.watcher.vl' -fs 4991
