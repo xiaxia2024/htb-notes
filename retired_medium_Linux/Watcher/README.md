@@ -1,6 +1,10 @@
 ## Watcher
 ### 总结 关于网页zabbix --hostid 10084的漏洞
 ```
+10050/tcp open tcpwrapped
+10051/tcp open tcpwrapped
+tcpwrapped 的意思是：端口 被访问控制保护；可能只允许 本机访问 (127.0.0.1)
+
 [★]$ ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u http://watcher.vl/ -H 'Host: FUZZ.watcher.vl' -fs 4991
 
 //index.php后门
@@ -56,6 +60,27 @@ Service detection performed. Please report any incorrect results at https://nmap
 Nmap done: 1 IP address (1 host up) scanned in 8.23 seconds
 [★]$ echo '10.129.234.163 watcher.vl' | sudo tee -a /etc/hosts
 10.129.234.163 watcher.vl
+```
+#### 有扫不到的端口
+```
+[★]$ ports=$(nmap -Pn -p- --min-rate=1000 -T4 10.129.234.163 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
+[★]$ nmap -Pn -p$ports -sC -sV 10.129.234.163
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-05 02:22 CST
+Nmap scan report for watcher.vl (10.129.234.163)
+Host is up (0.0092s latency).
+
+PORT      STATE SERVICE    VERSION
+22/tcp    open  ssh        OpenSSH 8.9p1 Ubuntu 3ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 f0:e4:e7:ae:27:22:14:09:0c:fe:1a:aa:85:a8:c3:a5 (ECDSA)
+|_  256 fd:a3:b9:36:17:39:25:1d:40:6d:5a:07:97:b3:42:13 (ED25519)
+80/tcp    open  http       Apache httpd 2.4.52 ((Ubuntu))
+|_http-title: Watcher
+|_http-server-header: Apache/2.4.52 (Ubuntu)
+10050/tcp open  tcpwrapped
+10051/tcp open  tcpwrapped
+39251/tcp open  java-rmi   Java RMI
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 ```
 [★]$ ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u http://watcher.vl/ -H 'Host: FUZZ.watcher.vl' -fs 4991
