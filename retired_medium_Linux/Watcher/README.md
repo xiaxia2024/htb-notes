@@ -72,6 +72,7 @@ https://github.com/W01fh4cker/CVE-2024-22120-RCE/blob/main/CVE-2024-22120-RCE.py
 #### 主机 ID 为 10084 ，这是“库存”中的 Zabbix 服务器。我们将对 cookie 进行 base64 解码，并使用 sessionid 键。
 #### Fn12 -> Storage -> Value 粘贴cooike
 #### 需要点击'Zabbix server' ，才会出现payload需要的cookie
+![图片](images/20260304.png)
 #### base64: invalid input的原因是       ’ %3D = URL 编码后的 =‘
 ```
 [★]$ echo 'eyJzZXNzaW9uaWQiOiJmMGU3NGZjNzY4MzVlMTAzODRhMTZhODQ2OTFkN2E2ZCIsInNlcnZlckNoZWNrUmVzdWx0Ijp0cnVlLCJzZXJ2ZXJDaGVja1RpbWUiOjE3NzI2Mzc1MTIsInNpZ24iOiI0ZTMwMGE0ZmUyOTE2NTY4OGI4YTllOWI5MWE1YWU0M2YyZjYwZWM4OTRhOWU4YTM0ODgzZmM3M2YyMDE2ZTQ4In0=' | base64 -d
@@ -258,7 +259,14 @@ zabbix@watcher:/var/lib/zabbix/.ssh$
 [★]$ vi id_rs
 [★]$ chmod 600 id_rsa
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N
-``
+```
+#### 还以为卡住了，在下实属愚昧啊，要直接访问浏览 http://localhost:8111
+#### TC是什么开发软件TeamCity
+#### 使用后门拿到的用户和密码登录 
+#### Agents -> All POOLS -> Default -> Default Agents -> Open Terminal
+#### # cat root.txt 鼠标拖选 + 复制
+![图片](images/20260305.png)
+
 ________________________________________
 ### 也就试了这么多遍 13遍
 ```
