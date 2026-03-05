@@ -255,9 +255,10 @@ zabbix@watcher:/var/lib/zabbix/.ssh$
 
 ```
 ```
+[★]$ vi id_rs
 [★]$ chmod 600 id_rsa
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N
-```
+``
 ________________________________________
 ### 也就试了这么多遍 13遍
 ```
