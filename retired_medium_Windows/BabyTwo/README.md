@@ -252,7 +252,7 @@ MapNetworkShare "\\dc.baby2.vl\docs", "L"
 ```
 #### 使用工具 revshells.com
 #### 选择PowerShell #3(Base64)
-![图片](2026030601.png)
+![图片](images/2026030601.png)
 #### Base64 编码的 UTF-16LE PowerShell 脚本
 ```
 [★]$ vi login.vbs
