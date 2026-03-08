@@ -37,7 +37,7 @@ AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
 [~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
 ```
 ————————————————————————————————————
-#### About WriteDacl--PowerView.ps1 && GenericAll ACL--pyGPOAbuse From BabyTwo
+#### About WriteDacl--PowerView.ps1 && GenericAll--pyGPOAbuse From BabyTwo
 ```
 工具 revshells.com; 选择PowerShell #3(Base64);Base64 编码的 UTF-16LE PowerShell 脚本
 
