@@ -60,7 +60,7 @@ zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
 [★]$ chmod 600 id_rsa //-rw-------
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N //-N 不执行远程命令
 ```
-#### Web_squid代理端口 Form Bombar
+#### Web_squid代理端口 Form Barboo
 ```
 端口工具 https://book.hacktricks.wiki/en/network-services-pentesting/3128-pentesting-squid.html
 Squid 的Privoxy代理工具： Squidscan -> https://gist.github.com/xct/597d48456214b15108b2817660fdee00 //扫描内部端口
