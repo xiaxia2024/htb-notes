@@ -33,3 +33,8 @@ AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
 导入到 
 [~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
 ```
+————————————————————————————————————
+#### About 
+```
+工具 revshells.com; 选择PowerShell #3(Base64);Base64 编码的 UTF-16LE PowerShell 脚本
+```
