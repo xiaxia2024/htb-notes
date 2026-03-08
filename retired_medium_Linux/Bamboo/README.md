@@ -725,6 +725,7 @@ papercut@bamboo:/tmp$ ./pspy64
 
 
 ```
+#### 以 root 权限运行且位于可写目录中的脚本名称是什么？server-command
 #### 命令好使 echo 'chmod u+s /bin/bash' > server-command 直接写进linux-x64系统，而且连着网页的刷新
 ```
 papercut@bamboo:~$ cd /home/papercut/server/bin/linux-x64
