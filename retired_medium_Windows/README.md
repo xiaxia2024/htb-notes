@@ -3,6 +3,9 @@
 ```
 [★]$ msfconsole //官方文件总是消失的命令
 ```
+```
+[★]$ nxc smb 10.129.234.72 -u users.txt -p users.txt --no-bruteforce --continue-on-success //同行配对--no-bruteforce
+```
 ————————————————————————————————————
 ### 总结 一样命令的区别 form Job
 #### PowerShell 反向 shell 文件
