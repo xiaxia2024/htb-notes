@@ -426,3 +426,20 @@ service@htb-xybs8a7uq9:/tmp/nfs$ sudo systemctl restart postgresql
 ervice@htb-xybs8a7uq9:/tmp/nfs$ sshpass -p service ssh -N -L 5432:/var/run/postgresql/.s.PGSQL.5432 service@10.129.234.160
 
 ```
+```
+[★]$ psql -h 127.0.0.1 -p 5432 -U postgres
+psql (15.14 (Debian 15.14-0+deb12u1))
+Type "help" for help.
+
+postgres=# 
+postgres=# CREATE ROLE service WITH PASSWORD 'service';
+CREATE ROLE
+postgres=# 
+postgres=# CREATE DATABASE service OWNER service;
+CREATE DATABASE
+postgres=# \c service
+You are now connected to database "service" as user "postgres".
+service=# \dt
+Did not find any relations.
+service=# 
+```
