@@ -443,3 +443,12 @@ service=# \dt
 Did not find any relations.
 service=# 
 ```
+_______________
+service@htb-tbs1dkwlng-htb-cloud-com:/tmp/nfs/service$ cat .psql_history
+CREATE DATABASE service;
+\c service;
+CREATE TABLE users ( id SERIAL PRIMARY KEY, username VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, description TEXT);
+INSERT INTO users (username, password, description)VALUES ('service', 'aaabf0d39951f3e6c3e8a7911df524c2'WHERE', network access account');
+select * from users;
+\q
+
