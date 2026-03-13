@@ -56,7 +56,7 @@ drwxr-xr-x 2 postgres postgres  4096 Oct  7  2024 conf.d
 -rw-r----- 1 postgres postgres  1636 Oct  7  2024 pg_ident.conf
 -rw-r--r-- 1 postgres postgres 29709 Oct  7  2024 postgresql.conf
 -rw-r--r-- 1 postgres postgres   317 Oct  7  2024 start.conf
-service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo vi postgresql.conf
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo vi postgresql.conf  //不用修改任何的配置文件
 service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo vi pg_hba.conf
 service@htb-xybs8a7uq9:/etc/postgresql/15/main$ sudo systemctl restart postgresql
 service@htb-xybs8a7uq9:/etc/postgresql/15/main$ systemctl status postgresql
