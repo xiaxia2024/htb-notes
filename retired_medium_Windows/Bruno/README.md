@@ -1,5 +1,9 @@
 ## Bruno
 ```
+//用 Microsoft .NET 运行时 去启动一个 .NET 程序
+C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.exe
+```
+```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.6.204 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sC -sV 10.129.6.204
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-13 03:07 CDT
@@ -226,8 +230,70 @@ SampleScanner.dll: MS-DOS executable
 SampleScanner.exe: MS-DOS executable
 ```
 #### 该 dll 实际上是一个 .Net 程序集，因此我们可以使用像 dnspy 这样的工具来解编这个程序集并获取其库的源代码。而另一个可执行文件则是以原生 x64 机器代码编译的，这意味着我们不得不采用静态和动态分析的方式来理解其工作流程。不过，这种情况可能并非总是需要的——该可执行文件很可能只是 dll 的加载器，其中将包含工作流程的主要功能。
-#### 如果我们在自己控制的 Windows 电脑上尝试运行 SampleScanner.exe，就会出现以下错误（除非我们已经安装了.NET 3.1.0 版本）：
-#### 在访问了所提供的链接并下载了目标框架后，我们运行安装程序。然后，我们可以再次运行该可执行文件，这次就不会出现错误了。如果我们使用工具“进程监视器”，并仅筛选出显示与“进程名称为 SampleScanner.exe”相匹配的结果，例如这样：
-https://learn.microsoft.com/en-us/sysinternals/downloads/procmon
+#### 可以通过https://file.io进行隔空传送
+```
+C:\Users\11xiaohei\Downloads\changelog>dir
+ 
+ C:\Users\11xiaohei\Downloads\changelog 的目录
+
+2026/03/13  17:18    <DIR>          .
+2026/03/13  17:18    <DIR>          ..
+2026/03/13  17:10               156 changelog
+2026/03/13  17:10               409 SampleScanner.deps.json
+2026/03/13  17:10             7,154 SampleScanner.dll
+2026/03/13  17:10           174,536 SampleScanner.exe
+2026/03/13  17:10               163 SampleScanner.runtimeconfig.dev.json
+2026/03/13  17:10               146 SampleScanner.runtimeconfig.json
+2026/03/13  17:10                 4 test.exe
+               7 个文件        182,568 字节
+               2 个目录 199,994,527,744 可用字节
+```
+```
+C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.dll
+You must install or update .NET to run this application.
+
+App: C:\Users\11xiaohei\Downloads\changelog\SampleScanner.dll
+Architecture: arm64
+Framework: 'Microsoft.NETCore.App', version '3.1.0' (arm64)
+.NET location: C:\Program Files\dotnet\
+
+The following frameworks were found:
+  8.0.19 at [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  9.0.8 at [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+
+Learn more:
+https://aka.ms/dotnet/app-launch-failed
+
+To install missing framework, download:
+https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_version=3.1.0&arch=arm64&rid=win-arm64&os=win10
+```
+#### 用 Microsoft .NET 运行时 去启动一个 .NET 程序。
+#### SampleScanner.exe 不是传统的 Windows 原生程序，而是 .NET Core 编译出来的应用，所以需要 .NET runtime 才能运行
+```
+C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.exe
+You must install or update .NET to run this application.
+
+App: C:\Users\11xiaohei\Downloads\changelog\SampleScanner.exe
+Architecture: arm64
+Framework: 'Microsoft.NETCore.App', version '3.1.0' (arm64)
+.NET location: C:\Program Files\dotnet\
+
+The following frameworks were found:
+  8.0.19 at [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+  9.0.8 at [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+
+Learn more:
+https://aka.ms/dotnet/app-launch-failed
+
+To install missing framework, download:
+https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_version=3.1.0&arch=arm64&rid=win-arm64&os=win10
+```
+#### 下载Microsoft.NETCore.App&framework_version=3.1.0之后，如果我们使用工具“进程监视器”，并仅筛选出显示与“进程名称为 SampleScanner.exe”相匹配的结果，例如这样：
+https://learn.microsoft.com/en-us/sysinternals/downloads/procmon //但是我不用
+#### 考 .NET 程序分析能力，而不是让你实际运行；
+#### 现在我们可以对 SampleScanner.dll 进行反编译，并查看源代码以找出任何我们能够利用的潜在漏洞
+#### dnSpy | ILSpy
 #### 我们可以看到，该可执行文件确实加载了 SampleScanner.dll 文件。
-#### 现在我们可以对 SampleScanner.dll 进行反编译，并查看源代码以找出任何我们能够利用的潜在漏洞。
+________
+#### 首先生成一个包含 EICAR 测试文件字符串的字节数组，然后该库会继续从 C:\samples\queue 目录中检索文件。接下来，它会遍历检索到的文件名，如果这些文件以.zip 扩展名结尾，则将归档文件的内容提取到 C:\samples\queue 目录下，然后删除原始文件（即归档文件）。最后，对于从归档文件中提取出来的每个文件，它会将其与 EICAR 测试字符串进行比较。如果EICAR 模式存在于所获取文件的字节表示形式中，这会将该文件移动至恶意文件区域。文件夹。如果不是这样，它就会将该文件移动到“良性”文件夹中。
+https://en.wikipedia.org/wiki/EICAR_test_file
