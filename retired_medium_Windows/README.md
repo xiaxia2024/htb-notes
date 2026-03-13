@@ -1,5 +1,6 @@
 ## Windows
 
+### 不同局域网的传送https://file.io
 ```
 [★]$ msfconsole //官方文件总是消失的命令
 ```
