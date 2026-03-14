@@ -270,26 +270,34 @@ https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_v
 #### 用 Microsoft .NET 运行时 去启动一个 .NET 程序。
 #### SampleScanner.exe 不是传统的 Windows 原生程序，而是 .NET Core 编译出来的应用，所以需要 .NET runtime 才能运行
 ```
-C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.exe
-You must install or update .NET to run this application.
+C:\Users\11xiaohei\Downloads\changelog>echo %PROCESSOR_ARCHITECTURE%
+ARM64
+//直接用 安装脚本 
+PS C:\Users\11xiaohei> Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
+PS C:\Users\11xiaohei> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+PS C:\Users\11xiaohei> .\dotnet-install.ps1 -Runtime dotnet -Version 3.1.32 -Architecture arm64
 
-App: C:\Users\11xiaohei\Downloads\changelog\SampleScanner.exe
-Architecture: arm64
-Framework: 'Microsoft.NETCore.App', version '3.1.0' (arm64)
-.NET location: C:\Program Files\dotnet\
+PS C:\Users\11xiaohei> dotnet --list-runtimes
+Microsoft.AspNetCore.App 8.0.19 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.AspNetCore.App 9.0.8 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.NETCore.App 3.1.32 [C:\Users\11xiaohei\AppData\Local\Microsoft\dotnet\shared\Microsoft.NETCore.App]
 
-The following frameworks were found:
-  8.0.19 at [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
-  9.0.8 at [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+PS C:\Users\11xiaohei\downloads\changelog> dotnet SampleScanner.dll
+Unhandled exception. System.BadImageFormatException: Could not load file or assembly 'C:\Users\11xiaohei\downloads\changelog\SampleScanner.dll'. Format of the executable (.exe) or library (.dll) is invalid.
+File name: 'C:\Users\11xiaohei\downloads\changelog\SampleScanner.dll'
 
-Learn more:
-https://aka.ms/dotnet/app-launch-failed
-
-To install missing framework, download:
-https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_version=3.1.0&arch=arm64&rid=win-arm64&os=win10
+PS C:\Users\11xiaohei\downloads\changelog> dotnet SampleScanner.exe
+Error:
+  An assembly specified in the application dependencies manifest (SampleScanner.deps.json) has already been found but with a different file extension:
+    package: 'SampleScanner', version: '1.0.0'
+    path: 'SampleScanner.dll'
+    previously found assembly: 'C:\Users\11xiaohei\downloads\changelog\SampleScanner.exe'
 ```
-#### 下载Microsoft.NETCore.App&framework_version=3.1.0之后，如果我们使用工具“进程监视器”，并仅筛选出显示与“进程名称为 SampleScanner.exe”相匹配的结果，例如这样：
-https://learn.microsoft.com/en-us/sysinternals/downloads/procmon //但是我不用
+#### 下载Microsoft.NETCore.App&framework_version=3.1.0之后，如果我们使用工具“进程监视器Process Monitor”，并仅筛选出显示与“进程名称为 SampleScanner.exe”相匹配的结果，例如这样：
+https://learn.microsoft.com/en-us/sysinternals/downloads/procmon 
+#### 解压之后运行Procmon.exe
+#### 选择 ‘process Name' is 'SampleScanner.exe' then 'Include'
+
 #### 考 .NET 程序分析能力，而不是让你实际运行；
 #### 现在我们可以对 SampleScanner.dll 进行反编译，并查看源代码以找出任何我们能够利用的潜在漏洞
 #### dnSpy | ILSpy
