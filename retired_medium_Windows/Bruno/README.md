@@ -297,3 +297,34 @@ https://learn.microsoft.com/en-us/sysinternals/downloads/procmon //但是我不�
 ________
 #### 首先生成一个包含 EICAR 测试文件字符串的字节数组，然后该库会继续从 C:\samples\queue 目录中检索文件。接下来，它会遍历检索到的文件名，如果这些文件以.zip 扩展名结尾，则将归档文件的内容提取到 C:\samples\queue 目录下，然后删除原始文件（即归档文件）。最后，对于从归档文件中提取出来的每个文件，它会将其与 EICAR 测试字符串进行比较。如果EICAR 模式存在于所获取文件的字节表示形式中，这会将该文件移动至恶意文件区域。文件夹。如果不是这样，它就会将该文件移动到“良性”文件夹中。
 https://en.wikipedia.org/wiki/EICAR_test_file
+```
+EICAR 测试字符串[ 9 ]读作[ 10 ]
+
+X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+第三个字符是拉丁字母大写字母“O” ，而不是数字零
+```
+#### 由于研究这段代码中漏洞的唯一可行选项是 ZipArchive 类，我们将在网上搜索 C# 中的 ZipArchive 漏洞。
+https://www.meziantou.net/prevent-zip-slip-in-dotnet.htm
+#### 防止 .NET 中的 Zip 滑移,文件路径可以是任意的
+#### 在搜索结果中，我们可以找到这篇文章，它解释了使用 Path.Combine 将文件提取到文件而不是使用 ExtractToDirectory 是危险的。本质上，Path.Combine 将各个字符串连接成一个表示文件路径的单个字符串。但是，正如微软文档中所述，如果除第一个参数外的任何参数包含根路径，则任何先前的路径组件都将被忽略。这意味着，如果压缩文件中的文件包含像 C:\Users\rogue\any.txt 这样的路径，那么与压缩文件名组合的 C:\samples\queue 路径将被忽略，文件将被提取到 C:\Users\rogue\any.txt  
+#### 关于 .NET 9 的 Path.Combine方法
+https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine?view=net-9.0
+```
+C#
+
+合并(ReadOnlySpan<String>)
+将一段字符串合并成一个路径。
+public static string Combine(scoped ReadOnlySpan<string> paths);
+
+合并(字符串[])
+将字符串数组组合成一个路径。
+public static string Combine(params string[] paths);
+
+以下示例将字符串数组组合成一个路径
+string[] paths = {@"d:\archives", "2001", "media", "images"};
+string fullPath = Path.Combine(paths);
+Console.WriteLine(fullPath);
+```
+#### 这种情况之所以危险，是因为我们实际上可以创建一个包含根路径的文件名，并将其归档。当 Path 创建路径组合的字符串时，归档文件的内容将写入归档文件名中包含的路径，从而允许我们在系统上写入任意文件。我们可以在本地机器上测试这一点。首先，我们需要创建一个文件名包含路径的文件。我们可以使用 Python 来实现。首先，我们将为测试目的创建一个测试文件：
+
+#### 我们将使用以下自定义脚本创建一个包含测试文件的压缩文件，同时将该文件名修改为 C:\Users\rogue\Desktop\test.txt 。
