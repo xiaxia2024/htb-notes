@@ -342,8 +342,71 @@ PS C:\Users\11xiaohei> Get-Content C:\Users\11xiaohei\Downloads\changelog\Sample
 77
 90
 
-//编译打不开的花，就换另一种编译或者重新下载新的.dll ,再不济就往下走
+//编译打不开的话，就换另一种编译或者重新下载新的.dll ,再不济就往下走
 ```
+#### 安装了dotpeek终于打开了
+https://www.jetbrains.com/decompiler/
+```
+// Decompiled with JetBrains decompiler
+// Type: SampleScanner.Program
+// Assembly: SampleScanner, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+// MVID: F802DA52-4179-4C52-B977-743340BF1853
+// Assembly location: C:\samples\app\SampleScanner.dll
+
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Text;
+
+#nullable disable
+namespace SampleScanner;
+
+internal class Program
+{
+  public static IEnumerable<int> PatternAt(byte[] source, byte[] pattern)
+  {
+    for (int i = 0; i < source.Length; ++i)
+    {
+      if (((IEnumerable<byte>) source).Skip<byte>(i).Take<byte>(pattern.Length).SequenceEqual<byte>((IEnumerable<byte>) pattern))
+        yield return i;
+    }
+  }
+
+  private static void Main(string[] args)
+  {
+    string str = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EYCAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+    str.Replace("EYCAR", "EICAR");
+    byte[] bytes = Encoding.ASCII.GetBytes(str);
+    foreach (string file in Directory.GetFiles("C:\\samples\\queue\\", "*", SearchOption.AllDirectories))
+    {
+      if (file.EndsWith(".zip"))
+      {
+        using (ZipArchive zipArchive = ZipFile.OpenRead(file))
+        {
+          foreach (ZipArchiveEntry entry in zipArchive.Entries)
+          {
+            string destinationFileName = Path.Combine("C:\\samples\\queue\\", entry.FullName);
+            entry.ExtractToFile(destinationFileName);
+          }
+          File.Delete(file);
+        }
+      }
+      else if (Program.PatternAt(File.ReadAllBytes(file), bytes).Any<int>())
+      {
+        File.Copy(file, file.Replace("queue", "malicious"), true);
+        File.Delete(file);
+      }
+      else
+      {
+        File.Copy(file, file.Replace("queue", "benign"), true);
+        File.Delete(file);
+      }
+    }
+  }
+}
+```
+
 #### 我们可以看到，该可执行文件确实加载了 SampleScanner.dll 文件。
 ________
 #### 首先生成一个包含 EICAR 测试文件字符串的字节数组，然后该库会继续从 C:\samples\queue 目录中检索文件。接下来，它会遍历检索到的文件名，如果这些文件以.zip 扩展名结尾，则将归档文件的内容提取到 C:\samples\queue 目录下，然后删除原始文件（即归档文件）。最后，对于从归档文件中提取出来的每个文件，它会将其与 EICAR 测试字符串进行比较。如果EICAR 模式存在于所获取文件的字节表示形式中，这会将该文件移动至恶意文件区域。文件夹。如果不是这样，它就会将该文件移动到“良性”文件夹中。
