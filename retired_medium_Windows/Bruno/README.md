@@ -819,7 +819,12 @@ X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
 #### 由于研究这段代码中漏洞的唯一可行选项是 ZipArchive 类，我们将在网上搜索 C# 中的 ZipArchive 漏洞。
 https://www.meziantou.net/prevent-zip-slip-in-dotnet.htm
 #### 防止 .NET 中的 Zip 滑移,文件路径可以是任意的
-#### 在搜索结果中，我们可以找到这篇文章，它解释了使用 Path.Combine 将文件提取到文件而不是使用 ExtractToDirectory 是危险的。本质上，Path.Combine 将各个字符串连接成一个表示文件路径的单个字符串。但是，正如微软文档中所述，如果除第一个参数外的任何参数包含根路径，则任何先前的路径组件都将被忽略。这意味着，如果压缩文件中的文件包含像 C:\Users\rogue\any.txt 这样的路径，那么与压缩文件名组合的 C:\samples\queue 路径将被忽略，文件将被提取到 C:\Users\rogue\any.txt  
+#### 在搜索结果中，我们可以找到这篇文章，它解释了使用 Path.Combine 将文件提取到文件而不是使用 ExtractToDirectory 是危险的。本质上，Path.Combine 将各个字符串连接成一个表示文件路径的单个字符串。但是，正如微软文档中所述，如果除第一个参数外的任何参数包含根路径，则任何先前的路径组件都将被忽略。这意味着，如果压缩文件中的文件包含像 C:\Users\rogue\any.txt 这样的路径，那么与压缩文件名组合的 C:\samples\queue 路径将被忽略，文件将被提取到 C:\Users\rogue\any.txt 
+
+### 应用程序用于构建归档内容提取路径的方法名称是什么？ Path.Combine
+```
+string destinationFileName = Path.Combine("C:\\samples\\queue\\", entry.FullName);
+```
 #### 关于 .NET 9 的 Path.Combine方法
 https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine?view=net-9.0
 ```
