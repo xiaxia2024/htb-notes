@@ -6,10 +6,12 @@
 #### 本质就是：一台机器可以代表其他用户去请求服务票据（TGS）
 #### MachineAccountQuota（默认 10）
 #### 用 KrbRelay实战 RBCD 
+### 总结
 ```
-//用 Microsoft .NET 运行时 去启动一个 .NET 程序
-C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.exe
 ```
+
+<details>
+	<summary>nmap</summary>
 ```
 [★]$ ports=$(nmap -p- --min-rate=1000 -T4 10.129.6.204 | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//)
 [★]$ nmap -p$ports -sC -sV 10.129.6.204
@@ -104,6 +106,7 @@ Host script results:
 |   date: 2026-03-13T08:08:26
 |_  start_date: N/A
 ```
+</details>
 ```
 [★]$ echo '10.129.6.204 brunodc.bruno.vl bruno.vl' | sudo tee -a /etc/hosts
 10.129.6.204 brunodc.bruno.vl bruno.vl
@@ -780,6 +783,9 @@ bruno\administrator
 ----------------------------
 ### 试错
 ```
+//用 Microsoft .NET 运行时 去启动一个 .NET 程序
+C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.exe
+
 C:\Users\11xiaohei\Downloads\changelog>echo %PROCESSOR_ARCHITECTURE%
 ARM64
 
