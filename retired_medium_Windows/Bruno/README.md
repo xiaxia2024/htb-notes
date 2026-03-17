@@ -1,4 +1,11 @@
 ## Bruno
+#### 哪种配置允许攻击者添加的机器被授权向主机请求其他帐户的服务票证？
+#### Resource-Based Constrained Delegation
+#### RBCD（资源基约束委派）做了什么：
+#### 允许：某台机器（比如你加的恶意机器, 以任意用户身份访问目标服务
+#### 本质就是：一台机器可以代表其他用户去请求服务票据（TGS）
+#### MachineAccountQuota（默认 10）
+#### 用 KrbRelay实战 RBCD 
 ```
 //用 Microsoft .NET 运行时 去启动一个 .NET 程序
 C:\Users\11xiaohei\Downloads\changelog>dotnet SampleScanner.exe
