@@ -354,6 +354,14 @@ PS C:\samples\app>
 ### [5]在Process Monitor找 Result:NAME NOT FOUND | Operation:CreateFile
 #### C:\samples\app\hostfxr.dll 里面运行着 KernelBase.dll
 ![图片](images/2026031601.png)
+#### 利用 Path.Combine 的任意文件写入漏洞来劫持哪个 DLL 文件以实现代码执行？
+#### Microsoft.DiaSymReader.Native.amd64.dll (由于win11环境是ARM64,所以没有找到这个程序
+```
+在Stack里面，
+Module			Lccation
+KemelBase.dll	LoadLibraryExW + 0x162
+//查找应用程序找不到的 DLL 文件。一个有价值的目标是应用程序根路径中搜索到的、并且已被应用程序加载的 DLL 文件（例如，通过 LoadLibraryExW 调用加载）
+```
 #### C:\Progrm Files\dotnet\x64\coreclr.dll 里面运行着 hostfxr.dll
 ![图片](images/2026031602.png)
 #### CreateFile这是用于获取新文件或现有文件的文件句柄的Windows API。如果参数指定只打开现有文件（不创建新文件），则如果文件不存在，ProcMon 将显示“NAME NOT FOUND”。这意味着如果我们能够创建该 DLL，它就能加载。第一个 DLL 看起来像是一个可写入的位置，所以我将目标设置为C:\samples\app\hostfxr.dll
