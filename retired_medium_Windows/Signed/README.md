@@ -917,3 +917,11 @@ SQL (SIGNED\mssqlsvc  dbo@master)> RECONFIGURE;
 
 
 ```
+https://github.com/antonioCoco/RunasCs
+```
+[★]$ wget https://github.com/antonioCoco/RunasCs/releases/download/v1.5/RunasCs.zip
+[★]$ unzip RunasCs.zip
+Archive:  RunasCs.zip
+  inflating: RunasCs.exe             
+  inflating: RunasCs_net2.exe
+```
