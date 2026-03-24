@@ -1,4 +1,4 @@
-## Giveback [oxdf]
+## Giveback [0xdf]
 ```
 [★]$ sudo nmap -p- -vvv --min-rate 10000 10.129.242.171
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-24 03:16 CDT
