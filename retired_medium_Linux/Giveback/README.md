@@ -1,4 +1,7 @@
 ## Giveback [0xdf]
+<details>
+<summary>Nmap</summary>
+
 ```
 [★]$ sudo nmap -p- -vvv --min-rate 10000 10.129.242.171
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-03-24 03:16 CDT
@@ -73,6 +76,8 @@ PORT      STATE SERVICE VERSION
 |     "localEndpoints": 1,
 |_    "serviceProxyHealthy": true
 ```
+</details>
+
 #### 根据 OpenSSH 版本，该主机很可能运行的是 Ubuntu 22.04 jammy LTS 系统。nginx 版本与当前 SID（不稳定开发分支）以及将于 2027 年推出的 Debian 14 Forky 版本非常接近。
 #### 要到达 80 端口的网络服务器还需要再经过一个跳转：
 ```
