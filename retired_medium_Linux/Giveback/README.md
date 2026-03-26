@@ -2615,6 +2615,9 @@ boot  dev    home  lib32  libx32  media       opt  root  sbin  sys  usr
 # ls
 '\'   audit__.sh   coredns   dns.sh   helm   iptables_rules.sh	 python   root.txt
 # cat root.txt
+
+babywyrm@giveback:/tmp/runc$ ls rootfs/
+bin  dev  hostfs  lib  lib64  proc  sys
 ```
 #### 将从主机获取 root 权限（这样做是-p为了不降低权限）
 ```
