@@ -372,3 +372,20 @@ by Ben "epi" Risher 🤓                 ver: 2.11.0
 ### Authentik - TCP 9000 / 9443
 #### Authentik是一款开源的身份提供商 (IdP) 和单点登录 (SSO) 解决方案。它支持 SAML、OAuth2、OpenID Connect 和 LDAP 等协议，使组织能够集中管理跨多个应用程序的身份验证，并作为 GitLab、Grafana、Nextcloud 等服务的统一登录门户。它采用自托管模式，通常通过 Docker 进行部署。
 #### 使用 Satoru 凭据登录成功，显示两个应用程序 'satoru','dGJ2V72SUEMsM3Ca'
+#### 点击第一个应用“Gitlab”，Fn12的Network:显示302的那一个（在第一个），查看请求，发现它使用SAML对 GitLab 进行身份验证：
+```
+GET
+	https://gitlab.barrier.vl/users/auth/saml/callback?SAMLResponse=nVhZk5s6t33nV6T...
+```
+#### 查看gitlab的官方页面的版本17.3.2
+https://about.gitlab.com/releases/categories/releases/
+#### 它的补丁版本是17.3.3 
+https://about.gitlab.com/releases/2024/09/17/patch-release-gitlab-17-3-3-released/
+![图片](images/2026032704.png)
+#### SAML身份验证绕过 SAML authentication bypass	Critical
+#### 更新依赖项omniauth-saml至 2.2.1 版本和ruby-saml1.17.0 版本，以缓解CVE-2024-45409 漏洞。此安全漏洞仅适用于已配置基于 SAML 身份验证的实例
+https://nvd.nist.gov/vuln/detail/CVE-2024-45409
+#### Ruby SAML 库用于实现 SAML 授权的客户端。Ruby-SAML 12.2 及更早版本以及 1.13.0 至 1.16.0 版本中的版本无法正确验证 SAML 响应的签名。因此，未经身份验证的攻击者如果能够访问任何已签名的 SAML 文档（由身份提供商 (IdP) 签名），就可以伪造包含任意内容的 SAML 响应/断言。这将允许攻击者以任意用户身份登录到存在漏洞的系统中。此漏洞已在 1.17.0 和 1.12.3 版本中修复
+### 枚举 GitLab 用户
+#### 为了确定要以哪个用户身份登录，我需要知道可用的用户名。我需要一个 API 令牌，可以通过访问“首选项”页面（点击已登录用户的图标），然后点击“访问令牌”来获取。在那里，我将点击“添加新令牌”，并为其授予所有权限范围：
+![图片](images/2026032705.png)
