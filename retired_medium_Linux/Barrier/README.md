@@ -387,5 +387,57 @@ https://about.gitlab.com/releases/2024/09/17/patch-release-gitlab-17-3-3-release
 https://nvd.nist.gov/vuln/detail/CVE-2024-45409
 #### Ruby SAML 库用于实现 SAML 授权的客户端。Ruby-SAML 12.2 及更早版本以及 1.13.0 至 1.16.0 版本中的版本无法正确验证 SAML 响应的签名。因此，未经身份验证的攻击者如果能够访问任何已签名的 SAML 文档（由身份提供商 (IdP) 签名），就可以伪造包含任意内容的 SAML 响应/断言。这将允许攻击者以任意用户身份登录到存在漏洞的系统中。此漏洞已在 1.17.0 和 1.12.3 版本中修复
 ### 枚举 GitLab 用户
-#### 为了确定要以哪个用户身份登录，我需要知道可用的用户名。我需要一个 API 令牌，可以通过访问“首选项”页面（点击已登录用户的图标），然后点击“访问令牌”来获取。在那里，我将点击“添加新令牌”，并为其授予所有权限范围：
+#### 为了确定要以哪个用户身份登录，我需要知道可用的用户名。我需要一个 API 令牌，可以通过访问“首选项”页面（点击已登录用户的图标），然后点击“access tokens”来获取。在那里，我将点击“Add new token”，并为其授予所有权限范围：
 ![图片](images/2026032705.png)
+#### Copy token:
+#### 也可以使用命令获取token,获得了token_type
+```
+[★]$ curl -sk https://gitlab.barrier.vl/oauth/token -d "grant_type=password&username=satoru&password=dGJ2V72SUEMsM3Ca"
+{"access_token":"d32c77f49ee9fb2356f6e98c1fc5f4cf9c1d0b64277716f80bbd43bf42311abd","token_type":"Bearer","expires_in":7200,"refresh_token":"5c98a818440e08c8cb7c139eb1c373c3e9e918eefe5a7a6024b51160952a1c20","scope":"api","created_at":1774775539}
+```
+#### 用作Bearer列出用户的令牌
+```
+[★]$ curl -sk --header "Authorization: Bearer glpat-***********" "https://gitlab.barrier.vl/api/v4/users?per_page=100" | jq .
+[
+  {
+    "id": 5,
+    "username": "ghost",
+    "name": "Ghost User",
+    "state": "active",
+    "locked": false,
+    "avatar_url": "https://secure.gravatar.com/avatar/79783106d88279c6c8f94f1f4dec22bdb9f90a8d14c9d6c6628a11430e236cbf?s=80&d=identicon",
+    "web_url": "https://gitlab.barrier.vl/ghost"
+  },
+  {
+    "id": 4,
+    "username": "project_1_bot_9658594231602f87fbf2548e67d1c270",
+    "name": "syareya",
+    "state": "active",
+    "locked": false,
+    "avatar_url": "https://secure.gravatar.com/avatar/b41665efb35dfb04e28a21a1bde27f3aef1b3e7c8ed4ad241fdb80cdb620896b?s=80&d=identicon",
+    "web_url": "https://gitlab.barrier.vl/project_1_bot_9658594231602f87fbf2548e67d1c270"
+  },
+  {
+    "id": 2,
+    "username": "satoru",
+    "name": "satoru",
+    "state": "active",
+    "locked": false,
+    "avatar_url": "https://secure.gravatar.com/avatar/f76962cdfb535a817fc9ff0e8fe34e28e92ba91df930af41f610fe8288e89a17?s=80&d=identicon",
+    "web_url": "https://gitlab.barrier.vl/satoru"
+  },
+  {
+    "id": 1,
+    "username": "akadmin",
+    "name": "akadmin",
+    "state": "active",
+    "locked": false,
+    "avatar_url": "https://secure.gravatar.com/avatar/818e54f1cbac56d3843c45d092853330b4d2cb8a6a7feed4703d3019a6993314?s=80&d=identicon",
+    "web_url": "https://gitlab.barrier.vl/akadmin"
+  }
+]
+```
+#### akadmin 是Authentik 使用的默认管理员名称！
+### 利用 CVE-2024-45409 漏洞
+https://github.com/synacktiv/CVE-2024-45409
+#### 拦截 SAML XML 断言
