@@ -370,7 +370,8 @@ by Ben "epi" Risher 🤓                 ver: 2.11.0
 
 #### 没什么其他特别有趣的事
 ### Authentik - TCP 9000 / 9443
-#### Authentik是一款开源的身份提供商 (IdP) 和单点登录 (SSO) 解决方案。它支持 SAML、OAuth2、OpenID Connect 和 LDAP 等协议，使组织能够集中管理跨多个应用程序的身份验证，并作为 GitLab、Grafana、Nextcloud 等服务的统一登录门户。它采用自托管模式，通常通过 Docker 进行部署。
+#### Authentik是一款开源的身份提供商 (IdP) 和单点登录 (SSO) 解决方案，SSO = Single Sign-On（单点登录）
+#### 它支持 SAML、OAuth2、OpenID Connect 和 LDAP 等协议，使组织能够集中管理跨多个应用程序的身份验证，并作为 GitLab、Grafana、Nextcloud 等服务的统一登录门户。它采用自托管模式，通常通过 Docker 进行部署。
 #### 使用 Satoru 凭据登录成功，显示两个应用程序 'satoru','dGJ2V72SUEMsM3Ca'
 #### 点击第一个应用“Gitlab”，Fn12的Network:显示302的那一个（在第一个），查看请求，发现它使用SAML对 GitLab 进行身份验证：
 <details>
