@@ -908,6 +908,7 @@ https://api.goauthentik.io/reference/core-users-list/
 #### 点击 maki的‘Impersonate'
 ![图片](images/2026040213.png)
 #### 点击 ‘Guacamole',找到终端‘>_ Maintenance'
+![图片](images/2026040214.png)
 ```
 Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-168-generic x86_64)
 
