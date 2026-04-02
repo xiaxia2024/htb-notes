@@ -599,7 +599,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 ```
 %3D%3D 要变成 ==（URL解码）
 ```
-![图片](images/2026040109.png)
+![图片](images/2026040209.png)
 
 __________________
 ### 遇到的困难：
