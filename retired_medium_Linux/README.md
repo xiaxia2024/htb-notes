@@ -44,7 +44,7 @@ nc -lvnp 9011
 [★]$ python3 -m venv .venv
 [★]$ source .venv/bin/activate
 ```
-
+----------------------------------------------------------------------------------
 #### Form Watcher
 <details>
 <summary>rsa_id; index.php后门</summary>
@@ -70,6 +70,7 @@ zabbix@watcher:/var/lib/zabbix/.ssh$ cat id_rsa
 ```
 </details>
 
+----------------------------------------------------------------------------------
 #### Form Bamboo
 <details>
 <summary>Web_squid代理端口</summary>
@@ -114,6 +115,7 @@ bash-5.1# id
 ```
 </details>
 
+----------------------------------------------------------------------------------
 #### psql数据库 From Slonik
 <details>
 <summary>postgres</summary>
@@ -168,8 +170,9 @@ COPY 0
 ```
 </details>
 
+----------------------------------------------------------------------------------
 #### 'Kubernetes = K8s' From Giveback
-
+----------------------------------------------------------------------------------
 #### GitLab From Barrier
 <details>
 <summary>GitLab API 枚举用户</summary>
@@ -316,4 +319,4 @@ maki_adm@barrier:~$
 ```
 </details>
 
-```
+----------------------------------------------------------------------------------
