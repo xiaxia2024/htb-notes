@@ -91,7 +91,7 @@ Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
 ```
 </details>
 
-details>
+<details>
 <summary>Ghidra --> -rwxr-xr-- 1 root root 35992 Oct  3  2025 gaveld</summary>
 
 ```
@@ -153,7 +153,7 @@ allow_url_include=Off
 ```
 </details>
 
-details>
+<details>
 <summary>加载自己的 php.ini 文件</summary>
 
 ```
