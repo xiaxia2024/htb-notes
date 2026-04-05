@@ -46,7 +46,7 @@ $2y$10$MNkDHV6g16FjW/lAQRpLiuQXN4MVkdMuILn0pLQlC2So9SgH5RTfS:midnight1
 ```
 </details>
 
-details>
+<details>
 <summary>gavel-util二进制文件</summary>
 
 ```
