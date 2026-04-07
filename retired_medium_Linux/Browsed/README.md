@@ -99,6 +99,22 @@ ____________________________________________________________________________
 //启动服务器以捕获 HTTP 请求
 [★]$ node server.js
 Server listening on port 4444
+
+--- POST / ---
+{
+  "host": "10.10.15.139:4444",
+  "connection": "keep-alive",
+  "content-length": "104",
+  "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+  "content-type": "text/plain;charset=UTF-8",
+  "accept": "*/*",
+  "origin": "chrome-extension://ofpjodhgdkndahokbggjcoadhkfnlhjc",
+  "accept-encoding": "gzip, deflate",
+  "accept-language": "en-US,en;q=0.9"
+}
+Body:
+{"originalUrl":"http://browsedinternals.htb/assets/img/logo.svg","timestamp":"2026-04-06T09:09:55.442Z"}
+<SNIP>
 ____________________________________________________________________________
 ```
 </details>
