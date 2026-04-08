@@ -149,6 +149,9 @@ https://github.com/NULL200OK/-nginxui_discover/blob/main/nginxui_discover.py
 ```
 [★]$ wget https://raw.githubusercontent.com/NULL200OK/-nginxui_discover/refs/heads/main/nginxui_discover.py
 ```
+<details>
+<summary>python3 nginxui_discover.py --target http://admin.snapped.htb</summary>
+
 ```
 [★]$ python3 nginxui_discover.py --target http://admin.snapped.htb
 
@@ -200,6 +203,8 @@ Nginx UI instances found: 8
   🔴 http://admin.snapped.htb - v≤2.3.2 (vulnerable - header present)
   🔴 http://admin.snapped.htb - v≤2.3.2 (vulnerable - header present)
 ```
+</details>
+
 #### 该端点创建的备份将包含 nginx 和 nginx-ui 的配置文件，包括 nginx-ui 的 database.db 文件。之前链接的 GitHub 告知中还包含了一个用于自动执行以下步骤的演示脚本，但我们将手动完成这些操作。
 #### 让我们使用 cURL 访问该端点并下载备份。
 ```
@@ -358,15 +363,21 @@ D /tmp 1777 root root 4m
 #q /var/tmp 1777 root root 30d
 ```
 #### 这意味着，位于 /tmp 目录下任何超过 4 分钟未更新的文件都将被删除，这为利用此漏洞创造了绝佳条件。
-### The Precondition: systemd-tmpfiles //前置条件
-#### 位于 /tmp 下的“.snap”目录是由“snap-confine”在每次调用时进行维护的。Ubuntu 24.04将“systemd-tmpfiles-clean.timer”定时器的配置修改为：删除位于“/tmp”目录下超过 30 天的文件（在“tmp.conf”文件中为“D /tmp 1777 root root 30d”）。当“.snap”文件进入休眠状态并被清理后，攻击者会重新创建它，由于“/tmp”是可被所有人读写的，所以重新创建的目录将属于攻击者所有。
-### Winning the Race Reliably //可靠的
-#### 该辅助程序将 snap-confine 的标准错误输出重定向到一个 AF_UNIX 套接字，其设置为 SO_RCVBUF=1 和 SO_SNDBUF=1 。这造成了极大的阻塞压力，因为 snap-confine 在每次对标准错误的写入操作中都会阻塞，直到辅助程序读取一个字节。辅助程序逐字节读取，实际上是在单步执行 snap-confine 的执行过程。当检测到触发消息 dir：“/tmp/.snap/usr/lib/x86_64-linux-gnu”（在模拟步骤 1 后发出）时（模拟步骤 1 后发出），snap-confine 在写入过程中被阻塞。攻击者有无限的时间通过 renameat2(RENAME_EXCHANGE) 来执行交换操作。
-### /proc/PID/cwd Bypass
-#### /tmp/snap-private-tmp 的权限设置为 700（即根用户对根用户），因此非特权用户无法访问该目录。然而，访问 /proc/PID/cwd 则会通过进程的挂载命名空间来遵循其工作目录，从而完全绕过了主机权限检查。
-### Dynamic Loader Hijack //动态加载程序劫持
-#### 比较结束后，该命名空间内位于 /usr/lib/x86_64-linux-gnu 下的所有库都成为了攻击者所掌控的资源。用 shellcode 替换 ld-linux-x86-64.so.2 将意味着在这个命名空间中执行的任何 SUID 二进制文件都会以 root 身份触发该 shellcode，因为内核会在程序本身之前加载 PT_INTERP 中指定的动态链接器，而 SUID 二进制文件的有效权限则会随之生效。
-### Sandbox Escape //“沙盒逃脱”
-#### 火狐软件包的 AppArmor 配置文件允许对 /var/snap/firefox/common/ 目录进行写入操作。一个设置为 SUID 的 bash 脚本会存放在此处，且不受 AppArmor 的限制，能够脱离沙盒环境持续运行。
+```
+1.The Precondition: systemd-tmpfiles //前置条件
+位于 /tmp 下的“.snap”目录是由“snap-confine”在每次调用时进行维护的。Ubuntu 24.04将“systemd-tmpfiles-clean.timer”定时器的配置修改为：删除位于“/tmp”目录下超过 30 天的文件（在“tmp.conf”文件中为“D /tmp 1777 root root 30d”）。当“.snap”文件进入休眠状态并被清理后，攻击者会重新创建它，由于“/tmp”是可被所有人读写的，所以重新创建的目录将属于攻击者所有。
+
+Winning the Race Reliably //可靠的
+该辅助程序将 snap-confine 的标准错误输出重定向到一个 AF_UNIX 套接字，其设置为 SO_RCVBUF=1 和 SO_SNDBUF=1 。这造成了极大的阻塞压力，因为 snap-confine 在每次对标准错误的写入操作中都会阻塞，直到辅助程序读取一个字节。辅助程序逐字节读取，实际上是在单步执行 snap-confine 的执行过程。当检测到触发消息 dir：“/tmp/.snap/usr/lib/x86_64-linux-gnu”（在模拟步骤 1 后发出）时（模拟步骤 1 后发出），snap-confine 在写入过程中被阻塞。攻击者有无限的时间通过 renameat2(RENAME_EXCHANGE) 来执行交换操作。
+
+3./proc/PID/cwd Bypass
+/tmp/snap-private-tmp 的权限设置为 700（即根用户对根用户），因此非特权用户无法访问该目录。然而，访问 /proc/PID/cwd 则会通过进程的挂载命名空间来遵循其工作目录，从而完全绕过了主机权限检查。
+
+4.Dynamic Loader Hijack //动态加载程序劫持
+比较结束后，该命名空间内位于 /usr/lib/x86_64-linux-gnu 下的所有库都成为了攻击者所掌控的资源。用 shellcode 替换 ld-linux-x86-64.so.2 将意味着在这个命名空间中执行的任何 SUID 二进制文件都会以 root 身份触发该 shellcode，因为内核会在程序本身之前加载 PT_INTERP 中指定的动态链接器，而 SUID 二进制文件的有效权限则会随之生效。
+
+5.Sandbox Escape //“沙盒逃脱”
+火狐软件包的 AppArmor 配置文件允许对 /var/snap/firefox/common/ 目录进行写入操作。一个设置为 SUID 的 bash 脚本会存放在此处，且不受 AppArmor 的限制，能够脱离沙盒环境持续运行。
+```
 ### Exploitation
 Step 1 — Enter sandbox (Terminal 1)
