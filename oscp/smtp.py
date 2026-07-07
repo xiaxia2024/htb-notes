@@ -23,3 +23,5 @@ result = s.recv(1024)
 print(result)
 
 s.close()
+#python3 smtp.py root 192.168.50.8
+#python3 smtp.py johndoe 192.168.50.8
